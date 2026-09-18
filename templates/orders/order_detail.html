@@ -1,0 +1,418 @@
+{% extends "base/base.html" %}
+{% load aquaflow_tags %}
+
+{% block title %}{{ order.order_number }} — AquaFlow{% endblock %}
+{% block page_icon %}fas fa-file-invoice{% endblock %}
+{% block page_title %}{{ order.order_number }}{% endblock %}
+{% block page_subtitle %}Order details{% endblock %}
+
+{% block breadcrumbs %}
+<span>/</span>
+<a href="/orders/">Orders</a>
+<span>/</span>
+<span class="current">{{ order.order_number }}</span>
+{% endblock %}
+
+{% block content %}
+
+<div class="row g-3">
+    <div class="col-lg-8">
+
+        <!-- Order Info -->
+        <div class="card mb-3">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <strong><i class="fas fa-info-circle me-2 aq-text-primary"></i>Order Information</strong>
+                <div>
+                    {% if order.status == 'completed' %}
+                    <span class="badge bg-success fs-6">Completed</span>
+                    {% elif order.status == 'void' %}
+                    <span class="badge bg-dark fs-6">VOIDED</span>
+                    {% endif %}
+                    {% if order.payment_status == 'paid' %}
+                    <span class="badge bg-success fs-6 ms-1">Paid</span>
+                    {% elif order.payment_status == 'refunded' %}
+                    <span class="badge bg-info fs-6 ms-1">Refunded</span>
+                    {% endif %}
+                </div>
+            </div>
+            <div class="card-body">
+                <table class="table table-borderless mb-0">
+                    <tr>
+                        <td class="text-muted" style="width:30%;">Order Number</td>
+                        <td><strong class="aq-text-primary">{{ order.order_number }}</strong></td>
+                    </tr>
+                    <tr>
+                        <td class="text-muted">Date & Time</td>
+                        <td>{{ order.created_at|date:"d M Y H:i" }}</td>
+                    </tr>
+                    <tr>
+                        <td class="text-muted">Customer</td>
+                        <td>
+                            <a href="/customers/{{ order.customer.pk }}/">{{ order.customer.name }}</a>
+                            <br><small class="text-muted">{{ order.customer.customer_code }} · {{ order.customer.phone }}</small>
+                        </td>
+                    </tr>
+                    {% if order.vehicle %}
+                    <tr>
+                        <td class="text-muted">Vehicle</td>
+                        <td>
+                            <code class="aq-text-primary fw-bold">{{ order.vehicle.registration_number }}</code>
+                            — {{ order.vehicle.brand.name }} {{ order.vehicle.model.name }}
+                        </td>
+                    </tr>
+                    {% endif %}
+                    <tr>
+                        <td class="text-muted">Branch</td>
+                        <td>{{ order.branch.name }}</td>
+                    </tr>
+                    {% if order.booking %}
+                    <tr>
+                        <td class="text-muted">From Booking</td>
+                        <td>
+                            <a href="/bookings/{{ order.booking.pk }}/">{{ order.booking.booking_number }}</a>
+                        </td>
+                    </tr>
+                    {% endif %}
+                    <tr>
+                        <td class="text-muted">Cashier</td>
+                        <td>{{ order.created_by.username|default:"—" }}</td>
+                    </tr>
+                    {% if order.notes %}
+                    <tr>
+                        <td class="text-muted">Notes</td>
+                        <td>{{ order.notes|linebreaksbr }}</td>
+                    </tr>
+                    {% endif %}
+                </table>
+            </div>
+        </div>
+
+        <!-- Line Items -->
+        <div class="card mb-3">
+            <div class="card-header">
+                <strong><i class="fas fa-list me-2 aq-text-primary"></i>Items</strong>
+            </div>
+            <div class="card-body p-0">
+                <table class="table mb-0">
+                    <thead>
+                        <tr>
+                            <th>Item</th>
+                            <th>Type</th>
+                            <th class="text-end">Qty</th>
+                            <th class="text-end">Price</th>
+                            <th class="text-end">Discount</th>
+                            <th class="text-end">Tax</th>
+                            <th class="text-end">Total</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for item in items %}
+                        <tr>
+                            <td>{{ item.description_snapshot }}</td>
+                            <td>
+                                {% if item.item_type == 'service' %}
+                                <span class="badge bg-info">Service</span>
+                                {% else %}
+                                <span class="badge bg-warning">Product</span>
+                                {% endif %}
+                            </td>
+                            <td class="text-end">{{ item.quantity|floatformat:2 }}</td>
+                            <td class="text-end">{% format_currency item.unit_price_snapshot %}</td>
+                            <td class="text-end">{% format_currency item.discount %}</td>
+                            <td class="text-end">{% format_currency item.tax %}</td>
+                            <td class="text-end fw-bold">{% format_currency item.line_total %}</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                    <tfoot>
+                        <tr>
+                            <th colspan="6" class="text-end">Subtotal</th>
+                            <th class="text-end">{% format_currency order.subtotal %}</th>
+                        </tr>
+                        {% if order.discount_amount > 0 %}
+                        <tr>
+                            <th colspan="6" class="text-end">Discount</th>
+                            <th class="text-end text-danger">- {% format_currency order.discount_amount %}</th>
+                        </tr>
+                        {% endif %}
+                        {% if order.tax_amount > 0 %}
+                        <tr>
+                            <th colspan="6" class="text-end">Tax</th>
+                            <th class="text-end">{% format_currency order.tax_amount %}</th>
+                        </tr>
+                        {% endif %}
+                        <tr class="table-primary">
+                            <th colspan="6" class="text-end fs-5">GRAND TOTAL</th>
+                            <th class="text-end fs-5 aq-text-primary">{% format_currency order.total %}</th>
+                        </tr>
+                    </tfoot>
+                </table>
+            </div>
+        </div>
+
+        <!-- Payments -->
+        <div class="card">
+            <div class="card-header">
+                <strong><i class="fas fa-money-bill-wave me-2 aq-text-success"></i>Payments</strong>
+            </div>
+            <div class="card-body p-0">
+                <table class="table mb-0">
+                    <thead>
+                        <tr>
+                            <th>Method</th>
+                            <th>Reference</th>
+                            <th>Status</th>
+                            <th>Processed</th>
+                            <th class="text-end">Amount</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for pmt in payments %}
+                        <tr>
+                            <td><strong>{{ pmt.payment_method.name }}</strong></td>
+                            <td>{{ pmt.reference|default:"—" }}</td>
+                            <td>
+                                {% if pmt.status == 'completed' %}
+                                <span class="badge bg-success">{{ pmt.get_status_display }}</span>
+                                {% else %}
+                                <span class="badge bg-secondary">{{ pmt.get_status_display }}</span>
+                                {% endif %}
+                            </td>
+                            <td>
+                                <small>{{ pmt.processed_at|date:"d M Y H:i" }}</small>
+                            </td>
+                            <td class="text-end fw-bold">{% format_currency pmt.amount %}</td>
+                        </tr>
+                        {% empty %}
+                        <tr><td colspan="5" class="text-center text-muted py-3">No payments recorded.</td></tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+    </div>
+
+    <!-- Actions -->
+    <div class="col-lg-4">
+        <div class="card">
+            <div class="card-header">
+                <strong><i class="fas fa-bolt me-2 aq-text-warning"></i>Actions</strong>
+            </div>
+            <div class="card-body d-grid gap-2">
+
+                {% if order.invoice %}
+                <a href="/pos/receipt/{{ order.invoice.pk }}/" target="_blank" class="btn btn-primary">
+                    <i class="fas fa-print me-1"></i>
+                    Print Receipt
+                </a>
+                <a href="/invoices/{{ order.invoice.pk }}/" class="btn btn-outline-primary">
+                    <i class="fas fa-file-invoice-dollar me-1"></i>
+                    View Invoice
+                </a>
+                {% endif %}
+
+                {% if can_refund and order.status == 'completed' %}
+                <hr class="my-2">
+                <button class="btn btn-outline-warning" onclick="openRefundModal()">
+                    <i class="fas fa-undo me-1"></i>
+                    Process Refund
+                </button>
+                {% endif %}
+
+                {% if can_void and order.status != 'void' %}
+                <hr class="my-2">
+                <button class="btn btn-outline-danger" onclick="openVoidModal()">
+                    <i class="fas fa-ban me-1"></i>
+                    Void Order (Super Admin)
+                </button>
+                {% endif %}
+
+                <hr class="my-2">
+                <a href="/orders/" class="btn btn-outline-secondary">
+                    <i class="fas fa-arrow-left me-1"></i>Back to Orders
+                </a>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Void Modal -->
+<div class="modal fade" id="voidModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header bg-danger text-white">
+                <h5 class="modal-title"><i class="fas fa-exclamation-triangle me-2"></i>Void Order</h5>
+                <button class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <div class="alert alert-warning">
+                    <strong>⚠ WARNING:</strong> Voiding this order is permanent.
+                    The invoice will be marked void but records will remain for audit.
+                </div>
+                <div class="mb-3">
+                    <label class="form-label fw-semibold">Reason <span class="text-danger">*</span></label>
+                    <textarea id="voidReason" class="form-control" rows="3" placeholder="Why is this order being voided?"></textarea>
+                </div>
+                <div class="mb-3">
+                    <label class="form-label fw-semibold">Type "VOID" to confirm</label>
+                    <input type="text" id="voidConfirm" class="form-control" placeholder="VOID">
+                </div>
+                <div id="voidError" class="alert alert-danger" style="display:none;"></div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                <button class="btn btn-danger" id="confirmVoidBtn">
+                    <i class="fas fa-ban me-1"></i>Void Order
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Refund Modal -->
+{% if order.invoice %}
+<div class="modal fade" id="refundModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header bg-warning">
+                <h5 class="modal-title"><i class="fas fa-undo me-2"></i>Process Refund</h5>
+                <button class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <div class="alert alert-info">
+                    Original Total: <strong>{% format_currency order.total %}</strong>
+                </div>
+
+                <div class="mb-3">
+                    <label class="form-label fw-semibold">Refund Amount <span class="text-danger">*</span></label>
+                    <input type="number" id="refundAmount" class="form-control form-control-lg" min="0" max="{{ order.total }}" step="0.01" value="{{ order.total }}">
+                    <small class="text-muted">Max: {% format_currency order.total %}</small>
+                </div>
+
+                <div class="mb-3">
+                    <label class="form-label fw-semibold">Refund Method <span class="text-danger">*</span></label>
+                    <select id="refundMethod" class="form-select">
+                        {% for pmt in payments %}
+                        <option value="{{ pmt.payment_method.pk }}">{{ pmt.payment_method.name }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+
+                <div class="mb-3">
+                    <label class="form-label fw-semibold">Reason <span class="text-danger">*</span></label>
+                    <textarea id="refundReason" class="form-control" rows="2" placeholder="Why is this refund being issued?"></textarea>
+                </div>
+
+                <div class="mb-3">
+                    <label class="form-label fw-semibold">Manager PIN <span class="text-danger">*</span></label>
+                    <input type="password" id="refundPin" class="form-control" placeholder="Enter manager PIN">
+                    <small class="text-muted">Refunds require manager approval.</small>
+                </div>
+
+                <div id="refundError" class="alert alert-danger" style="display:none;"></div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                <button class="btn btn-warning" id="confirmRefundBtn">
+                    <i class="fas fa-undo me-1"></i>Process Refund
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+{% endif %}
+
+{% endblock %}
+
+{% block extra_js %}
+<script>
+const CSRF_TOKEN = '{{ csrf_token }}';
+
+function openVoidModal() {
+    document.getElementById('voidReason').value = '';
+    document.getElementById('voidConfirm').value = '';
+    document.getElementById('voidError').style.display = 'none';
+    new bootstrap.Modal(document.getElementById('voidModal')).show();
+}
+
+document.getElementById('confirmVoidBtn').addEventListener('click', function () {
+    const reason = document.getElementById('voidReason').value.trim();
+    const confirm = document.getElementById('voidConfirm').value.trim();
+    const err = document.getElementById('voidError');
+    err.style.display = 'none';
+
+    if (!reason) { err.textContent = 'Reason required.'; err.style.display = 'block'; return; }
+    if (confirm !== 'VOID') { err.textContent = 'Type "VOID" exactly to confirm.'; err.style.display = 'block'; return; }
+
+    this.disabled = true;
+    const fd = new FormData();
+    fd.append('reason', reason);
+
+    fetch("{% url 'order_void' order.pk %}", {
+        method: 'POST',
+        headers: { 'X-CSRFToken': CSRF_TOKEN },
+        body: fd,
+    })
+    .then(r => r.json())
+    .then(data => {
+        this.disabled = false;
+        if (data.success) {
+            showToast(data.message, 'success');
+            setTimeout(() => location.reload(), 1000);
+        } else {
+            err.textContent = data.error;
+            err.style.display = 'block';
+        }
+    });
+});
+
+{% if order.invoice %}
+function openRefundModal() {
+    document.getElementById('refundAmount').value = '{{ order.total }}';
+    document.getElementById('refundReason').value = '';
+    document.getElementById('refundPin').value = '';
+    document.getElementById('refundError').style.display = 'none';
+    new bootstrap.Modal(document.getElementById('refundModal')).show();
+}
+
+document.getElementById('confirmRefundBtn').addEventListener('click', function () {
+    const amount = parseFloat(document.getElementById('refundAmount').value);
+    const method = document.getElementById('refundMethod').value;
+    const reason = document.getElementById('refundReason').value.trim();
+    const pin = document.getElementById('refundPin').value.trim();
+    const err = document.getElementById('refundError');
+    err.style.display = 'none';
+
+    if (!amount || amount <= 0) { err.textContent = 'Valid amount required.'; err.style.display = 'block'; return; }
+    if (amount > {{ order.total }}) { err.textContent = 'Refund exceeds order total.'; err.style.display = 'block'; return; }
+    if (!reason) { err.textContent = 'Reason required.'; err.style.display = 'block'; return; }
+    if (!pin) { err.textContent = 'Manager PIN required.'; err.style.display = 'block'; return; }
+
+    this.disabled = true;
+    const fd = new FormData();
+    fd.append('amount', amount);
+    fd.append('method_id', method);
+    fd.append('reason', reason);
+    fd.append('pin', pin);
+
+    fetch(`/payments/refund/{{ order.invoice.pk }}/`, {
+        method: 'POST',
+        headers: { 'X-CSRFToken': CSRF_TOKEN },
+        body: fd,
+    })
+    .then(r => r.json())
+    .then(data => {
+        this.disabled = false;
+        if (data.success) {
+            showToast(data.message, 'success');
+            setTimeout(() => location.reload(), 1000);
+        } else {
+            err.textContent = data.error;
+            err.style.display = 'block';
+        }
+    });
+});
+{% endif %}
+</script>
+{% endblock %}

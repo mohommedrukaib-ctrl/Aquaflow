@@ -1,0 +1,345 @@
+{% extends "base/base.html" %}
+{% load aquaflow_tags %}
+
+{% block title %}{{ job.job_number }} — AquaFlow{% endblock %}
+{% block page_icon %}fas fa-car-wash{% endblock %}
+{% block page_title %}{{ job.job_number }}{% endblock %}
+{% block page_subtitle %}Car Wash Job Details{% endblock %}
+
+{% block breadcrumbs %}
+<span>/</span>
+<a href="/wash/">Car Wash</a>
+<span>/</span>
+<span class="current">{{ job.job_number }}</span>
+{% endblock %}
+
+{% block content %}
+<div class="row g-3">
+
+    <div class="col-lg-8">
+        <!-- Job Info -->
+        <div class="card mb-3">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <strong><i class="fas fa-car-wash me-2 aq-text-primary"></i>Job Details</strong>
+                <span class="badge bg-info fs-6">{{ job.get_status_display }}</span>
+            </div>
+            <div class="card-body">
+                <table class="table table-borderless mb-0">
+                    <tr><td class="text-muted" style="width:30%;">Job Number</td><td><strong class="aq-text-primary">{{ job.job_number }}</strong></td></tr>
+                    <tr><td class="text-muted">Priority</td><td>
+                        {% if job.priority == 'urgent' %}<span class="badge bg-danger">URGENT</span>
+                        {% elif job.priority == 'high' %}<span class="badge bg-warning">HIGH</span>
+                        {% else %}<span class="badge bg-secondary">Normal</span>{% endif %}
+                    </td></tr>
+                    <tr><td class="text-muted">Customer</td><td>
+                        <a href="/customers/{{ job.customer.pk }}/">{{ job.customer.name }}</a>
+                        · {{ job.customer.phone|default:"" }}
+                    </td></tr>
+                    <tr><td class="text-muted">Vehicle</td><td>
+                        <code class="aq-text-primary fw-bold">{{ job.vehicle.registration_number }}</code>
+                        — {{ job.vehicle.brand.name }} {{ job.vehicle.model.name }}
+                    </td></tr>
+                    <tr><td class="text-muted">Branch</td><td>{{ job.branch.name }}</td></tr>
+                    <tr><td class="text-muted">Bay</td><td>{{ job.wash_bay.name|default:"Not assigned" }}</td></tr>
+                    <tr><td class="text-muted">Employee</td><td>
+                        {% if job.assigned_employee %}{{ job.assigned_employee.get_full_name|default:job.assigned_employee.username }}
+                        {% else %}Not assigned{% endif %}
+                    </td></tr>
+                    <tr><td class="text-muted">Created</td><td>{{ job.created_at|date:"d M Y H:i" }}</td></tr>
+                    {% if job.started_at %}<tr><td class="text-muted">Started</td><td>{{ job.started_at|date:"H:i" }}</td></tr>{% endif %}
+                    {% if job.completed_at %}<tr><td class="text-muted">Completed</td><td>{{ job.completed_at|date:"H:i" }}</td></tr>{% endif %}
+                    {% if job.duration_minutes %}<tr><td class="text-muted">Duration</td><td><strong>{{ job.duration_minutes }} min</strong></td></tr>{% endif %}
+                </table>
+                {% if job.notes %}
+                <div class="alert alert-info mt-3 mb-0"><strong>Notes:</strong><br>{{ job.notes|linebreaksbr }}</div>
+                {% endif %}
+            </div>
+        </div>
+
+        <!-- Items Table -->
+        <div class="card mb-3">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <strong><i class="fas fa-list me-2"></i>Job Items ({{ items.count }})</strong>
+                {% if can_manage and job.status != 'completed' %}
+                <button class="btn btn-sm btn-primary" onclick="openAddItemModal()">
+                    <i class="fas fa-plus me-1"></i>Add Item
+                </button>
+                {% endif %}
+            </div>
+            <div class="card-body p-0">
+                {% if items %}
+                <table class="table mb-0">
+                    <thead>
+                        <tr>
+                            <th>#</th>
+                            <th>Item</th>
+                            <th>Type</th>
+                            <th class="text-end">Price</th>
+                            <th class="text-center">Qty</th>
+                            <th class="text-end">Total</th>
+                            <th>Status</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for item in items %}
+                        <tr>
+                            <td>{{ forloop.counter }}</td>
+                            <td><strong>{{ item.name }}</strong></td>
+                            <td>
+                                {% if item.item_type == 'service' %}<span class="badge bg-info">Service</span>
+                                {% elif item.item_type == 'repair' %}<span class="badge bg-warning">Repair</span>
+                                {% elif item.item_type == 'product' %}<span class="badge bg-success">Product</span>
+                                {% else %}<span class="badge bg-secondary">Custom</span>{% endif %}
+                            </td>
+                            <td class="text-end">{% format_currency item.unit_price %}</td>
+                            <td class="text-center">{{ item.quantity|floatformat:2 }}</td>
+                            <td class="text-end fw-bold">{% format_currency item.total %}</td>
+                            <td>
+                                {% if item.status == 'completed' %}<span class="badge bg-success">Done</span>
+                                {% elif item.status == 'in_progress' %}<span class="badge bg-info">Working</span>
+                                {% else %}<span class="badge bg-secondary">Pending</span>{% endif %}
+                            </td>
+                        </tr>
+                        {% endfor %}
+                        <tr class="table-primary">
+                            <th colspan="5" class="text-end">Total</th>
+                            <th class="text-end">{% format_currency job.items_total %}</th>
+                            <th></th>
+                        </tr>
+                    </tbody>
+                </table>
+                {% else %}
+                <div class="text-center text-muted py-4">No items added yet.</div>
+                {% endif %}
+            </div>
+        </div>
+
+        <!-- Linked Records -->
+        {% if job.booking or job.order or job.invoice %}
+        <div class="card">
+            <div class="card-header"><strong><i class="fas fa-link me-2"></i>Linked Records</strong></div>
+            <div class="card-body">
+                {% if job.booking %}<div class="mb-2"><i class="fas fa-calendar-check me-2"></i>Booking: <a href="/bookings/{{ job.booking.pk }}/">{{ job.booking.booking_number }}</a></div>{% endif %}
+                {% if job.order %}<div class="mb-2"><i class="fas fa-file-invoice me-2"></i>Order: <a href="/orders/{{ job.order.pk }}/">{{ job.order.order_number }}</a></div>{% endif %}
+                {% if job.invoice %}<div><i class="fas fa-file-invoice-dollar me-2"></i>Invoice: <a href="/invoices/{{ job.invoice.pk }}/">{{ job.invoice.invoice_number }}</a></div>{% endif %}
+            </div>
+        </div>
+        {% endif %}
+    </div>
+
+    <!-- Actions -->
+    <div class="col-lg-4">
+        <div class="card mb-3">
+            <div class="card-header"><strong><i class="fas fa-bolt me-2 aq-text-warning"></i>Actions</strong></div>
+            <div class="card-body d-grid gap-2">
+
+                <!-- INVOICE BUTTON (available at any status except completed with invoice) -->
+                {% if not job.invoice %}
+                <a href="/pos/?wash_job={{ job.pk }}" class="btn btn-success btn-lg">
+                    <i class="fas fa-cash-register me-1"></i>Invoice This Job
+                </a>
+                {% else %}
+                <a href="/pos/receipt/{{ job.invoice.pk }}/" target="_blank" class="btn btn-primary">
+                    <i class="fas fa-print me-1"></i>Reprint Invoice
+                </a>
+                {% endif %}
+
+                <!-- Job Note -->
+                {% if can_manage %}
+                <a href="{% url 'wash_job_note' job.pk %}" target="_blank" class="btn btn-outline-info">
+                    <i class="fas fa-sticky-note me-1"></i>Print Job Note
+                </a>
+                {% endif %}
+
+                <hr class="my-2">
+
+                {% if can_manage %}
+                {% if job.status == 'waiting' or job.status == 'assigned' %}
+                <button class="btn btn-primary" onclick="changeStatus('washing')">
+                    <i class="fas fa-play me-1"></i>Start Washing
+                </button>
+                {% endif %}
+
+                {% if job.status == 'washing' %}
+                <button class="btn btn-warning" onclick="changeStatus('quality_check')">
+                    <i class="fas fa-search me-1"></i>Quality Check
+                </button>
+                {% endif %}
+
+                {% if job.status == 'quality_check' %}
+                <button class="btn btn-success" onclick="changeStatus('ready')">
+                    <i class="fas fa-check me-1"></i>Mark Ready
+                </button>
+                {% endif %}
+
+                {% if job.status == 'ready' %}
+                <button class="btn btn-success" onclick="changeStatus('completed')">
+                    <i class="fas fa-flag-checkered me-1"></i>Complete
+                </button>
+                {% endif %}
+
+                <hr class="my-2">
+
+                <div>
+                    <label class="form-label fw-semibold small">Employee</label>
+                    <select id="employeeSelect" class="form-select form-select-sm" onchange="assignEmployee(this.value)">
+                        <option value="">— Unassigned —</option>
+                        {% for emp in employees %}
+                        <option value="{{ emp.pk }}" {% if job.assigned_employee_id == emp.pk %}selected{% endif %}>
+                            {{ emp.get_full_name|default:emp.username }}
+                        </option>
+                        {% endfor %}
+                    </select>
+                </div>
+
+                <div>
+                    <label class="form-label fw-semibold small">Wash Bay</label>
+                    <select id="baySelect" class="form-select form-select-sm" onchange="assignBay(this.value)">
+                        <option value="">— No Bay —</option>
+                        {% for bay in bays %}
+                        <option value="{{ bay.pk }}" {% if job.wash_bay_id == bay.pk %}selected{% endif %}>
+                            {{ bay.name }}
+                        </option>
+                        {% endfor %}
+                    </select>
+                </div>
+
+                {% if job.status != 'completed' and job.status != 'cancelled' %}
+                <hr class="my-2">
+                <button class="btn btn-outline-danger btn-sm" onclick="if(confirm('Cancel?')) changeStatus('cancelled')">
+                    <i class="fas fa-ban me-1"></i>Cancel Job
+                </button>
+                {% endif %}
+
+                {% endif %}
+
+                <hr class="my-2">
+                <a href="/wash/" class="btn btn-outline-secondary">
+                    <i class="fas fa-arrow-left me-1"></i>Back to Board
+                </a>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Add Item Modal -->
+<div class="modal fade" id="addItemModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title"><i class="fas fa-plus me-2"></i>Add Item</h5>
+                <button class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <div class="mb-3">
+                    <label class="form-label fw-semibold">Type</label>
+                    <select id="itemType" class="form-select">
+                        <option value="service">Service</option>
+                        <option value="repair">Repair</option>
+                        <option value="product">Product</option>
+                        <option value="custom">Custom</option>
+                    </select>
+                </div>
+                <div class="mb-3">
+                    <label class="form-label fw-semibold">Name <span class="text-danger">*</span></label>
+                    <input type="text" id="itemName" class="form-control">
+                </div>
+                <div class="row g-2 mb-3">
+                    <div class="col-md-6">
+                        <label class="form-label fw-semibold">Price</label>
+                        <input type="number" id="itemPrice" class="form-control" min="0" step="0.01" value="0">
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label fw-semibold">Quantity</label>
+                        <input type="number" id="itemQty" class="form-control" min="1" step="1" value="1">
+                    </div>
+                </div>
+                <div id="itemError" class="alert alert-danger" style="display:none;"></div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                <button class="btn btn-primary" id="saveItemBtn"><i class="fas fa-plus me-1"></i>Add</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+{% endblock %}
+
+{% block extra_js %}
+<script>
+const CSRF_TOKEN = '{{ csrf_token }}';
+const JOB_ID = {{ job.pk }};
+
+function changeStatus(status) {
+    const fd = new FormData();
+    fd.append('status', status);
+    fetch(`/wash/jobs/${JOB_ID}/status/`, {
+        method: 'POST', headers: { 'X-CSRFToken': CSRF_TOKEN }, body: fd,
+    }).then(r => r.json()).then(data => {
+        if (data.success) { showToast(data.message, 'success'); setTimeout(() => location.reload(), 800); }
+        else { showToast(data.error, 'error'); }
+    });
+}
+
+function assignEmployee(id) {
+    const fd = new FormData();
+    if (id) fd.append('employee_id', id);
+    fetch(`/wash/jobs/${JOB_ID}/employee/`, {
+        method: 'POST', headers: { 'X-CSRFToken': CSRF_TOKEN }, body: fd,
+    }).then(r => r.json()).then(data => {
+        if (data.success) { showToast(data.message, 'success'); setTimeout(() => location.reload(), 800); }
+        else { showToast(data.error, 'error'); }
+    });
+}
+
+function assignBay(id) {
+    const fd = new FormData();
+    if (id) fd.append('bay_id', id);
+    fetch(`/wash/jobs/${JOB_ID}/bay/`, {
+        method: 'POST', headers: { 'X-CSRFToken': CSRF_TOKEN }, body: fd,
+    }).then(r => r.json()).then(data => {
+        if (data.success) { showToast(data.message, 'success'); setTimeout(() => location.reload(), 800); }
+        else { showToast(data.error, 'error'); }
+    });
+}
+
+function openAddItemModal() {
+    document.getElementById('itemName').value = '';
+    document.getElementById('itemPrice').value = '0';
+    document.getElementById('itemQty').value = '1';
+    document.getElementById('itemType').value = 'service';
+    document.getElementById('itemError').style.display = 'none';
+    new bootstrap.Modal(document.getElementById('addItemModal')).show();
+}
+
+document.getElementById('saveItemBtn')?.addEventListener('click', function () {
+    const name  = document.getElementById('itemName').value.trim();
+    const price = document.getElementById('itemPrice').value;
+    const qty   = document.getElementById('itemQty').value;
+    const type  = document.getElementById('itemType').value;
+    const err   = document.getElementById('itemError');
+    err.style.display = 'none';
+
+    if (!name) { err.textContent = 'Name required.'; err.style.display = 'block'; return; }
+
+    this.disabled = true;
+    const fd = new FormData();
+    fd.append('name', name);
+    fd.append('unit_price', price);
+    fd.append('quantity', qty);
+    fd.append('type', type);
+
+    fetch(`/wash/jobs/${JOB_ID}/add-item/`, {
+        method: 'POST', headers: { 'X-CSRFToken': CSRF_TOKEN }, body: fd,
+    }).then(r => r.json()).then(data => {
+        this.disabled = false;
+        if (data.success) {
+            bootstrap.Modal.getInstance(document.getElementById('addItemModal')).hide();
+            showToast(data.message, 'success');
+            setTimeout(() => location.reload(), 600);
+        } else { err.textContent = data.error; err.style.display = 'block'; }
+    });
+});
+</script>
+{% endblock %}

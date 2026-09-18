@@ -1,0 +1,468 @@
+{% extends "base/base.html" %}
+{% load static %}
+
+{% block title %}{{ page_title }} — AquaFlow{% endblock %}
+{% block page_icon %}fas fa-calendar-check{% endblock %}
+{% block page_title %}{{ page_title }}{% endblock %}
+{% block page_subtitle %}Schedule a car wash or service{% endblock %}
+
+{% block breadcrumbs %}
+<span>/</span>
+<a href="/bookings/">Bookings</a>
+<span>/</span>
+<span class="current">{{ action }}</span>
+{% endblock %}
+
+{% block content %}
+<div class="card">
+    <div class="card-header">
+        <strong>
+            <i class="fas fa-calendar-plus me-2 aq-text-primary"></i>
+            Booking Information
+        </strong>
+    </div>
+
+    <div class="card-body">
+        <form method="post" id="bookingForm" novalidate>
+            {% csrf_token %}
+
+            {% if form.non_field_errors %}
+            <div class="alert alert-danger">{{ form.non_field_errors }}</div>
+            {% endif %}
+
+            <div class="row g-3">
+
+                <!-- Customer -->
+                <div class="col-md-6">
+                    <label class="form-label fw-semibold">Customer <span class="text-danger">*</span></label>
+                    {% if form.instance.customer %}
+                    <div class="aq-smart-input" id="customerInput" data-name="customer" data-search-url="/customers/search/" data-create-url="/vehicles/customers/quick-create/" data-results-key="customers" data-label="Customer" data-placeholder="Search customer name or phone..." data-required="true" data-value="{{ form.instance.customer.pk }}" data-display-text="{{ form.instance.customer.name }}"></div>
+                    {% else %}
+                    <div class="aq-smart-input" id="customerInput" data-name="customer" data-search-url="/customers/search/" data-create-url="/vehicles/customers/quick-create/" data-results-key="customers" data-label="Customer" data-placeholder="Search customer name or phone..." data-required="true"></div>
+                    {% endif %}
+                </div>
+
+                <!-- Vehicle -->
+                <div class="col-md-6">
+                    <label class="form-label fw-semibold">Vehicle <span class="text-danger">*</span></label>
+                    {% if form.instance.vehicle %}
+                    <div class="aq-smart-input" id="vehicleInput" data-name="vehicle" data-search-url="/vehicles/search/" data-create-url="/bookings/vehicles/quick-create/" data-results-key="vehicles" data-label="Vehicle" data-placeholder="Search registration..." data-uppercase="true" data-required="true" data-value="{{ form.instance.vehicle.pk }}" data-display-text="{{ form.instance.vehicle.registration_number }}"></div>
+                    {% else %}
+                    <div class="aq-smart-input" id="vehicleInput" data-name="vehicle" data-search-url="/vehicles/search/" data-create-url="/bookings/vehicles/quick-create/" data-results-key="vehicles" data-label="Vehicle" data-placeholder="Select customer first..." data-uppercase="true" data-required="true" data-disabled="true"></div>
+                    {% endif %}
+                    <small class="text-muted d-block mt-1" id="vehicleInfoLine"></small>
+                </div>
+
+                <!-- Service -->
+                <div class="col-md-6">
+                    <label class="form-label fw-semibold">Service <span class="text-danger">*</span></label>
+                    {% if form.instance.service %}
+                    <div class="aq-smart-input" id="serviceInput" data-name="service" data-search-url="/bookings/services/search/" data-create-url="/bookings/services/create/" data-results-key="services" data-label="Service" data-placeholder="Search or type new service..." data-required="true" data-value="{{ form.instance.service.pk }}" data-display-text="{{ form.instance.service.name }}"></div>
+                    {% else %}
+                    <div class="aq-smart-input" id="serviceInput" data-name="service" data-search-url="/bookings/services/search/" data-create-url="/bookings/services/create/" data-results-key="services" data-label="Service" data-placeholder="Search or type new service..." data-required="true"></div>
+                    {% endif %}
+                </div>
+
+                <!-- Branch -->
+                <div class="col-md-6">
+                    <label class="form-label fw-semibold">Branch <span class="text-danger">*</span></label>
+                    {% if form.instance.branch %}
+                    <div class="aq-smart-input" id="branchInput" data-name="branch" data-search-url="/bookings/branches/search/" data-results-key="branches" data-label="Branch" data-placeholder="Search branch..." data-required="true" data-value="{{ form.instance.branch.pk }}" data-display-text="{{ form.instance.branch.name }}"></div>
+                    {% else %}
+                    <div class="aq-smart-input" id="branchInput" data-name="branch" data-search-url="/bookings/branches/search/" data-results-key="branches" data-label="Branch" data-placeholder="Search branch..." data-required="true"></div>
+                    {% endif %}
+                </div>
+
+                <!-- Date -->
+                <div class="col-md-4">
+                    <label class="form-label fw-semibold">Date <span class="text-danger">*</span></label>
+                    <input type="date" name="scheduled_date" id="scheduledDate" class="form-control" value="{{ form.instance.scheduled_date|date:'Y-m-d' }}" required>
+                </div>
+
+                <!-- Time -->
+                <div class="col-md-4">
+                    <label class="form-label fw-semibold">Time <span class="text-danger">*</span></label>
+                    <input type="time" name="scheduled_time" id="scheduledTime" class="form-control" value="{{ form.instance.scheduled_time|time:'H:i' }}" required>
+                </div>
+
+                <!-- Status (edit only) -->
+                {% if action == 'Update' %}
+                <div class="col-md-4">
+                    <label class="form-label fw-semibold">Status</label>
+                    {{ form.status }}
+                </div>
+                {% else %}
+                <div class="col-md-4"></div>
+                {% endif %}
+
+                <!-- Employee -->
+                <div class="col-md-6">
+                    <label class="form-label fw-semibold">Assigned Employee</label>
+                    {% if form.instance.assigned_employee %}
+                    <div class="aq-smart-input" id="employeeInput" data-name="assigned_employee" data-search-url="/bookings/employees/search/" data-results-key="employees" data-label="Employee" data-placeholder="Search employee..." data-value="{{ form.instance.assigned_employee.pk }}" data-display-text="{{ form.instance.assigned_employee.get_full_name|default:form.instance.assigned_employee.username }}"></div>
+                    {% else %}
+                    <div class="aq-smart-input" id="employeeInput" data-name="assigned_employee" data-search-url="/bookings/employees/search/" data-results-key="employees" data-label="Employee" data-placeholder="Search employee..."></div>
+                    {% endif %}
+                </div>
+
+                <!-- Wash Bay -->
+                <div class="col-md-6">
+                    <label class="form-label fw-semibold">Wash Bay</label>
+                    {% if form.instance.wash_bay %}
+                    <div class="aq-smart-input" id="washBayInput" data-name="wash_bay" data-search-url="/bookings/bays/search/" data-create-url="/bookings/bays/create/" data-results-key="wash_bays" data-label="Wash Bay" data-placeholder="Search or type new bay..." data-uppercase="true" data-value="{{ form.instance.wash_bay.pk }}" data-display-text="{{ form.instance.wash_bay.name }}"></div>
+                    {% else %}
+                    <div class="aq-smart-input" id="washBayInput" data-name="wash_bay" data-search-url="/bookings/bays/search/" data-create-url="/bookings/bays/create/" data-results-key="wash_bays" data-label="Wash Bay" data-placeholder="Search or type new bay..." data-uppercase="true"></div>
+                    {% endif %}
+                </div>
+
+                <!-- Notes -->
+                <div class="col-md-12">
+                    <label class="form-label fw-semibold">Notes</label>
+                    <textarea name="notes" rows="2" class="form-control" placeholder="Optional notes">{{ form.instance.notes|default:'' }}</textarea>
+                </div>
+            </div>
+
+            <div class="mt-4 d-flex justify-content-between">
+                <a href="/bookings/" class="btn btn-secondary">
+                    <i class="fas fa-arrow-left me-1"></i> Back
+                </a>
+                <button type="submit" class="btn btn-primary">
+                    <i class="fas fa-save me-1"></i> {{ action }} Booking
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- Customer popup -->
+<div class="modal fade" id="customerModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title"><i class="fas fa-user-plus me-2"></i>Add Customer</h5>
+                <button class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <div class="mb-3">
+                    <label class="form-label fw-semibold">Full Name <span class="text-danger">*</span></label>
+                    <input type="text" id="quickCustName" class="form-control">
+                </div>
+                <div class="mb-3">
+                    <label class="form-label fw-semibold">Phone Number <span class="text-danger">*</span></label>
+                    <input type="text" id="quickCustPhone" class="form-control">
+                    <div id="phoneMatchAlert" class="alert alert-info small mt-2 py-2 mb-0" style="display:none;"></div>
+                </div>
+                <div id="quickCustError" class="alert alert-danger" style="display:none;"></div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                <button class="btn btn-primary" id="saveQuickCustBtn"><i class="fas fa-save me-1"></i>Save</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Vehicle popup -->
+<div class="modal fade" id="vehicleModal" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title"><i class="fas fa-car me-2"></i>Add Vehicle</h5>
+                <button class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <div class="alert alert-info small py-2"><i class="fas fa-user me-1"></i>For: <strong id="vehicleCustomerName"></strong></div>
+                <div class="row g-3">
+                    <div class="col-md-12">
+                        <label class="form-label fw-semibold">Registration <span class="text-danger">*</span></label>
+                        <input type="text" id="vehModalReg" class="form-control text-uppercase fw-bold">
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label fw-semibold">Brand <span class="text-danger">*</span></label>
+                        <div class="aq-smart-input" id="vehModalBrand" data-name="brand" data-search-url="/vehicles/brands/search/" data-create-url="/vehicles/brands/create/" data-results-key="brands" data-label="Brand" data-uppercase="true" data-required="true"></div>
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label fw-semibold">Model <span class="text-danger">*</span></label>
+                        <div class="aq-smart-input" id="vehModalModel" data-name="model" data-search-url="/vehicles/models/search/" data-create-url="/vehicles/models/create/" data-results-key="models" data-label="Model" data-uppercase="true" data-disabled="true" data-required="true"></div>
+                    </div>
+                    <div class="col-md-4">
+                        <label class="form-label fw-semibold">Type</label>
+                        <div class="aq-smart-input" id="vehModalType" data-name="vehicle_type" data-search-url="/vehicles/types/search/" data-create-url="/vehicles/types/create/" data-results-key="types" data-label="Type" data-uppercase="true"></div>
+                    </div>
+                    <div class="col-md-4">
+                        <label class="form-label fw-semibold">Color</label>
+                        <div class="aq-smart-input" id="vehModalColor" data-name="color" data-search-url="/vehicles/colors/search/" data-create-url="/vehicles/colors/create/" data-results-key="colors" data-label="Color" data-uppercase="true"></div>
+                    </div>
+                    <div class="col-md-4">
+                        <label class="form-label fw-semibold">Fuel</label>
+                        <div class="aq-smart-input" id="vehModalFuel" data-name="fuel_type" data-search-url="/vehicles/fuels/search/" data-create-url="/vehicles/fuels/create/" data-results-key="fuels" data-label="Fuel" data-uppercase="true"></div>
+                    </div>
+                    <div class="col-md-4">
+                        <label class="form-label fw-semibold">Year</label>
+                        <input type="number" id="vehModalYear" class="form-control" min="1950" max="2099">
+                    </div>
+                </div>
+                <div id="vehModalError" class="alert alert-danger mt-3" style="display:none;"></div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                <button class="btn btn-primary" id="saveVehicleBtn"><i class="fas fa-save me-1"></i>Save</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+{% endblock %}
+
+{% block extra_js %}
+<script>
+const CSRF_TOKEN = '{{ csrf_token }}';
+let currentSmartInput = null;
+
+// Default date/time
+(function () {
+    const d = document.getElementById('scheduledDate');
+    const t = document.getElementById('scheduledTime');
+    if (d && !d.value) {
+        const now = new Date();
+        d.value = `${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}-${String(now.getDate()).padStart(2,'0')}`;
+    }
+    if (t && !t.value) {
+        const now = new Date();
+        t.value = `${String(now.getHours()).padStart(2,'0')}:${String(now.getMinutes()).padStart(2,'0')}`;
+    }
+})();
+
+const customerInput = document.getElementById('customerInput');
+const vehicleInput  = document.getElementById('vehicleInput');
+const branchInput   = document.getElementById('branchInput');
+const washBayInput  = document.getElementById('washBayInput');
+const vehicleInfoLine = document.getElementById('vehicleInfoLine');
+
+// Customer → Vehicle filter
+customerInput?.addEventListener('aq:selected', (e) => {
+    const vs = vehicleInput._smartInput;
+    vs.input.value = ''; vs.hiddenInput.value = '';
+    vs.pendingHidden.value = ''; vs.clearBtn.style.display = 'none';
+    vs.pendingHint.style.display = 'none';
+    vehicleInfoLine.textContent = '';
+    vs.enable();
+    vs.extraParams = `customer_id=${e.detail.id}`;
+    vs.placeholder = "Search customer's vehicles or add new...";
+    vs.input.placeholder = vs.placeholder;
+});
+
+customerInput?.addEventListener('aq:cleared', () => {
+    vehicleInput._smartInput.disable();
+    vehicleInfoLine.textContent = '';
+});
+
+// Vehicle → Auto-fill customer + show info
+vehicleInput?.addEventListener('aq:selected', (e) => {
+    fetch(`/bookings/vehicle-details/${e.detail.id}/`)
+        .then(r => r.json())
+        .then(data => {
+            if (!data.success) return;
+            const v = data.vehicle;
+
+            // Auto-fill customer if not set or different
+            const cs = customerInput._smartInput;
+            if (!cs.hiddenInput.value || String(cs.hiddenInput.value) !== String(v.customer_id)) {
+                cs.setSelected({
+                    id: v.customer_id, label: v.customer_name, name: v.customer_name,
+                    meta: `${v.customer_code} · ${v.customer_phone}`,
+                });
+                // Re-filter vehicles for this customer
+                const vs = vehicleInput._smartInput;
+                vs.extraParams = `customer_id=${v.customer_id}`;
+            }
+
+            let info = `${v.brand} ${v.model}`;
+            if (v.vehicle_type) info += ` · ${v.vehicle_type}`;
+            if (v.color) info += ` · ${v.color}`;
+            if (v.year) info += ` · ${v.year}`;
+            vehicleInfoLine.innerHTML = `<i class="fas fa-info-circle me-1"></i>${info}`;
+        });
+});
+
+// Enable vehicle if customer preselected (edit mode)
+setTimeout(() => {
+    const cs = customerInput?._smartInput;
+    if (cs && cs.hiddenInput.value) {
+        const vs = vehicleInput._smartInput;
+        vs.enable();
+        vs.extraParams = `customer_id=${cs.hiddenInput.value}`;
+    }
+}, 300);
+
+// Branch → Filter wash bays
+branchInput?.addEventListener('aq:selected', (e) => {
+    const bi = washBayInput._smartInput;
+    if (bi) bi.extraParams = `branch_id=${e.detail.id}`;
+});
+
+// Customer popup
+document.addEventListener('aq:pending', (e) => {
+    if (e.target.id === 'customerInput') {
+        currentSmartInput = e.target._smartInput;
+        const q = e.detail.value;
+        document.getElementById('quickCustName').value = /^\d/.test(q) ? '' : q;
+        document.getElementById('quickCustPhone').value = /^\d/.test(q) ? q : '';
+        document.getElementById('quickCustError').style.display = 'none';
+        document.getElementById('phoneMatchAlert').style.display = 'none';
+        new bootstrap.Modal(document.getElementById('customerModal')).show();
+        return;
+    }
+    if (e.target.id === 'vehicleInput') {
+        currentSmartInput = e.target._smartInput;
+        const custSmart = customerInput._smartInput;
+        if (!custSmart.hiddenInput.value) {
+            showToast('Select customer first.', 'warning');
+            e.target._smartInput.pendingHidden.value = '';
+            e.target._smartInput.pendingHint.style.display = 'none';
+            e.target._smartInput.input.value = '';
+            return;
+        }
+        openVehicleModal(e.detail.value.trim().toUpperCase(), custSmart);
+        return;
+    }
+});
+
+// Phone lookup
+document.getElementById('quickCustPhone')?.addEventListener('input', function () {
+    const phone = this.value.trim();
+    const alertBox = document.getElementById('phoneMatchAlert');
+    if (phone.length < 4) { alertBox.style.display = 'none'; return; }
+    fetch(`/customers/phone-lookup/?phone=${encodeURIComponent(phone)}`)
+        .then(r => r.json())
+        .then(data => {
+            if (data.match) {
+                alertBox.style.display = 'block';
+                alertBox.innerHTML = `<i class="fas fa-user me-1"></i> Existing: <strong>${data.match.name}</strong> (${data.match.customer_code}) <button type="button" class="btn btn-sm btn-info ms-2" id="useExistBtn">Use This</button>`;
+                document.getElementById('useExistBtn').onclick = () => {
+                    currentSmartInput.setSelected({ id: data.match.id, label: data.match.name, name: data.match.name, meta: `${data.match.customer_code} · ${data.match.phone}` });
+                    bootstrap.Modal.getInstance(document.getElementById('customerModal')).hide();
+                    showToast('Customer selected.', 'success');
+                };
+            } else { alertBox.style.display = 'none'; }
+        });
+});
+
+// Save customer
+document.getElementById('saveQuickCustBtn')?.addEventListener('click', function () {
+    const name = document.getElementById('quickCustName').value.trim();
+    const phone = document.getElementById('quickCustPhone').value.trim();
+    const err = document.getElementById('quickCustError');
+    err.style.display = 'none';
+    if (!name) { err.textContent = 'Name required.'; err.style.display = 'block'; return; }
+    if (!phone) { err.textContent = 'Phone required.'; err.style.display = 'block'; return; }
+
+    this.disabled = true;
+    const fd = new FormData();
+    fd.append('name', name); fd.append('phone', phone);
+    fetch('/vehicles/customers/quick-create/', {
+        method: 'POST', headers: { 'X-CSRFToken': CSRF_TOKEN }, body: fd,
+    }).then(r => r.json()).then(data => {
+        this.disabled = false;
+        if (data.success) {
+            currentSmartInput.setSelected(data.item);
+            bootstrap.Modal.getInstance(document.getElementById('customerModal')).hide();
+            showToast(data.message, 'success');
+        } else { err.textContent = data.error; err.style.display = 'block'; }
+    });
+});
+
+// Vehicle popup
+function openVehicleModal(reg, custSmart) {
+    document.getElementById('vehicleCustomerName').textContent = custSmart.input.value;
+    document.getElementById('vehModalReg').value = reg || '';
+    ['vehModalBrand','vehModalModel','vehModalType','vehModalColor','vehModalFuel'].forEach(id => {
+        const el = document.getElementById(id);
+        if (el && !el._smartInput) window.initSmartInput(el);
+        if (el && el._smartInput) {
+            el._smartInput.input.value = ''; el._smartInput.hiddenInput.value = '';
+            el._smartInput.pendingHidden.value = ''; el._smartInput.clearBtn.style.display = 'none';
+            el._smartInput.pendingHint.style.display = 'none';
+        }
+    });
+    document.getElementById('vehModalYear').value = '';
+    document.getElementById('vehModalError').style.display = 'none';
+    const ms = document.getElementById('vehModalModel')._smartInput;
+    if (ms) ms.disable();
+    new bootstrap.Modal(document.getElementById('vehicleModal')).show();
+}
+
+setTimeout(() => {
+    const mb = document.getElementById('vehModalBrand');
+    const mm = document.getElementById('vehModalModel');
+    if (mb) {
+        mb.addEventListener('aq:selected', (e) => { const s=mm._smartInput; if(s){s.enable();s.extraParams=`brand_id=${e.detail.id}`;s.input.value='';s.hiddenInput.value='';} });
+        mb.addEventListener('aq:pending', () => { const s=mm._smartInput; if(s) s.enable(); });
+        mb.addEventListener('aq:cleared', () => { const s=mm._smartInput; if(s) s.disable(); });
+    }
+    const mr = document.getElementById('vehModalReg');
+    if (mr) mr.addEventListener('input', function(){ const p=this.selectionStart; this.value=this.value.toUpperCase(); this.setSelectionRange(p,p); });
+}, 200);
+
+document.getElementById('saveVehicleBtn')?.addEventListener('click', function () {
+    const errBox = document.getElementById('vehModalError');
+    errBox.style.display = 'none';
+    const reg = document.getElementById('vehModalReg').value.trim().toUpperCase();
+    const custSmart = customerInput._smartInput;
+    const customerId = custSmart.hiddenInput.value;
+    if (!customerId) { errBox.textContent = 'Customer required.'; errBox.style.display = 'block'; return; }
+    if (!reg) { errBox.textContent = 'Registration required.'; errBox.style.display = 'block'; return; }
+
+    const gs = (id) => { const s=document.getElementById(id)?._smartInput; return {id:s?.hiddenInput.value||'',new:s?.pendingHidden.value||''}; };
+    const brand=gs('vehModalBrand'),model=gs('vehModalModel'),type=gs('vehModalType'),color=gs('vehModalColor'),fuel=gs('vehModalFuel');
+    if(!brand.id&&!brand.new){errBox.textContent='Brand required.';errBox.style.display='block';return;}
+    if(!model.id&&!model.new){errBox.textContent='Model required.';errBox.style.display='block';return;}
+
+    this.disabled = true;
+    const fd = new FormData();
+    fd.append('customer_id',customerId); fd.append('registration_number',reg);
+    fd.append('brand_id',brand.id); fd.append('brand_new',brand.new);
+    fd.append('model_id',model.id); fd.append('model_new',model.new);
+    fd.append('vehicle_type_id',type.id); fd.append('vehicle_type_new',type.new);
+    fd.append('color_id',color.id); fd.append('color_new',color.new);
+    fd.append('fuel_type_id',fuel.id); fd.append('fuel_type_new',fuel.new);
+    fd.append('year',document.getElementById('vehModalYear').value);
+
+    fetch('/bookings/vehicles/quick-create/', {
+        method: 'POST', headers: { 'X-CSRFToken': CSRF_TOKEN }, body: fd,
+    }).then(r => r.json()).then(data => {
+        this.disabled = false;
+        if (data.success) {
+            currentSmartInput.setSelected(data.item);
+            const v = data.vehicle_details;
+            vehicleInfoLine.innerHTML = `<i class="fas fa-info-circle me-1"></i>${v.brand} ${v.model}`;
+            bootstrap.Modal.getInstance(document.getElementById('vehicleModal')).hide();
+            showToast(data.message, 'success');
+        } else { errBox.textContent = data.error; errBox.style.display = 'block'; }
+    });
+});
+
+// Form submit validation
+document.getElementById('bookingForm')?.addEventListener('submit', function (e) {
+    const missing = [];
+    const check = (id, label) => {
+        const el = document.getElementById(id);
+        if (!el) return;
+        const s = el._smartInput;
+        if (s && !s.hiddenInput.value && !s.pendingHidden.value) missing.push(label);
+    };
+    check('customerInput', 'Customer');
+    check('vehicleInput', 'Vehicle');
+    check('serviceInput', 'Service');
+    check('branchInput', 'Branch');
+
+    if (!document.getElementById('scheduledDate').value) missing.push('Date');
+    if (!document.getElementById('scheduledTime').value) missing.push('Time');
+
+    if (missing.length > 0) {
+        e.preventDefault();
+        showToast('Missing: ' + missing.join(', '), 'error');
+    }
+});
+</script>
+{% endblock %}

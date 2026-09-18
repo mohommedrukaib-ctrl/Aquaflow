@@ -1,0 +1,205 @@
+{% extends "base/base.html" %}
+{% load aquaflow_tags %}
+
+{% block title %}Audit Dashboard — AquaFlow{% endblock %}
+{% block page_icon %}fas fa-shield-alt{% endblock %}
+{% block page_title %}Audit Dashboard{% endblock %}
+{% block page_subtitle %}System activity overview{% endblock %}
+
+{% block breadcrumbs %}
+<span>/</span>
+<a href="/system/">System</a>
+<span>/</span>
+<span class="current">Audit</span>
+{% endblock %}
+
+{% block content %}
+
+<div class="row g-3 mb-4">
+    <div class="col-md-3">
+        <div class="aq-stat-card">
+            <div class="aq-stat-info">
+                <h6>Total Logs</h6>
+                <div class="aq-stat-value">{{ total_logs }}</div>
+                <div class="aq-stat-meta">All time</div>
+            </div>
+            <div class="aq-stat-icon primary"><i class="fas fa-history"></i></div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="aq-stat-card">
+            <div class="aq-stat-info">
+                <h6>Today</h6>
+                <div class="aq-stat-value">{{ today_logs }}</div>
+                <div class="aq-stat-meta">Actions today</div>
+            </div>
+            <div class="aq-stat-icon info"><i class="fas fa-calendar-day"></i></div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="aq-stat-card">
+            <div class="aq-stat-info">
+                <h6>This Week</h6>
+                <div class="aq-stat-value">{{ week_logs }}</div>
+                <div class="aq-stat-meta">Last 7 days</div>
+            </div>
+            <div class="aq-stat-icon success"><i class="fas fa-calendar-week"></i></div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="aq-stat-card">
+            <div class="aq-stat-info">
+                <h6>Active Users</h6>
+                <div class="aq-stat-value">{{ active_users }}</div>
+                <div class="aq-stat-meta">Today</div>
+            </div>
+            <div class="aq-stat-icon warning"><i class="fas fa-users"></i></div>
+        </div>
+    </div>
+</div>
+
+<div class="row g-3 mb-3">
+
+    <!-- Critical Recent Actions -->
+    <div class="col-lg-6">
+        <div class="card">
+            <div class="card-header">
+                <strong>
+                    <i class="fas fa-exclamation-triangle me-2 text-warning"></i>
+                    Recent Critical Actions
+                </strong>
+            </div>
+            <div class="card-body p-0">
+                <table class="table mb-0">
+                    <thead>
+                        <tr>
+                            <th>Time</th>
+                            <th>User</th>
+                            <th>Action</th>
+                            <th></th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for log in recent_critical %}
+                        <tr>
+                            <td><small>{{ log.timestamp|date:"d M H:i" }}</small></td>
+                            <td><small>{{ log.user_name_snapshot|default:"—" }}</small></td>
+                            <td>
+                                <span class="badge bg-danger">{{ log.action }}</span>
+                                <br><small class="text-muted">{{ log.object_repr|truncatechars:30 }}</small>
+                            </td>
+                            <td>
+                                <a href="/system/audit/logs/{{ log.pk }}/" class="btn btn-sm btn-outline-primary">
+                                    <i class="fas fa-eye"></i>
+                                </a>
+                            </td>
+                        </tr>
+                        {% empty %}
+                        <tr><td colspan="4" class="text-center text-muted py-3">No critical actions recently.</td></tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <!-- Top Users -->
+    <div class="col-lg-6">
+        <div class="card">
+            <div class="card-header">
+                <strong><i class="fas fa-users me-2 aq-text-primary"></i>Top Active Users (Week)</strong>
+            </div>
+            <div class="card-body p-0">
+                <table class="table mb-0">
+                    <thead>
+                        <tr>
+                            <th>User</th>
+                            <th class="text-end">Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for u in top_users %}
+                        <tr>
+                            <td><strong>{{ u.user__username }}</strong></td>
+                            <td class="text-end">{{ u.count }}</td>
+                        </tr>
+                        {% empty %}
+                        <tr><td colspan="2" class="text-center text-muted py-3">No activity.</td></tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+</div>
+
+<div class="row g-3">
+
+    <!-- Top Actions -->
+    <div class="col-lg-6">
+        <div class="card">
+            <div class="card-header">
+                <strong><i class="fas fa-bolt me-2 aq-text-warning"></i>Top Actions (Week)</strong>
+            </div>
+            <div class="card-body p-0">
+                <table class="table mb-0">
+                    <thead>
+                        <tr>
+                            <th>Action</th>
+                            <th class="text-end">Count</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for a in top_actions %}
+                        <tr>
+                            <td><code class="small">{{ a.action }}</code></td>
+                            <td class="text-end fw-bold">{{ a.count }}</td>
+                        </tr>
+                        {% empty %}
+                        <tr><td colspan="2" class="text-center text-muted py-3">No actions.</td></tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <!-- Top Modules -->
+    <div class="col-lg-6">
+        <div class="card">
+            <div class="card-header">
+                <strong><i class="fas fa-cubes me-2 aq-text-info"></i>Top Modules (Week)</strong>
+            </div>
+            <div class="card-body p-0">
+                <table class="table mb-0">
+                    <thead>
+                        <tr>
+                            <th>Module</th>
+                            <th class="text-end">Count</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for m in top_modules %}
+                        <tr>
+                            <td><span class="badge bg-light text-dark border">{{ m.module }}</span></td>
+                            <td class="text-end fw-bold">{{ m.count }}</td>
+                        </tr>
+                        {% empty %}
+                        <tr><td colspan="2" class="text-center text-muted py-3">No data.</td></tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+</div>
+
+<div class="mt-3 text-center">
+    <a href="/system/audit/logs/" class="btn btn-primary">
+        <i class="fas fa-list me-1"></i> View Full Audit Log
+    </a>
+</div>
+
+{% endblock %}

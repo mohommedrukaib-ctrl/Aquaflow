@@ -1,0 +1,67 @@
+<form id="addCustomerForm" novalidate>
+    {% csrf_token %}
+    <div class="row g-3">
+
+        <div class="col-md-12">
+            <label class="form-label fw-semibold text-dark">
+                Full Name <span class="text-danger">*</span>
+            </label>
+            <input type="text" name="name" class="form-control"
+                   placeholder="Customer name" required autofocus>
+        </div>
+
+        <div class="col-md-6">
+            <label class="form-label fw-semibold text-dark">
+                Phone Number <span class="text-danger">*</span>
+            </label>
+            <input type="text" name="phone" class="form-control"
+                   placeholder="Primary phone" required>
+        </div>
+
+        <div class="col-md-6">
+            <label class="form-label fw-semibold text-dark">
+                Secondary Phone
+            </label>
+            <input type="text" name="phone2" class="form-control"
+                   placeholder="Optional">
+        </div>
+
+        <div class="col-md-6">
+            <label class="form-label fw-semibold text-dark">
+                Email
+            </label>
+            <input type="email" name="email" class="form-control"
+                   placeholder="Optional">
+        </div>
+
+        <div class="col-md-6">
+            <label class="form-label fw-semibold text-dark">
+                Status
+            </label>
+            <select name="status" class="form-select">
+                <option value="active" selected>Active</option>
+                <option value="inactive">Inactive</option>
+            </select>
+        </div>
+
+        <div class="col-md-12">
+            <label class="form-label fw-semibold text-dark">
+                Address
+            </label>
+            <textarea name="address" rows="2" class="form-control"
+                      placeholder="Optional"></textarea>
+        </div>
+
+    </div>
+
+    <div id="customerFormErrors" class="alert alert-danger mt-3"
+         style="display:none;"></div>
+
+    <div class="mt-4 d-flex justify-content-end gap-2">
+        <button type="button" class="btn btn-secondary"
+                data-bs-dismiss="modal">Cancel</button>
+        <button type="submit" class="btn btn-primary">
+            <i class="fas fa-save me-1"></i> Save Customer
+        </button>
+    </div>
+</form>

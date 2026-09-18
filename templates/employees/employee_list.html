@@ -1,0 +1,296 @@
+{% extends "base/base.html" %}
+{% load aquaflow_tags %}
+
+{% block title %}Employees — AquaFlow{% endblock %}
+{% block page_icon %}fas fa-id-badge{% endblock %}
+{% block page_title %}Employees{% endblock %}
+{% block page_subtitle %}Manage staff members{% endblock %}
+
+{% block breadcrumbs %}
+<span>/</span>
+<span class="current">Employees</span>
+{% endblock %}
+
+{% block content %}
+
+<div class="card">
+    <div class="card-header d-flex justify-content-between align-items-center">
+        <strong>
+            <i class="fas fa-id-badge me-2 aq-text-primary"></i>
+            Employees <span class="badge bg-secondary ms-2">{{ total_count }}</span>
+        </strong>
+        {% if can_manage %}
+        <button class="btn btn-primary btn-sm" onclick="openAddModal()">
+            <i class="fas fa-plus me-1"></i>Add Employee
+        </button>
+        {% endif %}
+    </div>
+
+    <div class="card-body">
+
+        <form method="GET" class="row g-2 mb-3">
+            <div class="col-md-8">
+                <input type="text" name="q" class="form-control" placeholder="Search name, phone, code..." value="{{ search }}">
+            </div>
+            <div class="col-md-2">
+                <select name="status" class="form-select" onchange="this.form.submit()">
+                    <option value="active" {% if status == 'active' %}selected{% endif %}>Active</option>
+                    <option value="inactive" {% if status == 'inactive' %}selected{% endif %}>Inactive</option>
+                    <option value="on_leave" {% if status == 'on_leave' %}selected{% endif %}>On Leave</option>
+                    <option value="all" {% if status == 'all' %}selected{% endif %}>All</option>
+                </select>
+            </div>
+            <div class="col-md-2">
+                <button class="btn btn-primary w-100"><i class="fas fa-search me-1"></i>Search</button>
+            </div>
+        </form>
+
+        {% if employees %}
+        <div class="table-responsive">
+            <table class="table table-hover align-middle">
+                <thead>
+                    <tr>
+                        <th>Code</th>
+                        <th>Name</th>
+                        <th>Position</th>
+                        <th>Phone</th>
+                        <th>Branch</th>
+                        <th>Salary</th>
+                        <th>Status</th>
+                        <th>Account</th>
+                        <th class="text-end">Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for emp in employees %}
+                    <tr data-id="{{ emp.pk }}">
+                        <td><code class="small">{{ emp.employee_code }}</code></td>
+                        <td>
+                            <a href="/employees/{{ emp.pk }}/" class="fw-semibold text-decoration-none">
+                                {{ emp.full_name }}
+                            </a>
+                        </td>
+                        <td>
+                            {% if emp.position %}
+                            <span class="badge bg-light text-dark border">{{ emp.position.name }}</span>
+                            {% else %}<span class="text-muted">—</span>{% endif %}
+                        </td>
+                        <td><small>{{ emp.phone|default:"—" }}</small></td>
+                        <td><small>{{ emp.branch.name }}</small></td>
+                        <td>{% format_currency emp.salary %}</td>
+                        <td>
+                            {% if emp.status == 'active' %}
+                            <span class="badge bg-success">Active</span>
+                            {% elif emp.status == 'on_leave' %}
+                            <span class="badge bg-warning">On Leave</span>
+                            {% else %}
+                            <span class="badge bg-secondary">Inactive</span>
+                            {% endif %}
+                        </td>
+                        <td>
+                            {% if emp.user %}
+                            <span class="badge bg-info">{{ emp.user.username }}</span>
+                            {% else %}
+                            <span class="text-muted small">No login</span>
+                            {% endif %}
+                        </td>
+                        <td class="text-end">
+                            <div class="btn-group btn-group-sm">
+                                <a href="/employees/{{ emp.pk }}/" class="btn btn-outline-primary" title="View">
+                                    <i class="fas fa-eye"></i>
+                                </a>
+                                {% if can_manage %}
+                                <button class="btn btn-outline-danger" title="Delete"
+                                    onclick="deleteEmployee({{ emp.pk }}, '{{ emp.full_name|escapejs }}')">
+                                    <i class="fas fa-trash"></i>
+                                </button>
+                                {% endif %}
+                            </div>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+
+        {% if page_obj.has_other_pages %}
+        <nav class="mt-3">
+            <ul class="pagination pagination-sm justify-content-center">
+                {% if page_obj.has_previous %}
+                <li class="page-item"><a class="page-link" href="?page={{ page_obj.previous_page_number }}&q={{ search }}&status={{ status }}">Previous</a></li>
+                {% endif %}
+                <li class="page-item disabled"><span class="page-link">Page {{ page_obj.number }} of {{ page_obj.paginator.num_pages }}</span></li>
+                {% if page_obj.has_next %}
+                <li class="page-item"><a class="page-link" href="?page={{ page_obj.next_page_number }}&q={{ search }}&status={{ status }}">Next</a></li>
+                {% endif %}
+            </ul>
+        </nav>
+        {% endif %}
+
+        {% else %}
+        <div class="text-center py-5">
+            <i class="fas fa-id-badge fa-3x text-muted mb-3"></i>
+            <h5 class="text-muted">No employees found</h5>
+            {% if can_manage %}
+            <button class="btn btn-primary mt-2" onclick="openAddModal()">
+                <i class="fas fa-plus me-1"></i>Add First Employee
+            </button>
+            {% endif %}
+        </div>
+        {% endif %}
+    </div>
+</div>
+
+<!-- Add Employee Modal -->
+<div class="modal fade" id="addModal" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title"><i class="fas fa-user-plus me-2"></i>Add Employee</h5>
+                <button class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <div class="row g-3">
+                    <div class="col-md-6">
+                        <label class="form-label fw-semibold">First Name <span class="text-danger">*</span></label>
+                        <input type="text" id="empFirstName" class="form-control">
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label fw-semibold">Last Name</label>
+                        <input type="text" id="empLastName" class="form-control">
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label fw-semibold">Phone</label>
+                        <input type="text" id="empPhone" class="form-control">
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label fw-semibold">Email</label>
+                        <input type="email" id="empEmail" class="form-control">
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label fw-semibold">NIC / ID Number</label>
+                        <input type="text" id="empNIC" class="form-control">
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label fw-semibold">Position</label>
+                        <select id="empPosition" class="form-select">
+                            <option value="">— Select —</option>
+                            {% for pos in positions %}
+                            <option value="{{ pos.pk }}">{{ pos.name }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label fw-semibold">Branch</label>
+                        <select id="empBranch" class="form-select">
+                            {% for br in branches %}
+                            <option value="{{ br.pk }}" {% if br.is_default %}selected{% endif %}>{{ br.name }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label fw-semibold">Hire Date</label>
+                        <input type="date" id="empHireDate" class="form-control">
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label fw-semibold">Salary</label>
+                        <input type="number" id="empSalary" class="form-control" min="0" step="0.01" value="0">
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label fw-semibold">Commission %</label>
+                        <input type="number" id="empCommission" class="form-control" min="0" max="100" step="0.01" value="0">
+                    </div>
+                    <div class="col-md-12">
+                        <label class="form-label fw-semibold">Notes</label>
+                        <textarea id="empNotes" class="form-control" rows="2"></textarea>
+                    </div>
+                </div>
+                <div id="empError" class="alert alert-danger mt-3" style="display:none;"></div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                <button class="btn btn-primary" id="saveEmpBtn"><i class="fas fa-save me-1"></i>Save Employee</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+{% endblock %}
+
+{% block extra_js %}
+<script>
+const CSRF_TOKEN = '{{ csrf_token }}';
+
+function openAddModal() {
+    ['empFirstName', 'empLastName', 'empPhone', 'empEmail', 'empNIC', 'empNotes'].forEach(id => {
+        document.getElementById(id).value = '';
+    });
+    document.getElementById('empSalary').value = '0';
+    document.getElementById('empCommission').value = '0';
+    document.getElementById('empHireDate').value = '';
+    document.getElementById('empError').style.display = 'none';
+    new bootstrap.Modal(document.getElementById('addModal')).show();
+    setTimeout(() => document.getElementById('empFirstName').focus(), 300);
+}
+
+document.getElementById('saveEmpBtn').addEventListener('click', function () {
+    const firstName = document.getElementById('empFirstName').value.trim();
+    const err = document.getElementById('empError');
+    err.style.display = 'none';
+
+    if (!firstName) {
+        err.textContent = 'First name required.';
+        err.style.display = 'block';
+        return;
+    }
+
+    this.disabled = true;
+    const fd = new FormData();
+    fd.append('first_name', firstName);
+    fd.append('last_name', document.getElementById('empLastName').value.trim());
+    fd.append('phone', document.getElementById('empPhone').value.trim());
+    fd.append('email', document.getElementById('empEmail').value.trim());
+    fd.append('nic_number', document.getElementById('empNIC').value.trim());
+    fd.append('position_id', document.getElementById('empPosition').value);
+    fd.append('branch_id', document.getElementById('empBranch').value);
+    fd.append('hire_date', document.getElementById('empHireDate').value);
+    fd.append('salary', document.getElementById('empSalary').value);
+    fd.append('commission_rate', document.getElementById('empCommission').value);
+    fd.append('notes', document.getElementById('empNotes').value.trim());
+
+    fetch('/employees/create/', {
+        method: 'POST',
+        headers: { 'X-CSRFToken': CSRF_TOKEN },
+        body: fd,
+    })
+    .then(r => r.json())
+    .then(data => {
+        this.disabled = false;
+        if (data.success) {
+            showToast(data.message, 'success');
+            setTimeout(() => location.reload(), 800);
+        } else {
+            err.textContent = data.error;
+            err.style.display = 'block';
+        }
+    });
+});
+
+function deleteEmployee(id, name) {
+    if (!confirm(`Delete employee "${name}"?`)) return;
+    fetch(`/employees/${id}/delete/`, {
+        method: 'POST',
+        headers: { 'X-CSRFToken': CSRF_TOKEN },
+    })
+    .then(r => r.json())
+    .then(data => {
+        if (data.success) {
+            document.querySelector(`tr[data-id="${id}"]`)?.remove();
+            showToast(data.message, 'success');
+        } else {
+            showToast(data.error, 'error');
+        }
+    });
+}
+</script>
+{% endblock %}

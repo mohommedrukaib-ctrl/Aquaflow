@@ -1,0 +1,225 @@
+{% extends "base/base.html" %}
+{% load aquaflow_tags %}
+
+{% block title %}Customers — {{ AQUAFLOW_SYSTEM_NAME }}{% endblock %}
+{% block page_icon %}fas fa-users{% endblock %}
+{% block page_title %}Customers{% endblock %}
+{% block page_subtitle %}Customer records{% endblock %}
+{% block breadcrumbs %}<span>/</span><span class="current">Customers</span>{% endblock %}
+
+{% block content %}
+
+<div class="aq-panel">
+    <div class="aq-panel-head">
+        <div class="aq-chips">
+            <span class="aq-chip pri"><i class="fas fa-users"></i> Total <b>{{ total_count }}</b></span>
+        </div>
+        {% if can_create %}
+        <button class="btn btn-primary btn-sm" onclick="openAddCustomerModal()">
+            <i class="fas fa-plus me-1"></i>Add Customer
+        </button>
+        {% endif %}
+    </div>
+
+    <form method="GET" class="aq-toolbar" id="searchForm">
+        <div class="input-group" style="width:300px;">
+            <span class="input-group-text"><i class="fas fa-search"></i></span>
+            <input type="text" name="q" class="form-control" id="searchInput"
+                   placeholder="Name, phone, email, code…" value="{{ search }}">
+            {% if search %}<a href="/customers/" class="btn btn-outline-secondary btn-sm"><i class="fas fa-times"></i></a>{% endif %}
+        </div>
+        <select name="status" class="form-select" style="width:130px;" onchange="this.form.submit()">
+            <option value="all" {% if status == 'all' %}selected{% endif %}>All Status</option>
+            <option value="active" {% if status == 'active' %}selected{% endif %}>Active</option>
+            <option value="inactive" {% if status == 'inactive' %}selected{% endif %}>Inactive</option>
+        </select>
+        <button class="btn btn-outline-primary btn-sm"><i class="fas fa-filter me-1"></i>Filter</button>
+    </form>
+
+    <div class="aq-panel-body flush">
+        {% if customers %}
+        <div class="aq-table-scroll">
+            <table class="table table-hover">
+                <thead>
+                    <tr>
+                        <th>Code</th>
+                        <th>Name</th>
+                        <th>Phone</th>
+                        <th>Email</th>
+                        <th class="num">Vehicles</th>
+                        <th class="num">Points</th>
+                        <th>Status</th>
+                        <th class="nowrap">Joined</th>
+                        <th style="width:80px;"></th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for c in customers %}
+                    <tr>
+                        <td class="nowrap"><code>{{ c.customer_code }}</code></td>
+                        <td><a href="{% url 'customer_detail' c.pk %}" class="fw-semibold">{{ c.name }}</a></td>
+                        <td class="nowrap">{% if c.phone %}<a href="tel:{{ c.phone }}">{{ c.phone }}</a>{% else %}<span class="text-muted">—</span>{% endif %}</td>
+                        <td>{{ c.email|default:"—"|truncatechars:24 }}</td>
+                        <td class="num">{{ c.vehicle_count }}</td>
+                        <td class="num">{{ c.loyalty_points }}</td>
+                        <td><span class="{{ c.status|status_badge }}">{{ c.get_status_display }}</span></td>
+                        <td class="nowrap text-muted">{{ c.created_at|date:"d M Y" }}</td>
+                        <td class="nowrap text-end">
+                            <a href="{% url 'customer_detail' c.pk %}" class="btn btn-sm btn-outline-primary btn-icon" title="View"><i class="fas fa-eye"></i></a>
+                            {% if can_edit %}<a href="{% url 'customer_edit' c.pk %}" class="btn btn-sm btn-outline-secondary btn-icon" title="Edit"><i class="fas fa-pen"></i></a>{% endif %}
+                            {% if can_delete %}<button class="btn btn-sm btn-outline-danger btn-icon" title="Delete"
+                                onclick="confirmDelete({{ c.pk }}, '{{ c.name|escapejs }}')"><i class="fas fa-trash"></i></button>{% endif %}
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+
+        <div class="aq-pagebar">
+            <span>{{ page_obj.paginator.count }} record{{ page_obj.paginator.count|pluralize }} · Page {{ page_obj.number }}/{{ page_obj.paginator.num_pages }}</span>
+            {% if page_obj.has_other_pages %}
+            <ul class="pagination pagination-sm mb-0">
+                {% if page_obj.has_previous %}<li class="page-item"><a class="page-link" href="?page={{ page_obj.previous_page_number }}&q={{ search }}&status={{ status }}">‹</a></li>{% endif %}
+                <li class="page-item disabled"><span class="page-link">{{ page_obj.number }}</span></li>
+                {% if page_obj.has_next %}<li class="page-item"><a class="page-link" href="?page={{ page_obj.next_page_number }}&q={{ search }}&status={{ status }}">›</a></li>{% endif %}
+            </ul>
+            {% endif %}
+        </div>
+
+        {% else %}
+        <div class="aq-empty">
+            <i class="fas fa-users"></i>
+            <h5>No customers found</h5>
+            {% if search %}<p>No results for "<strong>{{ search }}</strong>"</p>
+            <a href="/customers/" class="btn btn-sm btn-outline-secondary">Clear Search</a>
+            {% elif can_create %}<button class="btn btn-sm btn-primary" onclick="openAddCustomerModal()"><i class="fas fa-plus me-1"></i>Add First Customer</button>{% endif %}
+        </div>
+        {% endif %}
+    </div>
+</div>
+
+<!-- Add Modal -->
+<div class="modal fade" id="addCustomerModal" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title"><i class="fas fa-user-plus me-2"></i>Add New Customer</h5>
+                <button class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body" id="modalBody">
+                {% include "customers/partials/customer_form_modal.html" %}
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Delete Modal -->
+<div class="modal fade" id="deleteModal" tabindex="-1">
+    <div class="modal-dialog modal-sm">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title text-danger"><i class="fas fa-triangle-exclamation me-2"></i>Confirm Delete</h5>
+                <button class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <p class="mb-1">Delete <strong id="deleteCustomerName"></strong>?</p>
+                <p class="text-muted mb-0" style="font-size:10.5px;">Moved to Trash. Restorable by Super Admin.</p>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-sm btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                <button class="btn btn-sm btn-danger" id="confirmDeleteBtn"><i class="fas fa-trash me-1"></i>Delete</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+{% endblock %}
+
+{% block extra_js %}
+<script>
+const CSRF_TOKEN = '{{ csrf_token }}';
+
+function openAddCustomerModal() {
+    new bootstrap.Modal(document.getElementById('addCustomerModal')).show();
+}
+
+document.addEventListener('submit', function (e) {
+    if (e.target.id === 'addCustomerForm') { e.preventDefault(); submitCustomerForm(e.target); }
+});
+
+function submitCustomerForm(form) {
+    const btn = form.querySelector('[type=submit]');
+    btn.disabled = true;
+    btn.innerHTML = '<i class="fas fa-spinner fa-spin me-1"></i>Saving…';
+    fetch('{% url "customer_create" %}', {
+        method: 'POST',
+        headers: { 'X-Requested-With': 'XMLHttpRequest', 'X-CSRFToken': CSRF_TOKEN },
+        body: new FormData(form),
+    }).then(r => r.json()).then(data => {
+        if (data.success) {
+            bootstrap.Modal.getInstance(document.getElementById('addCustomerModal')).hide();
+            showToast(data.message, 'success');
+            setTimeout(() => location.reload(), 800);
+        } else {
+            btn.disabled = false;
+            btn.innerHTML = '<i class="fas fa-save me-1"></i>Save Customer';
+            if (data.errors) showFormErrors(form, data.errors);
+            else showToast(data.error || 'Failed to save.', 'error');
+        }
+    }).catch(() => {
+        btn.disabled = false;
+        btn.innerHTML = '<i class="fas fa-save me-1"></i>Save Customer';
+        showToast('Network error.', 'error');
+    });
+}
+
+function showFormErrors(form, errors) {
+    form.querySelectorAll('.is-invalid').forEach(el => el.classList.remove('is-invalid'));
+    form.querySelectorAll('.invalid-feedback').forEach(el => el.remove());
+    for (const [field, msgs] of Object.entries(errors)) {
+        const input = form.querySelector(`[name=${field}]`);
+        if (input) {
+            input.classList.add('is-invalid');
+            const d = document.createElement('div');
+            d.className = 'invalid-feedback';
+            d.textContent = msgs.join(' ');
+            input.parentNode.appendChild(d);
+        }
+    }
+}
+
+let deleteCustomerId = null;
+function confirmDelete(id, name) {
+    deleteCustomerId = id;
+    document.getElementById('deleteCustomerName').textContent = name;
+    new bootstrap.Modal(document.getElementById('deleteModal')).show();
+}
+
+document.getElementById('confirmDeleteBtn').addEventListener('click', function () {
+    if (!deleteCustomerId) return;
+    this.disabled = true;
+    this.innerHTML = '<i class="fas fa-spinner fa-spin"></i>';
+    fetch(`/customers/${deleteCustomerId}/delete/`, {
+        method: 'POST',
+        headers: { 'X-CSRFToken': CSRF_TOKEN, 'X-Requested-With': 'XMLHttpRequest' },
+    }).then(r => r.json()).then(data => {
+        if (data.success) {
+            bootstrap.Modal.getInstance(document.getElementById('deleteModal')).hide();
+            showToast(data.message, 'success');
+            setTimeout(() => location.reload(), 800);
+        } else {
+            showToast(data.error, 'error');
+            this.disabled = false;
+            this.innerHTML = '<i class="fas fa-trash me-1"></i>Delete';
+        }
+    }).catch(() => { showToast('Network error.', 'error'); this.disabled = false; });
+});
+
+let searchTimer = null;
+document.getElementById('searchInput').addEventListener('input', function () {
+    clearTimeout(searchTimer);
+    searchTimer = setTimeout(() => document.getElementById('searchForm').submit(), 450);
+});
+</script>
+{% endblock %}

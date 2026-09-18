@@ -1,0 +1,126 @@
+{% extends "base/base.html" %}
+{% load aquaflow_tags %}
+
+{% block title %}{{ product.name }} — AquaFlow{% endblock %}
+{% block page_icon %}fas fa-box{% endblock %}
+{% block page_title %}{{ product.name }}{% endblock %}
+{% block page_subtitle %}Product details and stock history{% endblock %}
+
+{% block breadcrumbs %}
+<span>/</span>
+<a href="/inventory/">Inventory</a>
+<span>/</span>
+<span class="current">{{ product.name }}</span>
+{% endblock %}
+
+{% block content %}
+<div class="row g-3">
+
+    <div class="col-lg-4">
+        <div class="card mb-3">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <strong><i class="fas fa-box me-2 aq-text-primary"></i>Product</strong>
+                {% if is_low %}
+                <span class="badge bg-danger">LOW STOCK</span>
+                {% endif %}
+            </div>
+            <div class="card-body">
+                <table class="table table-borderless mb-0">
+                    <tr><td class="text-muted">SKU</td><td><code>{{ product.sku }}</code></td></tr>
+                    <tr><td class="text-muted">Category</td><td>{{ product.category.name|default:"—" }}</td></tr>
+                    <tr><td class="text-muted">Unit</td><td>{{ product.unit|default:"—" }}</td></tr>
+                    <tr><td class="text-muted">Cost Price</td><td>{% format_currency product.cost_price %}</td></tr>
+                    <tr><td class="text-muted">Selling Price</td><td class="fw-bold aq-text-success">{% format_currency product.selling_price %}</td></tr>
+                    <tr><td class="text-muted">Reorder Level</td><td>{{ product.reorder_level|floatformat:2 }}</td></tr>
+                    <tr><td class="text-muted">Total Stock</td><td class="fw-bold" style="font-size:18px;">{{ total_stock|floatformat:2 }}</td></tr>
+                </table>
+            </div>
+        </div>
+
+        <div class="card">
+            <div class="card-header">
+                <strong><i class="fas fa-warehouse me-2"></i>Stock by Branch</strong>
+            </div>
+            <div class="card-body p-0">
+                <table class="table mb-0">
+                    <thead>
+                        <tr><th>Branch</th><th class="text-end">Stock</th><th></th></tr>
+                    </thead>
+                    <tbody>
+                        {% for s in stock_by_branch %}
+                        <tr>
+                            <td>{{ s.branch.name }}</td>
+                            <td class="text-end fw-bold">{{ s.quantity|floatformat:2 }}</td>
+                            <td>
+                                <small class="text-muted">{{ s.last_updated|date:"d M H:i" }}</small>
+                            </td>
+                        </tr>
+                        {% empty %}
+                        <tr><td colspan="3" class="text-center text-muted py-3">No stock recorded.</td></tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-lg-8">
+        <div class="card">
+            <div class="card-header">
+                <strong><i class="fas fa-history me-2 aq-text-primary"></i>Recent Stock Movements</strong>
+            </div>
+            <div class="card-body p-0">
+                <table class="table table-hover mb-0">
+                    <thead>
+                        <tr>
+                            <th>Date</th>
+                            <th>Type</th>
+                            <th class="text-end">Change</th>
+                            <th class="text-end">Before</th>
+                            <th class="text-end">After</th>
+                            <th>User</th>
+                            <th>Notes</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for tx in transactions %}
+                        <tr>
+                            <td><small>{{ tx.created_at|date:"d M Y H:i" }}</small></td>
+                            <td>
+                                {% if tx.transaction_type == 'purchase' %}
+                                <span class="badge bg-success">Purchase</span>
+                                {% elif tx.transaction_type == 'sale' %}
+                                <span class="badge bg-danger">Sale</span>
+                                {% elif tx.transaction_type == 'adjustment' %}
+                                <span class="badge bg-warning">Adjustment</span>
+                                {% elif tx.transaction_type == 'initial' %}
+                                <span class="badge bg-info">Initial</span>
+                                {% else %}
+                                <span class="badge bg-secondary">{{ tx.get_transaction_type_display }}</span>
+                                {% endif %}
+                            </td>
+                            <td class="text-end fw-bold {% if tx.quantity < 0 %}text-danger{% else %}text-success{% endif %}">
+                                {% if tx.quantity > 0 %}+{% endif %}{{ tx.quantity|floatformat:2 }}
+                            </td>
+                            <td class="text-end"><small>{{ tx.quantity_before|floatformat:2 }}</small></td>
+                            <td class="text-end fw-semibold">{{ tx.quantity_after|floatformat:2 }}</td>
+                            <td><small>{{ tx.created_by.username|default:"—" }}</small></td>
+                            <td><small>{{ tx.notes|truncatechars:40 }}</small></td>
+                        </tr>
+                        {% empty %}
+                        <tr><td colspan="7" class="text-center text-muted py-4">No transactions yet.</td></tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <div class="mt-3">
+            <a href="/inventory/" class="btn btn-outline-secondary">
+                <i class="fas fa-arrow-left me-1"></i>Back to Inventory
+            </a>
+        </div>
+    </div>
+
+</div>
+{% endblock %}

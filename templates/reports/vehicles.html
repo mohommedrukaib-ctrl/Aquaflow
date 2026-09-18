@@ -1,0 +1,70 @@
+{% extends "base/base.html" %}
+{% load aquaflow_tags %}
+
+{% block title %}Vehicle Report — AquaFlow{% endblock %}
+{% block page_icon %}fas fa-car{% endblock %}
+{% block page_title %}Most Washed Vehicles{% endblock %}
+
+{% block breadcrumbs %}
+<span>/</span>
+<a href="/reports/">Reports</a>
+<span>/</span>
+<span class="current">Vehicles</span>
+{% endblock %}
+
+{% block content %}
+
+<form method="get" class="card mb-3">
+    <div class="card-body">
+        <div class="row g-2">
+            <div class="col-md-4">
+                <label class="form-label fw-semibold">From</label>
+                <input type="date" name="date_from" class="form-control" value="{{ date_from }}">
+            </div>
+            <div class="col-md-4">
+                <label class="form-label fw-semibold">To</label>
+                <input type="date" name="date_to" class="form-control" value="{{ date_to }}">
+            </div>
+            <div class="col-md-4 d-flex align-items-end">
+                <button class="btn btn-primary me-2"><i class="fas fa-filter me-1"></i>Filter</button>
+                <a href="?date_from={{ date_from }}&date_to={{ date_to }}&export=csv" class="btn btn-outline-success">
+                    <i class="fas fa-download me-1"></i>CSV
+                </a>
+            </div>
+        </div>
+    </div>
+</form>
+
+<div class="card">
+    <div class="card-header"><strong>Top 100 Vehicles</strong></div>
+    <div class="card-body">
+        <table class="table table-hover">
+            <thead>
+                <tr>
+                    <th>#</th>
+                    <th>Registration</th>
+                    <th>Vehicle</th>
+                    <th>Owner</th>
+                    <th class="text-end">Washes</th>
+                    <th class="text-end">Total Spent</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for v in vehicles %}
+                <tr>
+                    <td>{{ forloop.counter }}</td>
+                    <td><code class="aq-text-primary fw-bold">{{ v.registration_number }}</code></td>
+                    <td>{{ v.brand.name }} {{ v.model.name }}</td>
+                    <td>{{ v.customer.name }}</td>
+                    <td class="text-end">{{ v.wash_count }}</td>
+                    <td class="text-end fw-bold aq-text-success">{% format_currency v.total_spent %}</td>
+                </tr>
+                {% empty %}
+                <tr><td colspan="6" class="text-center text-muted py-4">No vehicle activity.</td></tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+
+{% endblock %}

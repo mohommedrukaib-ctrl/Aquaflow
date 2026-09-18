@@ -1,0 +1,76 @@
+{% extends "base/base.html" %}
+{% load aquaflow_tags %}
+
+{% block title %}Cashier Report — AquaFlow{% endblock %}
+{% block page_icon %}fas fa-user-tie{% endblock %}
+{% block page_title %}Cashier Performance{% endblock %}
+
+{% block breadcrumbs %}
+<span>/</span>
+<a href="/reports/">Reports</a>
+<span>/</span>
+<span class="current">Cashiers</span>
+{% endblock %}
+
+{% block content %}
+
+<form method="get" class="card mb-3">
+    <div class="card-body">
+        <div class="row g-2">
+            <div class="col-md-4">
+                <label class="form-label fw-semibold">From</label>
+                <input type="date" name="date_from" class="form-control" value="{{ date_from }}">
+            </div>
+            <div class="col-md-4">
+                <label class="form-label fw-semibold">To</label>
+                <input type="date" name="date_to" class="form-control" value="{{ date_to }}">
+            </div>
+            <div class="col-md-4 d-flex align-items-end">
+                <button class="btn btn-primary me-2"><i class="fas fa-filter me-1"></i>Filter</button>
+                <a href="?date_from={{ date_from }}&date_to={{ date_to }}&export=csv" class="btn btn-outline-success">
+                    <i class="fas fa-download me-1"></i>CSV
+                </a>
+            </div>
+        </div>
+    </div>
+</form>
+
+<div class="card">
+    <div class="card-header"><strong>Sales by Cashier</strong></div>
+    <div class="card-body">
+        <table class="table table-hover">
+            <thead>
+                <tr>
+                    <th>Rank</th>
+                    <th>Cashier</th>
+                    <th class="text-end">Orders</th>
+                    <th class="text-end">Total Sales</th>
+                    <th class="text-end">Avg Order</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for c in cashiers %}
+                <tr>
+                    <td>
+                        {% if forloop.counter == 1 %}<span class="badge bg-warning">🏆 #{{ forloop.counter }}</span>
+                        {% else %}#{{ forloop.counter }}{% endif %}
+                    </td>
+                    <td>
+                        <strong>{{ c.created_by__username }}</strong>
+                        {% if c.created_by__first_name %}
+                        <br><small class="text-muted">{{ c.created_by__first_name }} {{ c.created_by__last_name }}</small>
+                        {% endif %}
+                    </td>
+                    <td class="text-end">{{ c.order_count }}</td>
+                    <td class="text-end fw-bold aq-text-success">{% format_currency c.total_sales %}</td>
+                    <td class="text-end">{% format_currency c.avg_order %}</td>
+                </tr>
+                {% empty %}
+                <tr><td colspan="5" class="text-center text-muted py-4">No sales data.</td></tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+
+{% endblock %}

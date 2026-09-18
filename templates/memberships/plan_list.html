@@ -1,0 +1,212 @@
+{% extends "base/base.html" %}
+{% load aquaflow_tags %}
+
+{% block title %}Membership Plans — AquaFlow{% endblock %}
+{% block page_icon %}fas fa-award{% endblock %}
+{% block page_title %}Membership Plans{% endblock %}
+{% block page_subtitle %}Customer loyalty packages{% endblock %}
+
+{% block breadcrumbs %}
+<span>/</span>
+<a href="/memberships/">Memberships</a>
+<span>/</span>
+<span class="current">Plans</span>
+{% endblock %}
+
+{% block content %}
+<div class="card">
+    <div class="card-header d-flex justify-content-between align-items-center">
+        <strong><i class="fas fa-award me-2 aq-text-primary"></i>Available Plans</strong>
+        {% if can_manage %}
+        <button class="btn btn-primary btn-sm" onclick="openAddModal()">
+            <i class="fas fa-plus me-1"></i>Add Plan
+        </button>
+        {% endif %}
+    </div>
+    <div class="card-body">
+
+        {% if plans %}
+        <div class="row g-3">
+            {% for plan in plans %}
+            <div class="col-md-4">
+                <div class="card h-100" style="border-top: 4px solid {{ plan.color }};">
+                    <div class="card-body">
+                        <div class="d-flex justify-content-between align-items-start mb-3">
+                            <h5 class="mb-0">{{ plan.name }}</h5>
+                            {% if plan.is_active %}
+                            <span class="badge bg-success">Active</span>
+                            {% else %}
+                            <span class="badge bg-secondary">Inactive</span>
+                            {% endif %}
+                        </div>
+
+                        <div class="mb-3">
+                            <div style="font-size: 28px; font-weight: 700; color: {{ plan.color }};">
+                                {% format_currency plan.price %}
+                            </div>
+                        </div>
+
+                        <table class="table table-borderless table-sm mb-3">
+                            <tr>
+                                <td class="text-muted">Washes</td>
+                                <td class="fw-bold">{% if plan.wash_count == 0 %}Unlimited{% else %}{{ plan.wash_count }}{% endif %}</td>
+                            </tr>
+                            <tr>
+                                <td class="text-muted">Duration</td>
+                                <td class="fw-bold">{{ plan.duration_days }} days</td>
+                            </tr>
+                            <tr>
+                                <td class="text-muted">Discount</td>
+                                <td class="fw-bold">{{ plan.discount_percentage }}%</td>
+                            </tr>
+                            <tr>
+                                <td class="text-muted">Members</td>
+                                <td class="fw-bold">{{ plan.memberships.count }}</td>
+                            </tr>
+                        </table>
+
+                        {% if plan.description %}
+                        <p class="small text-muted">{{ plan.description }}</p>
+                        {% endif %}
+
+                        {% if can_manage %}
+                        <button class="btn btn-outline-danger btn-sm w-100" onclick="deletePlan({{ plan.pk }}, '{{ plan.name|escapejs }}')">
+                            <i class="fas fa-trash me-1"></i>Delete
+                        </button>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+        {% else %}
+        <div class="text-center py-5">
+            <i class="fas fa-award fa-3x text-muted mb-3"></i>
+            <h5 class="text-muted">No plans yet</h5>
+            {% if can_manage %}
+            <button class="btn btn-primary mt-2" onclick="openAddModal()">
+                <i class="fas fa-plus me-1"></i>Create First Plan
+            </button>
+            {% endif %}
+        </div>
+        {% endif %}
+    </div>
+</div>
+
+<!-- Add Plan Modal -->
+<div class="modal fade" id="addModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title"><i class="fas fa-award me-2"></i>New Plan</h5>
+                <button class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <div class="mb-3">
+                    <label class="form-label fw-semibold">Plan Name <span class="text-danger">*</span></label>
+                    <input type="text" id="planName" class="form-control" placeholder="e.g. Silver, Gold, Platinum">
+                </div>
+                <div class="row g-2 mb-3">
+                    <div class="col-md-6">
+                        <label class="form-label fw-semibold">Price <span class="text-danger">*</span></label>
+                        <input type="number" id="planPrice" class="form-control" min="0" step="0.01">
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label fw-semibold">Wash Count</label>
+                        <input type="number" id="planWashes" class="form-control" min="0" placeholder="0 = unlimited">
+                    </div>
+                </div>
+                <div class="row g-2 mb-3">
+                    <div class="col-md-6">
+                        <label class="form-label fw-semibold">Duration (days)</label>
+                        <input type="number" id="planDuration" class="form-control" min="1" value="365">
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label fw-semibold">Discount %</label>
+                        <input type="number" id="planDiscount" class="form-control" min="0" max="100" step="0.01" value="0">
+                    </div>
+                </div>
+                <div class="mb-3">
+                    <label class="form-label fw-semibold">Color</label>
+                    <input type="color" id="planColor" class="form-control form-control-color" value="#04a9f5">
+                </div>
+                <div id="planError" class="alert alert-danger" style="display:none;"></div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                <button class="btn btn-primary" id="savePlanBtn"><i class="fas fa-save me-1"></i>Save</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+{% endblock %}
+
+{% block extra_js %}
+<script>
+const CSRF_TOKEN = '{{ csrf_token }}';
+
+function openAddModal() {
+    ['planName', 'planPrice', 'planWashes'].forEach(id => document.getElementById(id).value = '');
+    document.getElementById('planDuration').value = '365';
+    document.getElementById('planDiscount').value = '0';
+    document.getElementById('planColor').value = '#04a9f5';
+    document.getElementById('planError').style.display = 'none';
+    new bootstrap.Modal(document.getElementById('addModal')).show();
+    setTimeout(() => document.getElementById('planName').focus(), 300);
+}
+
+document.getElementById('savePlanBtn').addEventListener('click', function () {
+    const name = document.getElementById('planName').value.trim();
+    const price = document.getElementById('planPrice').value.trim();
+    const err = document.getElementById('planError');
+    err.style.display = 'none';
+
+    if (!name) { err.textContent = 'Name required.'; err.style.display = 'block'; return; }
+    if (!price) { err.textContent = 'Price required.'; err.style.display = 'block'; return; }
+
+    this.disabled = true;
+    const fd = new FormData();
+    fd.append('name', name);
+    fd.append('price', price);
+    fd.append('wash_count', document.getElementById('planWashes').value || '0');
+    fd.append('duration_days', document.getElementById('planDuration').value || '365');
+    fd.append('discount_percentage', document.getElementById('planDiscount').value || '0');
+    fd.append('color', document.getElementById('planColor').value);
+
+    fetch('/memberships/plans/create/', {
+        method: 'POST',
+        headers: { 'X-CSRFToken': CSRF_TOKEN },
+        body: fd,
+    })
+    .then(r => r.json())
+    .then(data => {
+        this.disabled = false;
+        if (data.success) {
+            showToast(data.message, 'success');
+            setTimeout(() => location.reload(), 600);
+        } else {
+            err.textContent = data.error;
+            err.style.display = 'block';
+        }
+    });
+});
+
+function deletePlan(id, name) {
+    if (!confirm(`Delete "${name}" plan?`)) return;
+    fetch(`/memberships/plans/${id}/delete/`, {
+        method: 'POST',
+        headers: { 'X-CSRFToken': CSRF_TOKEN },
+    })
+    .then(r => r.json())
+    .then(data => {
+        if (data.success) {
+            showToast(data.message, 'success');
+            setTimeout(() => location.reload(), 600);
+        } else {
+            showToast(data.error, 'error');
+        }
+    });
+}
+</script>
+{% endblock %}

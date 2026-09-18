@@ -1,0 +1,339 @@
+{% extends "base/base.html" %}
+{% load aquaflow_tags %}
+
+{% block title %}{{ booking.booking_number }} — AquaFlow{% endblock %}
+{% block page_icon %}fas fa-calendar-check{% endblock %}
+{% block page_title %}{{ booking.booking_number }}{% endblock %}
+{% block page_subtitle %}Booking details{% endblock %}
+
+{% block breadcrumbs %}
+<span>/</span>
+<a href="/bookings/">Bookings</a>
+<span>/</span>
+<span class="current">{{ booking.booking_number }}</span>
+{% endblock %}
+
+{% block content %}
+<div class="row g-3">
+
+    <!-- Booking Details -->
+    <div class="col-lg-8">
+        <div class="card">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <strong><i class="fas fa-calendar-check me-2 aq-text-primary"></i>Booking Details</strong>
+                <span class="badge bg-info fs-6">{{ booking.get_status_display }}</span>
+            </div>
+
+            <div class="card-body">
+                <table class="table table-borderless mb-0">
+                    <tr>
+                        <td class="text-muted" style="width:30%;">Booking Number</td>
+                        <td><strong class="aq-text-primary">{{ booking.booking_number }}</strong></td>
+                    </tr>
+                    <tr>
+                        <td class="text-muted">Customer</td>
+                        <td>
+                            <a href="/customers/{{ booking.customer.pk }}/" class="fw-semibold text-decoration-none">
+                                {{ booking.customer.name }}
+                            </a>
+                            <br>
+                            <small class="text-muted">{{ booking.customer.customer_code }}</small>
+                        </td>
+                    </tr>
+                    <tr>
+                        <td class="text-muted">Phone</td>
+                        <td>
+                            {% if booking.customer.phone %}
+                            <a href="tel:{{ booking.customer.phone }}">{{ booking.customer.phone }}</a>
+                            {% else %}—{% endif %}
+                        </td>
+                    </tr>
+                    <tr>
+                        <td class="text-muted">Vehicle</td>
+                        <td>
+                            <a href="/vehicles/{{ booking.vehicle.pk }}/" class="text-decoration-none">
+                                <code class="aq-text-primary fw-bold">{{ booking.vehicle.registration_number }}</code>
+                            </a>
+                            —
+                            {{ booking.vehicle.brand.name }} {{ booking.vehicle.model.name }}
+                            {% if booking.vehicle.year %}({{ booking.vehicle.year }}){% endif %}
+                        </td>
+                    </tr>
+                    <tr>
+                        <td class="text-muted">Service</td>
+                        <td>
+                            <strong>{{ booking.service.name }}</strong>
+                            <br>
+                            <small class="text-muted">
+                                <i class="far fa-clock me-1"></i>
+                                {{ booking.duration_minutes }} min
+                            </small>
+                        </td>
+                    </tr>
+                    <tr>
+                        <td class="text-muted">Branch</td>
+                        <td>{{ booking.branch.name }}</td>
+                    </tr>
+                    <tr>
+                        <td class="text-muted">Scheduled</td>
+                        <td>
+                            <strong>{{ booking.scheduled_date|date:"d M Y" }}</strong>
+                            at
+                            <strong>{{ booking.scheduled_time|time:"H:i" }}</strong>
+                        </td>
+                    </tr>
+                    <tr>
+                        <td class="text-muted">Wash Bay</td>
+                        <td>
+                            {% if booking.wash_bay %}
+                            {{ booking.wash_bay.name }}
+                            {% else %}
+                            <span class="text-muted">Not assigned</span>
+                            {% endif %}
+                        </td>
+                    </tr>
+                    <tr>
+                        <td class="text-muted">Employee</td>
+                        <td>
+                            {% if booking.assigned_employee %}
+                            <i class="fas fa-user-circle me-1"></i>
+                            {{ booking.assigned_employee.get_full_name|default:booking.assigned_employee.username }}
+                            {% else %}
+                            <span class="text-muted">Not assigned</span>
+                            {% endif %}
+                        </td>
+                    </tr>
+                    <tr>
+                        <td class="text-muted">Created By</td>
+                        <td>
+                            {{ booking.created_by.username }}
+                            <br>
+                            <small class="text-muted">{{ booking.created_at|date:"d M Y H:i" }}</small>
+                        </td>
+                    </tr>
+                </table>
+
+                {% if booking.notes %}
+                <div class="alert alert-secondary mt-3 mb-0">
+                    <strong><i class="fas fa-sticky-note me-1"></i> Notes:</strong>
+                    <div class="mt-1">{{ booking.notes|linebreaksbr }}</div>
+                </div>
+                {% endif %}
+
+                {% if booking.cancellation_reason %}
+                <div class="alert alert-warning mt-3 mb-0">
+                    <strong><i class="fas fa-ban me-1"></i> Cancellation Reason:</strong>
+                    <div class="mt-1">{{ booking.cancellation_reason }}</div>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+
+    <!-- Actions -->
+    <div class="col-lg-4">
+        <div class="card mb-3">
+            <div class="card-header">
+                <strong><i class="fas fa-bolt me-2 aq-text-warning"></i>Actions</strong>
+            </div>
+
+            <div class="card-body d-grid gap-2">
+
+                <!-- Invoice this Booking -->
+                {% if booking.status != 'completed' and booking.status != 'cancelled' %}
+                <a href="/pos/?booking={{ booking.pk }}" class="btn btn-success">
+                    <i class="fas fa-cash-register me-1"></i>
+                    Invoice This Booking
+                </a>
+                <hr class="my-2">
+                {% endif %}
+
+                {% if can_manage %}
+
+                <!-- Edit -->
+                <a href="{% url 'booking_edit' booking.pk %}" class="btn btn-primary">
+                    <i class="fas fa-edit me-1"></i>
+                    Edit Booking
+                </a>
+
+                <!-- Status Change Buttons -->
+                {% if booking.status == 'pending' %}
+                <button class="btn btn-outline-success" onclick="changeStatus('confirmed')">
+                    <i class="fas fa-check me-1"></i>
+                    Confirm Booking
+                </button>
+                {% endif %}
+
+                {% if booking.status == 'confirmed' %}
+                <button class="btn btn-outline-warning" onclick="changeStatus('arrived')">
+                    <i class="fas fa-user-check me-1"></i>
+                    Mark Arrived
+                </button>
+                {% endif %}
+
+                {% if booking.status == 'arrived' %}
+                <button class="btn btn-outline-success" onclick="changeStatus('completed')">
+                    <i class="fas fa-flag-checkered me-1"></i>
+                    Mark Completed
+                </button>
+                {% endif %}
+
+                {% if booking.status != 'completed' and booking.status != 'cancelled' %}
+                <button class="btn btn-outline-danger" onclick="cancelBooking()">
+                    <i class="fas fa-ban me-1"></i>
+                    Cancel Booking
+                </button>
+
+                {% if booking.status == 'confirmed' or booking.status == 'pending' %}
+                <button class="btn btn-outline-secondary" onclick="changeStatus('no_show')">
+                    <i class="fas fa-times me-1"></i>
+                    Mark No-Show
+                </button>
+                {% endif %}
+                {% endif %}
+
+                {% endif %}
+
+                <hr class="my-2">
+
+                <a href="/bookings/" class="btn btn-outline-secondary">
+                    <i class="fas fa-arrow-left me-1"></i>
+                    Back to Bookings
+                </a>
+
+            </div>
+        </div>
+
+        <!-- Timeline / Info -->
+        <div class="card">
+            <div class="card-header">
+                <strong><i class="fas fa-history me-2 aq-text-primary"></i>Timeline</strong>
+            </div>
+            <div class="card-body">
+                <ul class="list-unstyled mb-0" style="font-size:13px;">
+                    <li class="mb-2">
+                        <i class="fas fa-plus-circle text-success me-2"></i>
+                        <strong>Created</strong>
+                        <br>
+                        <small class="text-muted ms-4">
+                            {{ booking.created_at|date:"d M Y H:i" }}
+                        </small>
+                    </li>
+                    {% if booking.updated_at != booking.created_at %}
+                    <li>
+                        <i class="fas fa-edit text-info me-2"></i>
+                        <strong>Last Updated</strong>
+                        <br>
+                        <small class="text-muted ms-4">
+                            {{ booking.updated_at|date:"d M Y H:i" }}
+                        </small>
+                    </li>
+                    {% endif %}
+                </ul>
+            </div>
+        </div>
+    </div>
+
+</div>
+
+<!-- Cancel Modal -->
+<div class="modal fade" id="cancelModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header bg-danger text-white">
+                <h5 class="modal-title">
+                    <i class="fas fa-ban me-2"></i>
+                    Cancel Booking
+                </h5>
+                <button class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <p>Are you sure you want to cancel booking <strong>{{ booking.booking_number }}</strong>?</p>
+                <div class="mb-3">
+                    <label class="form-label fw-semibold">Cancellation Reason</label>
+                    <textarea id="cancelReason" class="form-control" rows="3" placeholder="Why is this being cancelled?"></textarea>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-secondary" data-bs-dismiss="modal">Keep Booking</button>
+                <button class="btn btn-danger" id="confirmCancelBtn">
+                    <i class="fas fa-ban me-1"></i>
+                    Cancel Booking
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+{% endblock %}
+
+{% block extra_js %}
+<script>
+const CSRF_TOKEN = '{{ csrf_token }}';
+
+function changeStatus(status) {
+    const data = new FormData();
+    data.append('status', status);
+
+    fetch("{% url 'booking_status_update' booking.pk %}", {
+        method: 'POST',
+        headers: {
+            'X-CSRFToken': CSRF_TOKEN,
+        },
+        body: data,
+    })
+    .then(response => response.json())
+    .then(result => {
+        if (result.success) {
+            showToast('Booking status updated to ' + result.status_label, 'success');
+            setTimeout(() => location.reload(), 800);
+        } else {
+            showToast(result.error || 'Unable to update status.', 'error');
+        }
+    })
+    .catch(() => {
+        showToast('Network error.', 'error');
+    });
+}
+
+function cancelBooking() {
+    document.getElementById('cancelReason').value = '';
+    new bootstrap.Modal(document.getElementById('cancelModal')).show();
+}
+
+document.getElementById('confirmCancelBtn').addEventListener('click', function () {
+    const reason = document.getElementById('cancelReason').value.trim();
+
+    const data = new FormData();
+    data.append('status', 'cancelled');
+    data.append('reason', reason);
+
+    this.disabled = true;
+    this.innerHTML = '<i class="fas fa-spinner fa-spin me-1"></i> Cancelling...';
+
+    fetch("{% url 'booking_status_update' booking.pk %}", {
+        method: 'POST',
+        headers: { 'X-CSRFToken': CSRF_TOKEN },
+        body: data,
+    })
+    .then(r => r.json())
+    .then(result => {
+        this.disabled = false;
+        this.innerHTML = '<i class="fas fa-ban me-1"></i> Cancel Booking';
+
+        if (result.success) {
+            bootstrap.Modal.getInstance(document.getElementById('cancelModal')).hide();
+            showToast('Booking cancelled.', 'success');
+            setTimeout(() => location.reload(), 800);
+        } else {
+            showToast(result.error || 'Cancellation failed.', 'error');
+        }
+    })
+    .catch(() => {
+        this.disabled = false;
+        this.innerHTML = '<i class="fas fa-ban me-1"></i> Cancel Booking';
+        showToast('Network error.', 'error');
+    });
+});
+</script>
+{% endblock %}

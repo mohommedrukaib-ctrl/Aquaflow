@@ -1,0 +1,249 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}{{ page_title|default:"Dashboard" }} — {{ AQUAFLOW_SYSTEM_NAME }}{% endblock %}</title>
+
+    <script>
+        (function () {
+            var t = localStorage.getItem('aquaflow-theme') || 'light';
+            document.documentElement.setAttribute('data-theme', t);
+        })();
+    </script>
+
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+
+    {% load static %}
+    <link rel="stylesheet" href="{% static 'css/aquaflow.css' %}?v=3">
+    <link rel="stylesheet" href="{% static 'css/aquaflow-smart-input.css' %}?v=3">
+
+    {% block extra_css %}{% endblock %}
+</head>
+
+<body>
+
+<noscript>
+    <div class="aq-noscript">
+        <i class="fas fa-exclamation-triangle me-1"></i>
+        JavaScript is disabled. Live search, popups and real-time updates will not work.
+    </div>
+</noscript>
+
+<div class="aq-layout">
+
+    <div class="aq-sidebar-overlay" id="sidebarOverlay"></div>
+
+    <!-- ══ SIDEBAR ══════════════════════════════════════════ -->
+    <aside class="aq-sidebar">
+        <a href="{% url 'dashboard' %}" class="aq-brand">
+            <span class="aq-brand-icon"><i class="fas fa-droplet"></i></span>
+            AquaFlow
+        </a>
+
+        <nav class="aq-nav">
+
+            <div class="aq-nav-header">Operations</div>
+            <a href="{% url 'dashboard' %}" class="aq-nav-item {% if request.resolver_match.url_name == 'dashboard' %}active{% endif %}">
+                <i class="fas fa-gauge-high"></i> Dashboard
+            </a>
+            <a href="/pos/" class="aq-nav-item {% if '/pos/' in request.path %}active{% endif %}">
+                <i class="fas fa-cash-register"></i> Point of Sale
+            </a>
+            <a href="/wash/" class="aq-nav-item {% if '/wash/' in request.path %}active{% endif %}">
+                <i class="fas fa-spray-can-sparkles"></i> Wash Board
+            </a>
+            <a href="/bookings/" class="aq-nav-item {% if '/bookings/' in request.path %}active{% endif %}">
+                <i class="fas fa-calendar-check"></i> Bookings
+            </a>
+
+            <div class="aq-nav-header">Records</div>
+            <a href="/customers/" class="aq-nav-item {% if '/customers/' in request.path %}active{% endif %}">
+                <i class="fas fa-users"></i> Customers
+            </a>
+            <a href="/vehicles/" class="aq-nav-item {% if '/vehicles/' in request.path %}active{% endif %}">
+                <i class="fas fa-car"></i> Vehicles
+            </a>
+            <a href="/services/" class="aq-nav-item {% if '/services/' in request.path %}active{% endif %}">
+                <i class="fas fa-list-check"></i> Services
+            </a>
+
+            <div class="aq-nav-header">Finance</div>
+            <a href="/orders/" class="aq-nav-item {% if '/orders/' in request.path %}active{% endif %}">
+                <i class="fas fa-receipt"></i> Orders
+            </a>
+            <a href="/invoices/" class="aq-nav-item {% if '/invoices/' in request.path %}active{% endif %}">
+                <i class="fas fa-file-invoice-dollar"></i> Invoices
+            </a>
+            <a href="/payments/" class="aq-nav-item {% if request.path == '/payments/' %}active{% endif %}">
+                <i class="fas fa-money-bill-wave"></i> Payments
+            </a>
+            <a href="/payments/summary/" class="aq-nav-item {% if 'summary' in request.path %}active{% endif %}">
+                <i class="fas fa-chart-pie"></i> Daily Summary
+            </a>
+            <a href="/finance/" class="aq-nav-item {% if '/finance/' in request.path %}active{% endif %}">
+                <i class="fas fa-wallet"></i> Expenses
+            </a>
+
+            <div class="aq-nav-header">Inventory</div>
+            <a href="/inventory/" class="aq-nav-item {% if '/inventory/' in request.path %}active{% endif %}">
+                <i class="fas fa-boxes-stacked"></i> Inventory
+            </a>
+            <a href="/suppliers/" class="aq-nav-item {% if '/suppliers/' in request.path %}active{% endif %}">
+                <i class="fas fa-truck"></i> Suppliers
+            </a>
+
+            <div class="aq-nav-header">People</div>
+            <a href="/employees/" class="aq-nav-item {% if '/employees/' in request.path %}active{% endif %}">
+                <i class="fas fa-id-badge"></i> Employees
+            </a>
+            <a href="/memberships/" class="aq-nav-item {% if '/memberships/' in request.path %}active{% endif %}">
+                <i class="fas fa-star"></i> Memberships
+            </a>
+            <a href="/loyalty/" class="aq-nav-item {% if '/loyalty/' in request.path %}active{% endif %}">
+                <i class="fas fa-gift"></i> Loyalty
+            </a>
+
+            <div class="aq-nav-header">System</div>
+            <a href="/reports/" class="aq-nav-item {% if '/reports/' in request.path %}active{% endif %}">
+                <i class="fas fa-chart-column"></i> Reports
+            </a>
+            <a href="/business/" class="aq-nav-item {% if '/business/' in request.path %}active{% endif %}">
+                <i class="fas fa-building"></i> Business
+            </a>
+            <a href="/accounts/users/" class="aq-nav-item {% if '/users/' in request.path %}active{% endif %}">
+                <i class="fas fa-users-gear"></i> Users
+            </a>
+            <a href="/accounts/roles/" class="aq-nav-item {% if '/roles/' in request.path %}active{% endif %}">
+                <i class="fas fa-user-shield"></i> Roles
+            </a>
+            <a href="/accounts/security/" class="aq-nav-item {% if '/security/' in request.path %}active{% endif %}">
+                <i class="fas fa-lock"></i> Security
+            </a>
+            <a href="/system/backups/" class="aq-nav-item {% if '/backups/' in request.path %}active{% endif %}">
+                <i class="fas fa-database"></i> Backups
+            </a>
+            <a href="/system/audit/" class="aq-nav-item {% if '/audit/' in request.path %}active{% endif %}">
+                <i class="fas fa-clipboard-list"></i> Audit Logs
+            </a>
+            <a href="/system/trash/" class="aq-nav-item {% if '/trash/' in request.path %}active{% endif %}">
+                <i class="fas fa-trash"></i> Trash
+            </a>
+            <a href="/system/health/" class="aq-nav-item {% if '/health/' in request.path %}active{% endif %}">
+                <i class="fas fa-heart-pulse"></i> Health
+            </a>
+            <a href="/system/" class="aq-nav-item {% if request.path == '/system/' %}active{% endif %}">
+                <i class="fas fa-gear"></i> Settings
+            </a>
+
+        </nav>
+    </aside>
+
+    <!-- ══ MAIN ═════════════════════════════════════════════ -->
+    <div class="aq-main">
+
+        <nav class="aq-navbar">
+            <button class="aq-navbar-toggle" id="sidebarToggle" title="Toggle sidebar">
+                <i class="fas fa-bars"></i>
+            </button>
+
+            <div class="aq-navbar-search">
+                <i class="fas fa-search"></i>
+                <input type="text" placeholder="Search…" id="globalSearch">
+            </div>
+
+            <div class="aq-navbar-icons">
+                <a href="/pos/" class="aq-navbar-icon" title="New Sale"><i class="fas fa-plus"></i></a>
+                <button class="aq-navbar-icon" id="fullscreenToggle" title="Fullscreen"><i class="fas fa-expand"></i></button>
+                <button class="aq-theme-toggle" id="themeToggle" title="Toggle theme"><i class="fas fa-moon"></i></button>
+                <button class="aq-navbar-icon" title="Notifications">
+                    <i class="far fa-bell"></i><span class="aq-dot"></span>
+                </button>
+
+                <div class="dropdown">
+                    <button class="aq-user-btn" data-bs-toggle="dropdown" aria-expanded="false">
+                        <span class="aq-avatar">{{ request.user.username|slice:":1"|upper }}</span>
+                        <span class="d-none d-md-inline">{{ request.user.username }}</span>
+                        <i class="fas fa-chevron-down" style="font-size:8px;"></i>
+                    </button>
+                    <div class="dropdown-menu dropdown-menu-end">
+                        <div class="dropdown-header">
+                            <strong>{{ request.user.get_full_name|default:request.user.username }}</strong>
+                            <div class="text-muted" style="font-size:10px;">
+                                {{ request.user.profile.role.name|default:"No role" }}
+                            </div>
+                        </div>
+                        <div class="dropdown-divider"></div>
+                        <a href="/accounts/change-password/" class="dropdown-item"><i class="fas fa-key me-2"></i>Change Password</a>
+                        <a href="/system/" class="dropdown-item"><i class="fas fa-gear me-2"></i>Settings</a>
+                        <div class="dropdown-divider"></div>
+                        <a href="{% url 'logout' %}" class="dropdown-item text-danger"><i class="fas fa-right-from-bracket me-2"></i>Sign Out</a>
+                    </div>
+                </div>
+            </div>
+        </nav>
+
+        <div class="aq-content">
+
+            {% block page_header %}
+            <div class="aq-page-header">
+                <div class="aq-page-icon"><i class="{% block page_icon %}fas fa-gauge-high{% endblock %}"></i></div>
+                <div class="aq-page-title">
+                    <h1>{% block page_title %}{{ page_title|default:"Dashboard" }}{% endblock %}</h1>
+                    <p class="d-none d-lg-block">{% block page_subtitle %}{{ BUSINESS_NAME }}{% endblock %}</p>
+                </div>
+                <nav class="aq-breadcrumbs d-none d-md-flex">
+                    <a href="{% url 'dashboard' %}"><i class="fas fa-home"></i></a>
+                    {% block breadcrumbs %}<span>/</span><span class="current">Dashboard</span>{% endblock %}
+                </nav>
+            </div>
+            {% endblock %}
+
+            {% if messages %}
+                {% for message in messages %}
+                <div class="alert alert-{{ message.tags }} alert-dismissible fade show py-1">
+                    {{ message }}
+                    <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                </div>
+                {% endfor %}
+            {% endif %}
+
+            {% block content %}{% endblock %}
+
+        </div>
+
+        <footer class="aq-footer">
+            {{ BUSINESS_NAME }} · {{ AQUAFLOW_SYSTEM_NAME }} v{{ AQUAFLOW_VERSION }} · Powered by {{ AQUAFLOW_DEVELOPER }}
+        </footer>
+
+    </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+<script src="{% static 'js/aquaflow-theme.js' %}?v=3"></script>
+<script src="{% static 'js/aquaflow-smart-input.js' %}?v=3"></script>
+
+<div id="toast-container" style="position:fixed;top:12px;right:12px;z-index:9999;"></div>
+
+<script>
+function showToast(message, type = 'success') {
+    const colors = { success:'#12a06a', error:'#d9342b', warning:'#d99100', info:'#0b7ec4' };
+    const icons  = { success:'check-circle', error:'exclamation-circle', warning:'exclamation-triangle', info:'info-circle' };
+    const t = document.createElement('div');
+    t.style.cssText = `background:${colors[type]||colors.success};color:#fff;padding:7px 12px;border-radius:4px;
+        margin-bottom:6px;font-size:11.5px;font-weight:600;box-shadow:0 4px 12px rgba(0,0,0,.25);
+        min-width:230px;max-width:340px;animation:slideIn .2s ease;display:flex;align-items:center;gap:8px;`;
+    t.innerHTML = `<i class="fas fa-${icons[type]}"></i><span>${message}</span>`;
+    document.getElementById('toast-container').appendChild(t);
+    setTimeout(() => { t.style.opacity='0'; t.style.transition='opacity .25s'; setTimeout(()=>t.remove(),250); }, 3200);
+}
+</script>
+
+{% block extra_js %}{% endblock %}
+
+</body>
+</html>

@@ -1,0 +1,268 @@
+{% extends "base/base.html" %}
+
+{% block title %}Security Dashboard — AquaFlow{% endblock %}
+{% block page_icon %}fas fa-shield-alt{% endblock %}
+{% block page_title %}Security Dashboard{% endblock %}
+{% block page_subtitle %}Super Admin — Manage security settings{% endblock %}
+
+{% block breadcrumbs %}
+<span>/</span>
+<a href="/system/">System</a>
+<span>/</span>
+<span class="current">Security</span>
+{% endblock %}
+
+{% block content %}
+
+<div class="row g-3 mb-4">
+    <div class="col-md-4">
+        <div class="aq-stat-card">
+            <div class="aq-stat-info">
+                <h6>Successful Logins (7d)</h6>
+                <div class="aq-stat-value">{{ stats.success }}</div>
+            </div>
+            <div class="aq-stat-icon success"><i class="fas fa-check"></i></div>
+        </div>
+    </div>
+    <div class="col-md-4">
+        <div class="aq-stat-card">
+            <div class="aq-stat-info">
+                <h6>Failed Attempts (7d)</h6>
+                <div class="aq-stat-value">{{ stats.failed }}</div>
+            </div>
+            <div class="aq-stat-icon warning"><i class="fas fa-exclamation-triangle"></i></div>
+        </div>
+    </div>
+    <div class="col-md-4">
+        <div class="aq-stat-card">
+            <div class="aq-stat-info">
+                <h6>Locked Accounts</h6>
+                <div class="aq-stat-value">{{ locked_accounts.count }}</div>
+            </div>
+            <div class="aq-stat-icon danger"><i class="fas fa-lock"></i></div>
+        </div>
+    </div>
+</div>
+
+<div class="row g-3">
+
+    <!-- Locked Accounts -->
+    <div class="col-lg-6">
+        <div class="card">
+            <div class="card-header">
+                <strong><i class="fas fa-lock me-2 text-danger"></i>Locked Accounts</strong>
+            </div>
+            <div class="card-body p-0">
+                {% if locked_accounts %}
+                <table class="table mb-0">
+                    <thead>
+                        <tr>
+                            <th>User</th>
+                            <th>Reason</th>
+                            <th>Unlock At</th>
+                            <th></th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for lock in locked_accounts %}
+                        <tr>
+                            <td><strong>{{ lock.user.username }}</strong></td>
+                            <td><small>{{ lock.reason }}</small></td>
+                            <td><small>{{ lock.unlock_at|date:"d M H:i" }}</small></td>
+                            <td>
+                                <button class="btn btn-sm btn-success" onclick="unlockAccount({{ lock.user.pk }}, '{{ lock.user.username }}')">
+                                    <i class="fas fa-unlock"></i> Unlock
+                                </button>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+                {% else %}
+                <div class="text-center py-4 text-muted">
+                    <i class="fas fa-check-circle fa-2x mb-2"></i>
+                    <div>No locked accounts</div>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+
+    <!-- Recent Failed Logins -->
+    <div class="col-lg-6">
+        <div class="card">
+            <div class="card-header">
+                <strong><i class="fas fa-times-circle me-2 text-warning"></i>Recent Failed Logins (24h)</strong>
+            </div>
+            <div class="card-body p-0" style="max-height: 400px; overflow-y: auto;">
+                {% if recent_failures %}
+                <table class="table mb-0">
+                    <thead>
+                        <tr>
+                            <th>Time</th>
+                            <th>User</th>
+                            <th>IP</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for a in recent_failures %}
+                        <tr>
+                            <td><small>{{ a.timestamp|date:"H:i:s" }}</small></td>
+                            <td><small>{{ a.username }}</small></td>
+                            <td><small>{{ a.ip_address|default:"—" }}</small></td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+                {% else %}
+                <div class="text-center py-4 text-muted">No failed logins</div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+
+    <!-- Security Config -->
+    <div class="col-12">
+        <div class="card">
+            <div class="card-header">
+                <strong><i class="fas fa-cog me-2"></i>Security Configuration</strong>
+            </div>
+            <div class="card-body">
+
+                <h6 class="mb-3">Login Security</h6>
+                <div class="row g-3 mb-4">
+                    <div class="col-md-4">
+                        <label class="form-label fw-semibold">Max Failed Attempts</label>
+                        <input type="number" id="cfgMaxFailed" class="form-control" value="{{ config.max_failed_attempts }}" min="1">
+                        <small class="text-muted">Before account is locked.</small>
+                    </div>
+                    <div class="col-md-4">
+                        <label class="form-label fw-semibold">Lockout Duration (min)</label>
+                        <input type="number" id="cfgLockDuration" class="form-control" value="{{ config.lockout_duration_minutes }}" min="1">
+                    </div>
+                    <div class="col-md-4">
+                        <label class="form-label fw-semibold">Failure Window (min)</label>
+                        <input type="number" id="cfgFailWindow" class="form-control" value="{{ config.failed_attempt_window }}" min="1">
+                        <small class="text-muted">Time window for counting failures.</small>
+                    </div>
+                </div>
+
+                <h6 class="mb-3">Session</h6>
+                <div class="row g-3 mb-4">
+                    <div class="col-md-6">
+                        <label class="form-label fw-semibold">Session Timeout (min)</label>
+                        <input type="number" id="cfgSessionTimeout" class="form-control" value="{{ config.session_timeout_minutes }}" min="1">
+                        <small class="text-muted">Total session length.</small>
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label fw-semibold">Idle Timeout (min)</label>
+                        <input type="number" id="cfgIdleTimeout" class="form-control" value="{{ config.idle_timeout_minutes }}" min="0">
+                        <small class="text-muted">Auto-logout after inactivity. 0 = disabled.</small>
+                    </div>
+                </div>
+
+                <h6 class="mb-3">Password Requirements</h6>
+                <div class="row g-3 mb-4">
+                    <div class="col-md-6">
+                        <label class="form-label fw-semibold">Minimum Length</label>
+                        <input type="number" id="cfgMinLen" class="form-control" value="{{ config.min_password_length }}" min="6">
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label fw-semibold">Password Expiry (days)</label>
+                        <input type="number" id="cfgExpiry" class="form-control" value="{{ config.password_expiry_days }}" min="0">
+                        <small class="text-muted">0 = never expires.</small>
+                    </div>
+                    <div class="col-md-4">
+                        <div class="form-check">
+                            <input type="checkbox" id="cfgUpper" class="form-check-input" {% if config.require_uppercase %}checked{% endif %}>
+                            <label for="cfgUpper" class="form-check-label">Require uppercase</label>
+                        </div>
+                    </div>
+                    <div class="col-md-4">
+                        <div class="form-check">
+                            <input type="checkbox" id="cfgNum" class="form-check-input" {% if config.require_number %}checked{% endif %}>
+                            <label for="cfgNum" class="form-check-label">Require number</label>
+                        </div>
+                    </div>
+                    <div class="col-md-4">
+                        <div class="form-check">
+                            <input type="checkbox" id="cfgSpecial" class="form-check-input" {% if config.require_special_char %}checked{% endif %}>
+                            <label for="cfgSpecial" class="form-check-label">Require special character</label>
+                        </div>
+                    </div>
+                </div>
+
+                <h6 class="mb-3">HTTPS</h6>
+                <div class="mb-4">
+                    <div class="form-check form-switch">
+                        <input type="checkbox" id="cfgHttps" class="form-check-input" role="switch" {% if config.force_https %}checked{% endif %}>
+                        <label for="cfgHttps" class="form-check-label fw-semibold">Force HTTPS (production only)</label>
+                    </div>
+                    <small class="text-muted">Redirects all HTTP to HTTPS. Only enable when SSL certificate is installed.</small>
+                </div>
+
+                <button class="btn btn-primary" id="saveCfgBtn">
+                    <i class="fas fa-save me-1"></i>Save Security Settings
+                </button>
+            </div>
+        </div>
+    </div>
+
+</div>
+
+{% endblock %}
+
+{% block extra_js %}
+<script>
+const CSRF_TOKEN = '{{ csrf_token }}';
+
+function unlockAccount(id, username) {
+    if (!confirm(`Unlock account "${username}"?`)) return;
+
+    fetch(`/accounts/security/unlock/${id}/`, {
+        method: 'POST',
+        headers: { 'X-CSRFToken': CSRF_TOKEN },
+    })
+    .then(r => r.json())
+    .then(data => {
+        if (data.success) {
+            showToast(data.message, 'success');
+            setTimeout(() => location.reload(), 600);
+        } else {
+            showToast(data.error, 'error');
+        }
+    });
+}
+
+document.getElementById('saveCfgBtn').addEventListener('click', function () {
+    this.disabled = true;
+    const fd = new FormData();
+    fd.append('max_failed_attempts', document.getElementById('cfgMaxFailed').value);
+    fd.append('lockout_duration_minutes', document.getElementById('cfgLockDuration').value);
+    fd.append('failed_attempt_window', document.getElementById('cfgFailWindow').value);
+    fd.append('session_timeout_minutes', document.getElementById('cfgSessionTimeout').value);
+    fd.append('idle_timeout_minutes', document.getElementById('cfgIdleTimeout').value);
+    fd.append('min_password_length', document.getElementById('cfgMinLen').value);
+    fd.append('password_expiry_days', document.getElementById('cfgExpiry').value);
+    fd.append('require_uppercase', document.getElementById('cfgUpper').checked ? 'true' : 'false');
+    fd.append('require_number', document.getElementById('cfgNum').checked ? 'true' : 'false');
+    fd.append('require_special_char', document.getElementById('cfgSpecial').checked ? 'true' : 'false');
+    fd.append('force_https', document.getElementById('cfgHttps').checked ? 'true' : 'false');
+
+    fetch('/accounts/security/config/', {
+        method: 'POST',
+        headers: { 'X-CSRFToken': CSRF_TOKEN },
+        body: fd,
+    })
+    .then(r => r.json())
+    .then(data => {
+        this.disabled = false;
+        if (data.success) {
+            showToast(data.message, 'success');
+        } else {
+            showToast(data.error, 'error');
+        }
+    });
+});
+</script>
+{% endblock %}

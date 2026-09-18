@@ -1,0 +1,15 @@
+CREATE USER aquaflow_user WITH PASSWORD 'Aquaflow@2026';
+
+CREATE DATABASE aquaflow
+    WITH
+    OWNER = aquaflow_user
+    ENCODING = 'UTF8'
+    LC_COLLATE = 'en_US.UTF-8'
+    LC_CTYPE = 'en_US.UTF-8'
+    TEMPLATE = template0;
+
+GRANT ALL PRIVILEGES ON DATABASE aquaflow TO aquaflow_user;
+
+\c aquaflow
+
+GRANT ALL ON SCHEMA public TO aquaflow_user;

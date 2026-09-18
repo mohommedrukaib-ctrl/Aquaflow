@@ -1,0 +1,123 @@
+{% extends "base/base.html" %}
+{% load aquaflow_tags %}
+
+{% block title %}Profit & Loss — AquaFlow{% endblock %}
+{% block page_icon %}fas fa-chart-line{% endblock %}
+{% block page_title %}Profit & Loss Statement{% endblock %}
+
+{% block breadcrumbs %}
+<span>/</span>
+<a href="/reports/">Reports</a>
+<span>/</span>
+<span class="current">P&L</span>
+{% endblock %}
+
+{% block content %}
+
+<form method="get" class="card mb-3">
+    <div class="card-body">
+        <div class="row g-2">
+            <div class="col-md-5">
+                <label class="form-label fw-semibold">From</label>
+                <input type="date" name="date_from" class="form-control" value="{{ date_from }}">
+            </div>
+            <div class="col-md-5">
+                <label class="form-label fw-semibold">To</label>
+                <input type="date" name="date_to" class="form-control" value="{{ date_to }}">
+            </div>
+            <div class="col-md-2 d-flex align-items-end">
+                <button class="btn btn-primary w-100"><i class="fas fa-filter me-1"></i>Filter</button>
+            </div>
+        </div>
+    </div>
+</form>
+
+<div class="row g-3">
+
+    <div class="col-lg-8">
+        <div class="card">
+            <div class="card-header bg-primary text-white">
+                <strong><i class="fas fa-chart-line me-2"></i>Profit & Loss Summary</strong>
+            </div>
+            <div class="card-body">
+
+                <h5 class="text-success mb-3"><i class="fas fa-plus-circle me-2"></i>Income</h5>
+                <table class="table">
+                    <tr>
+                        <td>Total Revenue (including tax)</td>
+                        <td class="text-end">{% format_currency revenue %}</td>
+                    </tr>
+                    <tr>
+                        <td class="text-muted">Less: Tax collected (not income)</td>
+                        <td class="text-end text-danger">- {% format_currency tax_collected %}</td>
+                    </tr>
+                    <tr class="table-success">
+                        <th>Gross Revenue</th>
+                        <th class="text-end">{% format_currency gross_revenue %}</th>
+                    </tr>
+                </table>
+
+                <h5 class="text-danger mb-3 mt-4"><i class="fas fa-minus-circle me-2"></i>Expenses</h5>
+                <table class="table">
+                    <tr>
+                        <td>Operating Expenses</td>
+                        <td class="text-end">{% format_currency total_expenses %}</td>
+                    </tr>
+                    <tr>
+                        <td>Inventory Purchases</td>
+                        <td class="text-end">{% format_currency total_purchases %}</td>
+                    </tr>
+                    <tr class="table-danger">
+                        <th>Total Expenses</th>
+                        <th class="text-end">{% format_currency total_expenses|add:total_purchases %}</th>
+                    </tr>
+                </table>
+
+                <table class="table mt-4">
+                    <tr class="{% if net_profit >= 0 %}table-success{% else %}table-danger{% endif %}">
+                        <th style="font-size: 20px;">NET PROFIT</th>
+                        <th class="text-end" style="font-size: 24px;">{% format_currency net_profit %}</th>
+                    </tr>
+                </table>
+
+            </div>
+        </div>
+    </div>
+
+    <div class="col-lg-4">
+        <div class="card">
+            <div class="card-header">
+                <strong>Expenses by Category</strong>
+            </div>
+            <div class="card-body p-0">
+                <table class="table mb-0">
+                    <thead>
+                        <tr>
+                            <th>Category</th>
+                            <th class="text-end">Amount</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for c in expenses_by_cat %}
+                        <tr>
+                            <td>{{ c.category__name }}</td>
+                            <td class="text-end">{% format_currency c.total %}</td>
+                        </tr>
+                        {% empty %}
+                        <tr><td colspan="2" class="text-center text-muted py-3">No expenses.</td></tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <div class="mt-3">
+            <button class="btn btn-outline-primary w-100" onclick="window.print()">
+                <i class="fas fa-print me-1"></i>Print P&L
+            </button>
+        </div>
+    </div>
+
+</div>
+
+{% endblock %}

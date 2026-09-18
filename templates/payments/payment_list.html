@@ -1,0 +1,149 @@
+{% extends "base/base.html" %}
+{% load aquaflow_tags %}
+
+{% block title %}Payments — AquaFlow{% endblock %}
+{% block page_icon %}fas fa-money-bill-wave{% endblock %}
+{% block page_title %}Payments{% endblock %}
+{% block page_subtitle %}All payment transactions{% endblock %}
+
+{% block breadcrumbs %}
+<span>/</span>
+<span class="current">Payments</span>
+{% endblock %}
+
+{% block content %}
+
+<div class="row g-3 mb-3">
+    <div class="col-md-4">
+        <div class="aq-stat-card">
+            <div class="aq-stat-info">
+                <h6>Total Payments</h6>
+                <div class="aq-stat-value">{{ total_count }}</div>
+            </div>
+            <div class="aq-stat-icon primary"><i class="fas fa-money-bill-wave"></i></div>
+        </div>
+    </div>
+    <div class="col-md-4">
+        <div class="aq-stat-card">
+            <div class="aq-stat-info">
+                <h6>Total Amount</h6>
+                <div class="aq-stat-value">{% format_currency total_amount %}</div>
+            </div>
+            <div class="aq-stat-icon success"><i class="fas fa-dollar-sign"></i></div>
+        </div>
+    </div>
+    <div class="col-md-4">
+        <a href="{% url 'sales_summary' %}" class="aq-stat-card" style="text-decoration:none;">
+            <div class="aq-stat-info">
+                <h6>Daily Sales Summary</h6>
+                <div class="aq-stat-value" style="font-size:16px;">
+                    View Today's Total
+                </div>
+                <div class="aq-stat-meta">Cash reconciliation</div>
+            </div>
+            <div class="aq-stat-icon warning"><i class="fas fa-chart-pie"></i></div>
+        </a>
+    </div>
+</div>
+
+<div class="card">
+    <div class="card-header d-flex justify-content-between align-items-center">
+        <strong><i class="fas fa-list me-2 aq-text-primary"></i>Payment List</strong>
+        <a href="{% url 'sales_summary' %}" class="btn btn-outline-primary btn-sm">
+            <i class="fas fa-chart-pie me-1"></i>Daily Summary
+        </a>
+    </div>
+    <div class="card-body">
+
+        <form method="GET" class="row g-2 mb-3">
+            <div class="col-md-4">
+                <input type="text" name="q" class="form-control" placeholder="Invoice#, order#, ref, customer..." value="{{ search }}">
+            </div>
+            <div class="col-md-2">
+                <select name="method" class="form-select">
+                    <option value="">All Methods</option>
+                    {% for pm in payment_methods %}
+                    <option value="{{ pm.pk }}" {% if method == pm.pk|stringformat:"s" %}selected{% endif %}>{{ pm.name }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="col-md-2">
+                <input type="date" name="date_from" class="form-control" value="{{ date_from }}">
+            </div>
+            <div class="col-md-2">
+                <input type="date" name="date_to" class="form-control" value="{{ date_to }}">
+            </div>
+            <div class="col-md-2">
+                <button class="btn btn-primary w-100"><i class="fas fa-search me-1"></i>Filter</button>
+            </div>
+        </form>
+
+        {% if payments %}
+        <div class="table-responsive">
+            <table class="table table-hover align-middle">
+                <thead>
+                    <tr>
+                        <th>Date/Time</th>
+                        <th>Invoice</th>
+                        <th>Customer</th>
+                        <th>Method</th>
+                        <th>Reference</th>
+                        <th>Cashier</th>
+                        <th class="text-end">Amount</th>
+                        <th>Status</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for p in payments %}
+                    <tr>
+                        <td><small>{{ p.processed_at|date:"d M Y H:i" }}</small></td>
+                        <td>
+                            <a href="/invoices/{{ p.invoice.pk }}/">
+                                <strong>{{ p.invoice.invoice_number }}</strong>
+                            </a>
+                        </td>
+                        <td>{{ p.order.customer.name }}</td>
+                        <td><span class="badge bg-light text-dark border">{{ p.payment_method.name }}</span></td>
+                        <td><small>{{ p.reference|default:"—" }}</small></td>
+                        <td><small>{{ p.processed_by.username|default:"—" }}</small></td>
+                        <td class="text-end fw-bold {% if p.amount < 0 %}text-danger{% endif %}">
+                            {% format_currency p.amount %}
+                        </td>
+                        <td>
+                            {% if p.status == 'completed' %}
+                            <span class="badge bg-success">Completed</span>
+                            {% elif p.status == 'refunded' %}
+                            <span class="badge bg-info">Refund</span>
+                            {% else %}
+                            <span class="badge bg-secondary">{{ p.get_status_display }}</span>
+                            {% endif %}
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+
+        {% if page_obj.has_other_pages %}
+        <nav class="mt-3">
+            <ul class="pagination pagination-sm justify-content-center">
+                {% if page_obj.has_previous %}
+                <li class="page-item"><a class="page-link" href="?page={{ page_obj.previous_page_number }}">Previous</a></li>
+                {% endif %}
+                <li class="page-item disabled"><span class="page-link">Page {{ page_obj.number }} of {{ page_obj.paginator.num_pages }}</span></li>
+                {% if page_obj.has_next %}
+                <li class="page-item"><a class="page-link" href="?page={{ page_obj.next_page_number }}">Next</a></li>
+                {% endif %}
+            </ul>
+        </nav>
+        {% endif %}
+
+        {% else %}
+        <div class="text-center py-5">
+            <i class="fas fa-money-bill-wave fa-3x text-muted mb-3"></i>
+            <h5 class="text-muted">No payments found</h5>
+        </div>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}

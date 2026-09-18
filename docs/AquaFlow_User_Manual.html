@@ -1,0 +1,313 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <title>AquaFlow User Manual</title>
+    <style>
+        body { font-family: Arial, sans-serif; max-width: 900px; margin: 40px auto; padding: 20px; color: #333; line-height: 1.8; }
+        h1 { color: #04a9f5; border-bottom: 3px solid #04a9f5; padding-bottom: 10px; }
+        h2 { color: #1a2035; border-bottom: 1px solid #ddd; padding-bottom: 6px; margin-top: 30px; }
+        h3 { color: #333; }
+        .step { background: #f8f9fa; border-left: 4px solid #04a9f5; padding: 12px 16px; margin: 10px 0; border-radius: 4px; }
+        .step-num { background: #04a9f5; color: white; padding: 2px 8px; border-radius: 50%; font-weight: bold; margin-right: 8px; }
+        .warning { background: #fff3cd; border-left: 4px solid #f4c22b; padding: 12px 16px; margin: 10px 0; border-radius: 4px; }
+        .tip { background: #d4edda; border-left: 4px solid #14b898; padding: 12px 16px; margin: 10px 0; border-radius: 4px; }
+        table { width: 100%; border-collapse: collapse; margin: 15px 0; }
+        th, td { border: 1px solid #ddd; padding: 8px 12px; text-align: left; }
+        th { background: #f4f4f4; }
+        .cover { text-align: center; padding: 60px 0; }
+        .cover h1 { font-size: 36px; border: none; }
+        @media print { body { margin: 20mm; } }
+    </style>
+</head>
+<body>
+
+<div class="cover">
+    <h1>AquaFlow</h1>
+    <h2>Car Wash Management System</h2>
+    <h3>User Manual</h3>
+    <p>Version 1.0.0 | 05 August 2026</p>
+    <p><strong>Powered by Quantum Axis</strong></p>
+</div>
+
+<div style="page-break-after: always;"></div>
+
+<h1>Table of Contents</h1>
+<ol>
+    <li>Getting Started</li>
+    <li>Dashboard</li>
+    <li>Daily Car Wash Flow</li>
+    <li>Bookings (Appointments)</li>
+    <li>Wash Operations</li>
+    <li>Point of Sale (POS)</li>
+    <li>Customers & Vehicles</li>
+    <li>Services & Pricing</li>
+    <li>Orders & Invoices</li>
+    <li>Inventory</li>
+    <li>Employees</li>
+    <li>Reports</li>
+    <li>System Settings</li>
+    <li>Troubleshooting</li>
+</ol>
+
+<h1>1. Getting Started</h1>
+
+<h2>1.1 Login</h2>
+<div class="step">
+    <span class="step-num">1</span> Open your browser and go to: <strong>http://192.168.x.x:8000/</strong><br>
+    <span class="step-num">2</span> Enter your username and password<br>
+    <span class="step-num">3</span> Click <strong>Sign In</strong>
+</div>
+
+<div class="warning">
+    <strong>⚠ Important:</strong> After 5 wrong password attempts, your account will be locked for 30 minutes.
+    Contact Super Admin to unlock.
+</div>
+
+<h1>2. Dashboard</h1>
+<p>The dashboard shows:</p>
+<ul>
+    <li><strong>Today's Sales</strong> — total revenue today</li>
+    <li><strong>Today's Washes</strong> — vehicles washed today</li>
+    <li><strong>Pending Bookings</strong> — upcoming appointments</li>
+    <li><strong>Total Customers</strong> — registered customers</li>
+    <li><strong>Sales Chart</strong> — last 7 days trend</li>
+    <li><strong>Quick Actions</strong> — shortcuts to POS, bookings, etc.</li>
+</ul>
+
+<h1>3. Daily Car Wash Flow</h1>
+
+<h2>The Complete Process</h2>
+
+<div class="step">
+    <span class="step-num">1</span> <strong>BOOKING</strong> — Customer calls or walks in to book<br>
+    Go to <em>Bookings → Add Booking</em><br>
+    Select: Customer, Vehicle, Service, Date, Time<br>
+    Status starts as: <strong>PENDING</strong>
+</div>
+
+<div class="step">
+    <span class="step-num">2</span> <strong>CUSTOMER ARRIVES</strong> — Mark booking as ARRIVED<br>
+    Go to <em>Bookings → Click booking → Mark Arrived</em><br>
+    This automatically creates a <strong>Wash Job</strong> on the Wash Board
+</div>
+
+<div class="step">
+    <span class="step-num">3</span> <strong>WASH OPERATIONS</strong> — Track the wash progress<br>
+    Go to <em>Wash Board</em><br>
+    Assign employee and wash bay<br>
+    Click <strong>Start Washing</strong><br>
+    Move through: Washing → Quality Check → Ready
+</div>
+
+<div class="step">
+    <span class="step-num">4</span> <strong>INVOICE & PAYMENT</strong> — Bill the customer<br>
+    On the Wash Board, click <strong>"Invoice"</strong> on the ready wash job<br>
+    This opens <strong>POS</strong> pre-filled with customer + vehicle + services<br>
+    Add any extra items (products, repairs)<br>
+    Select payment method (Cash, Card, etc.)<br>
+    Click <strong>Complete Sale</strong><br>
+    Receipt prints automatically
+</div>
+
+<div class="step">
+    <span class="step-num">5</span> <strong>DONE</strong> — Everything is recorded<br>
+    Order created, Invoice created, Payment recorded<br>
+    Wash job marked COMPLETED<br>
+    Inventory updated, Loyalty points awarded
+</div>
+
+<div class="tip">
+    <strong>💡 Quick Walk-in (No Booking):</strong>
+    You can also create a wash job directly from the Wash Board
+    or go straight to POS for a quick sale.
+</div>
+
+<h1>4. Bookings (Appointments)</h1>
+
+<h2>4.1 Create a Booking</h2>
+<div class="step">
+    <span class="step-num">1</span> Go to <em>Bookings → Add Booking</em><br>
+    <span class="step-num">2</span> Search and select Customer (or create new)<br>
+    <span class="step-num">3</span> Search and select Vehicle (or create new)<br>
+    <span class="step-num">4</span> Select Service<br>
+    <span class="step-num">5</span> Date and Time (defaults to today/now)<br>
+    <span class="step-num">6</span> Optionally assign Employee and Wash Bay<br>
+    <span class="step-num">7</span> Click <strong>Create Booking</strong>
+</div>
+
+<h2>4.2 Booking Statuses</h2>
+<table>
+    <tr><th>Status</th><th>Meaning</th></tr>
+    <tr><td>PENDING</td><td>Just created, not yet confirmed</td></tr>
+    <tr><td>CONFIRMED</td><td>Customer confirmed they will come</td></tr>
+    <tr><td>ARRIVED</td><td>Customer is here → creates Wash Job</td></tr>
+    <tr><td>COMPLETED</td><td>Service done and invoiced</td></tr>
+    <tr><td>CANCELLED</td><td>Customer cancelled</td></tr>
+    <tr><td>NO SHOW</td><td>Customer didn't come</td></tr>
+</table>
+
+<h1>5. Wash Operations</h1>
+
+<h2>5.1 Wash Board</h2>
+<p>The Wash Board shows 6 columns:</p>
+<table>
+    <tr><th>Column</th><th>Meaning</th></tr>
+    <tr><td>Waiting</td><td>Car is here, waiting to start</td></tr>
+    <tr><td>Assigned</td><td>Employee assigned, about to start</td></tr>
+    <tr><td>Washing</td><td>Currently being washed</td></tr>
+    <tr><td>Quality Check</td><td>Wash done, being inspected</td></tr>
+    <tr><td>Ready</td><td>Car is clean, waiting for customer</td></tr>
+    <tr><td>Completed</td><td>Customer picked up (today)</td></tr>
+</table>
+
+<h2>5.2 Managing a Wash Job</h2>
+<div class="step">
+    Click on any wash job card to:<br>
+    • Assign/change employee<br>
+    • Assign/change wash bay<br>
+    • Move to next status (Start → QC → Ready → Complete)<br>
+    • Invoice the job (opens POS)
+</div>
+
+<h1>6. Point of Sale (POS)</h1>
+
+<h2>6.1 Quick Sale (Walk-in)</h2>
+<div class="step">
+    <span class="step-num">1</span> Go to <em>POS</em><br>
+    <span class="step-num">2</span> Search Customer (or create new)<br>
+    <span class="step-num">3</span> Search Vehicle<br>
+    <span class="step-num">4</span> Add services and/or products to cart<br>
+    <span class="step-num">5</span> Adjust prices/quantities if needed<br>
+    <span class="step-num">6</span> Apply discount if any<br>
+    <span class="step-num">7</span> Select payment method<br>
+    <span class="step-num">8</span> Click <strong>Complete Sale</strong>
+</div>
+
+<h2>6.2 Invoice from Wash Job</h2>
+<div class="step">
+    <span class="step-num">1</span> On Wash Board, find the ready wash job<br>
+    <span class="step-num">2</span> Click <strong>"Invoice"</strong><br>
+    <span class="step-num">3</span> POS opens with customer + vehicle + service pre-filled<br>
+    <span class="step-num">4</span> Add extra items if needed<br>
+    <span class="step-num">5</span> Complete payment
+</div>
+
+<h2>6.3 Split Payment</h2>
+<div class="step">
+    Click <strong>Cash</strong> first (enters full amount)<br>
+    Click <strong>Card</strong> to add another payment<br>
+    Adjust amounts so they total correctly<br>
+    Complete sale
+</div>
+
+<h2>6.4 Custom Job / Repair</h2>
+<div class="step">
+    Click <strong>"Custom Job"</strong> button<br>
+    Enter description (e.g., "Battery Replacement")<br>
+    Enter price<br>
+    Added to cart as a service item
+</div>
+
+<h1>7. Customers & Vehicles</h1>
+
+<h2>7.1 Add Customer</h2>
+<p>Customers can be added from:</p>
+<ul>
+    <li>Customer list page</li>
+    <li>POS (popup)</li>
+    <li>Booking form (popup)</li>
+    <li>Vehicle form (popup)</li>
+</ul>
+<p>Required: <strong>Name + Phone number</strong></p>
+
+<h2>7.2 Add Vehicle</h2>
+<p>When adding a vehicle:</p>
+<ul>
+    <li>Type registration → checks if exists</li>
+    <li>If new → fill brand, model, type, color, fuel</li>
+    <li>All stored in UPPERCASE</li>
+    <li>New brands/models auto-created</li>
+</ul>
+
+<h1>8. Services & Pricing</h1>
+
+<h2>8.1 Service Prices</h2>
+<p>Prices can be different for:</p>
+<ul>
+    <li>Different vehicle types (Sedan vs SUV vs Van)</li>
+    <li>Different branches</li>
+    <li>Default price for all</li>
+</ul>
+
+<div class="step">
+    Go to <em>Services → Click a service → Add Price</em><br>
+    Or click the <strong>$</strong> button in service list
+</div>
+
+<h1>9. Reports</h1>
+<p>Available reports (all with CSV export):</p>
+<ul>
+    <li>Sales Report (daily/monthly)</li>
+    <li>Service Popularity</li>
+    <li>Top Customers</li>
+    <li>Most Washed Vehicles</li>
+    <li>Cashier Performance</li>
+    <li>Payment Method Breakdown</li>
+    <li>Inventory Report</li>
+    <li>Profit & Loss Statement</li>
+</ul>
+
+<h1>10. System Admin</h1>
+
+<h2>10.1 Business Settings</h2>
+<div class="step">
+    Go to <em>Business Settings</em> to change:<br>
+    • Company name and logo<br>
+    • Address and contact info<br>
+    • Tax settings (enable/disable, percentage)<br>
+    • Currency<br>
+    • Receipt footer message<br>
+    • Print format (thermal, dot matrix, A4)
+</div>
+
+<h2>10.2 Backups</h2>
+<div class="step">
+    Go to <em>System → Backups</em><br>
+    • Click "Full Backup" for manual backup<br>
+    • Configure auto-backup schedule<br>
+    • Download backup files<br>
+    • Restore from backup if needed
+</div>
+
+<h2>10.3 User Management</h2>
+<div class="step">
+    Go to <em>System → Users</em><br>
+    • Create new user accounts<br>
+    • Assign roles (Cashier, Manager, etc.)<br>
+    • Reset passwords<br>
+    • Deactivate users
+</div>
+
+<h1>11. Troubleshooting</h1>
+
+<h2>Common Issues</h2>
+<table>
+    <tr><th>Problem</th><th>Solution</th></tr>
+    <tr><td>Can't login</td><td>Check username/password. After 5 fails, account locks for 30 min.</td></tr>
+    <tr><td>Permission denied</td><td>Your role doesn't have this permission. Contact admin.</td></tr>
+    <tr><td>Service has no price</td><td>Go to Services → click $ button → set price.</td></tr>
+    <tr><td>Payment doesn't match</td><td>Payment amount must equal order total exactly.</td></tr>
+    <tr><td>Can't delete customer</td><td>Customers with orders can only be soft-deleted (moved to trash).</td></tr>
+    <tr><td>Receipt not printing</td><td>Check printer is connected. Try different format (thermal/A4).</td></tr>
+    <tr><td>Database error</td><td>Contact Super Admin. Check System Health page.</td></tr>
+</table>
+
+<div class="cover" style="margin-top:50px;">
+    <p><strong>AquaFlow User Manual</strong></p>
+    <p>Version 1.0.0 | Powered by Quantum Axis</p>
+    <p>© 2026 Quantum Axis. All rights reserved.</p>
+</div>
+
+</body>
+</html>

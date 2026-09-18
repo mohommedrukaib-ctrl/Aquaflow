@@ -1,0 +1,140 @@
+{% extends "base/base.html" %}
+
+{% block title %}Audit Log #{{ log.pk }} — AquaFlow{% endblock %}
+{% block page_icon %}fas fa-history{% endblock %}
+{% block page_title %}Audit Log Detail{% endblock %}
+
+{% block breadcrumbs %}
+<span>/</span>
+<a href="/system/audit/">Audit</a>
+<span>/</span>
+<a href="/system/audit/logs/">Logs</a>
+<span>/</span>
+<span class="current">#{{ log.pk }}</span>
+{% endblock %}
+
+{% block extra_css %}
+<style>
+.data-block {
+    background: var(--aq-surface-2);
+    border: 1px solid var(--aq-border);
+    border-radius: 6px;
+    padding: 12px;
+    font-family: 'Courier New', monospace;
+    font-size: 12px;
+    white-space: pre-wrap;
+    word-break: break-word;
+    max-height: 400px;
+    overflow-y: auto;
+}
+</style>
+{% endblock %}
+
+{% block content %}
+
+<div class="row g-3">
+    <div class="col-lg-8">
+        <div class="card">
+            <div class="card-header">
+                <strong><i class="fas fa-info-circle me-2"></i>Audit Log Details</strong>
+            </div>
+            <div class="card-body">
+                <table class="table table-borderless">
+                    <tr>
+                        <td class="text-muted" style="width:30%;">Log ID</td>
+                        <td><strong>#{{ log.pk }}</strong></td>
+                    </tr>
+                    <tr>
+                        <td class="text-muted">Timestamp</td>
+                        <td>{{ log.timestamp|date:"d M Y H:i:s" }}</td>
+                    </tr>
+                    <tr>
+                        <td class="text-muted">User</td>
+                        <td>
+                            {{ log.user_name_snapshot|default:"System" }}
+                            {% if log.user %}
+                            <br><small class="text-muted">Active user: {{ log.user.username }}</small>
+                            {% endif %}
+                        </td>
+                    </tr>
+                    <tr>
+                        <td class="text-muted">Action</td>
+                        <td><code class="fw-bold">{{ log.action }}</code></td>
+                    </tr>
+                    <tr>
+                        <td class="text-muted">Module</td>
+                        <td><span class="badge bg-info">{{ log.module }}</span></td>
+                    </tr>
+                    <tr>
+                        <td class="text-muted">Object Type</td>
+                        <td>{{ log.object_type|default:"—" }}</td>
+                    </tr>
+                    <tr>
+                        <td class="text-muted">Object ID</td>
+                        <td><code>{{ log.object_id|default:"—" }}</code></td>
+                    </tr>
+                    <tr>
+                        <td class="text-muted">Object Description</td>
+                        <td>{{ log.object_repr|default:"—" }}</td>
+                    </tr>
+                    <tr>
+                        <td class="text-muted">IP Address</td>
+                        <td>{{ log.ip_address|default:"—" }}</td>
+                    </tr>
+                    {% if log.user_agent %}
+                    <tr>
+                        <td class="text-muted">User Agent</td>
+                        <td><small>{{ log.user_agent }}</small></td>
+                    </tr>
+                    {% endif %}
+                </table>
+            </div>
+        </div>
+
+        {% if prev_data or new_data %}
+        <div class="row g-3 mt-1">
+            {% if prev_data %}
+            <div class="col-md-6">
+                <div class="card">
+                    <div class="card-header text-danger">
+                        <strong><i class="fas fa-minus-circle me-2"></i>Before</strong>
+                    </div>
+                    <div class="card-body">
+                        <pre class="data-block">{{ prev_data }}</pre>
+                    </div>
+                </div>
+            </div>
+            {% endif %}
+            {% if new_data %}
+            <div class="col-md-{% if prev_data %}6{% else %}12{% endif %}">
+                <div class="card">
+                    <div class="card-header text-success">
+                        <strong><i class="fas fa-plus-circle me-2"></i>After</strong>
+                    </div>
+                    <div class="card-body">
+                        <pre class="data-block">{{ new_data }}</pre>
+                    </div>
+                </div>
+            </div>
+            {% endif %}
+        </div>
+        {% endif %}
+    </div>
+
+    <div class="col-lg-4">
+        <div class="card">
+            <div class="card-header"><strong>Info</strong></div>
+            <div class="card-body">
+                <div class="alert alert-info small">
+                    <i class="fas fa-shield-alt me-1"></i>
+                    Audit logs are <strong>immutable</strong>. They cannot be edited or deleted for compliance and security.
+                </div>
+                <a href="/system/audit/logs/" class="btn btn-outline-secondary w-100">
+                    <i class="fas fa-arrow-left me-1"></i>Back to Logs
+                </a>
+            </div>
+        </div>
+    </div>
+</div>
+
+{% endblock %}

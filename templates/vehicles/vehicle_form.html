@@ -1,0 +1,486 @@
+{% extends "base/base.html" %}
+{% load static aquaflow_tags %}
+
+{% block title %}{{ action }} Vehicle — {{ AQUAFLOW_SYSTEM_NAME }}{% endblock %}
+{% block page_icon %}fas fa-car{% endblock %}
+{% block page_title %}{{ action }} Vehicle{% endblock %}
+{% block page_subtitle %}Register a new vehicle{% endblock %}
+
+{% block breadcrumbs %}
+<span>/</span>
+<a href="/vehicles/">Vehicles</a>
+<span>/</span>
+<span class="current">{{ action }}</span>
+{% endblock %}
+
+{% block content %}
+
+{% if action == 'Add' %}
+<div class="card mb-4" id="regSearchCard">
+    <div class="card-header d-flex align-items-center gap-2" style="background: var(--aq-primary); color: white;">
+        <i class="fas fa-search"></i>
+        <strong>Step 1 — Enter Vehicle Registration</strong>
+    </div>
+    <div class="card-body">
+        <label class="form-label fw-semibold">Registration Number <span class="text-danger">*</span></label>
+        <div class="input-group input-group-lg">
+            <span class="input-group-text"><i class="fas fa-car"></i></span>
+            <input type="text" id="regSearch" class="form-control text-uppercase fw-bold" placeholder="e.g. WP CAA-1234" autofocus autocomplete="off" style="letter-spacing: 1px;">
+            <button type="button" class="btn btn-primary" id="regContinueBtn">
+                Continue <i class="fas fa-arrow-right ms-1"></i>
+            </button>
+        </div>
+        <small class="text-muted mt-2 d-block">
+            <i class="fas fa-info-circle me-1"></i>
+            Live check — if this vehicle exists, details will appear below.
+        </small>
+
+        <div id="existingVehicleBox" class="mt-4 border rounded" style="display:none;">
+            <div class="p-3" style="background: var(--aq-surface-2); border-radius: 10px 10px 0 0;">
+                <div class="d-flex align-items-center gap-2">
+                    <i class="fas fa-check-circle aq-text-success fa-lg"></i>
+                    <strong class="aq-text-success">Vehicle Already Registered</strong>
+                </div>
+            </div>
+            <div class="p-3" id="existingVehicleContent"></div>
+            <div class="p-3 d-flex justify-content-between gap-2" style="background: var(--aq-surface-2); border-radius: 0 0 10px 10px;">
+                <a href="#" id="viewExistingBtn" class="btn btn-outline-primary btn-sm">
+                    <i class="fas fa-eye me-1"></i> View Details
+                </a>
+                <a href="#" id="editExistingBtn" class="btn btn-primary btn-sm">
+                    <i class="fas fa-edit me-1"></i> Edit This Vehicle
+                </a>
+            </div>
+        </div>
+    </div>
+</div>
+{% endif %}
+
+<div class="card" id="vehicleFormCard"{% if action == 'Add' %} style="display:none;"{% endif %}>
+    <div class="card-header">
+        <strong>
+            <i class="fas fa-car me-2 aq-text-primary"></i>
+            {% if action == 'Add' %}Step 2 — Vehicle Details{% else %}Edit Vehicle{% endif %}
+        </strong>
+    </div>
+    <div class="card-body">
+
+        <form method="POST" id="vehicleForm" novalidate>
+            {% csrf_token %}
+
+            <div class="row g-3">
+
+                <div class="col-md-6">
+                    <label class="form-label fw-semibold">Registration Number <span class="text-danger">*</span></label>
+                    <input type="text" name="registration_number" id="regInput" class="form-control text-uppercase fw-bold" value="{{ form.instance.registration_number|default:'' }}" required>
+                    {% if form.registration_number.errors %}
+                    <div class="text-danger small mt-1">{{ form.registration_number.errors.0 }}</div>
+                    {% endif %}
+                </div>
+
+                <div class="col-md-6">
+                    <label class="form-label fw-semibold">Customer <span class="text-danger">*</span></label>
+                    {% if form.instance.customer %}
+                    <div class="aq-smart-input" id="customerInput" data-name="customer" data-search-url="/customers/search/" data-create-url="/vehicles/customers/quick-create/" data-results-key="customers" data-label="Customer" data-placeholder="Search customer name or phone..." data-required="true" data-value="{{ form.instance.customer.pk }}" data-display-text="{{ form.instance.customer.name }}"></div>
+                    {% else %}
+                    <div class="aq-smart-input" id="customerInput" data-name="customer" data-search-url="/customers/search/" data-create-url="/vehicles/customers/quick-create/" data-results-key="customers" data-label="Customer" data-placeholder="Search customer name or phone..." data-required="true"></div>
+                    {% endif %}
+                </div>
+
+                <div class="col-md-6">
+                    <label class="form-label fw-semibold">Brand <span class="text-danger">*</span></label>
+                    {% if form.instance.brand %}
+                    <div class="aq-smart-input" id="brandInput" data-name="brand" data-search-url="/vehicles/brands/search/" data-create-url="/vehicles/brands/create/" data-results-key="brands" data-label="Brand" data-placeholder="Type brand name..." data-uppercase="true" data-required="true" data-value="{{ form.instance.brand.pk }}" data-display-text="{{ form.instance.brand.name }}"></div>
+                    {% else %}
+                    <div class="aq-smart-input" id="brandInput" data-name="brand" data-search-url="/vehicles/brands/search/" data-create-url="/vehicles/brands/create/" data-results-key="brands" data-label="Brand" data-placeholder="Type brand name..." data-uppercase="true" data-required="true"></div>
+                    {% endif %}
+                </div>
+
+                <div class="col-md-6">
+                    <label class="form-label fw-semibold">Model <span class="text-danger">*</span></label>
+                    {% if form.instance.model %}
+                    <div class="aq-smart-input" id="modelInput" data-name="model" data-search-url="/vehicles/models/search/" data-create-url="/vehicles/models/create/" data-results-key="models" data-label="Model" data-placeholder="Select brand first..." data-uppercase="true" data-required="true" data-value="{{ form.instance.model.pk }}" data-display-text="{{ form.instance.model.name }}"></div>
+                    {% else %}
+                    <div class="aq-smart-input" id="modelInput" data-name="model" data-search-url="/vehicles/models/search/" data-create-url="/vehicles/models/create/" data-results-key="models" data-label="Model" data-placeholder="Select brand first..." data-uppercase="true" data-disabled="true" data-required="true"></div>
+                    {% endif %}
+                </div>
+
+                <div class="col-md-4">
+                    <label class="form-label fw-semibold">Vehicle Type</label>
+                    {% if form.instance.vehicle_type %}
+                    <div class="aq-smart-input" id="typeInput" data-name="vehicle_type" data-search-url="/vehicles/types/search/" data-create-url="/vehicles/types/create/" data-results-key="types" data-label="Vehicle Type" data-placeholder="Type or select..." data-uppercase="true" data-value="{{ form.instance.vehicle_type.pk }}" data-display-text="{{ form.instance.vehicle_type.name }}"></div>
+                    {% else %}
+                    <div class="aq-smart-input" id="typeInput" data-name="vehicle_type" data-search-url="/vehicles/types/search/" data-create-url="/vehicles/types/create/" data-results-key="types" data-label="Vehicle Type" data-placeholder="Type or select..." data-uppercase="true"></div>
+                    {% endif %}
+                </div>
+
+                <div class="col-md-4">
+                    <label class="form-label fw-semibold">Color</label>
+                    {% if form.instance.color %}
+                    <div class="aq-smart-input" id="colorInput" data-name="color" data-search-url="/vehicles/colors/search/" data-create-url="/vehicles/colors/create/" data-results-key="colors" data-label="Color" data-placeholder="Type or select..." data-uppercase="true" data-value="{{ form.instance.color.pk }}" data-display-text="{{ form.instance.color.name }}"></div>
+                    {% else %}
+                    <div class="aq-smart-input" id="colorInput" data-name="color" data-search-url="/vehicles/colors/search/" data-create-url="/vehicles/colors/create/" data-results-key="colors" data-label="Color" data-placeholder="Type or select..." data-uppercase="true"></div>
+                    {% endif %}
+                </div>
+
+                <div class="col-md-4">
+                    <label class="form-label fw-semibold">Fuel Type</label>
+                    {% if form.instance.fuel_type %}
+                    <div class="aq-smart-input" id="fuelInput" data-name="fuel_type" data-search-url="/vehicles/fuels/search/" data-create-url="/vehicles/fuels/create/" data-results-key="fuels" data-label="Fuel Type" data-placeholder="Type or select..." data-uppercase="true" data-value="{{ form.instance.fuel_type.pk }}" data-display-text="{{ form.instance.fuel_type.name }}"></div>
+                    {% else %}
+                    <div class="aq-smart-input" id="fuelInput" data-name="fuel_type" data-search-url="/vehicles/fuels/search/" data-create-url="/vehicles/fuels/create/" data-results-key="fuels" data-label="Fuel Type" data-placeholder="Type or select..." data-uppercase="true"></div>
+                    {% endif %}
+                </div>
+
+                <div class="col-md-4">
+                    <label class="form-label fw-semibold">Year</label>
+                    <input type="number" name="year" class="form-control" value="{{ form.instance.year|default:'' }}" min="1950" max="2099" placeholder="e.g. 2020">
+                </div>
+
+                <div class="col-md-4">
+                    <label class="form-label fw-semibold">Mileage (km)</label>
+                    <input type="number" name="mileage" class="form-control" value="{{ form.instance.mileage|default:'' }}" min="0" placeholder="Current mileage">
+                </div>
+
+                <div class="col-md-4">
+                    <label class="form-label fw-semibold">Status</label>
+                    <select name="status" class="form-select">
+                        {% if action == 'Add' %}
+                        <option value="active" selected>Active</option>
+                        <option value="inactive">Inactive</option>
+                        {% else %}
+                        <option value="active" {% if form.instance.status == 'active' %}selected{% endif %}>Active</option>
+                        <option value="inactive" {% if form.instance.status == 'inactive' %}selected{% endif %}>Inactive</option>
+                        {% endif %}
+                    </select>
+                </div>
+
+                <div class="col-md-12">
+                    <label class="form-label fw-semibold">Notes</label>
+                    <textarea name="notes" rows="2" class="form-control" placeholder="Optional notes">{{ form.instance.notes|default:'' }}</textarea>
+                </div>
+
+            </div>
+
+            <div class="mt-4 d-flex justify-content-between">
+                <a href="/vehicles/" class="btn btn-secondary">
+                    <i class="fas fa-arrow-left me-1"></i> Back
+                </a>
+                <button type="submit" class="btn btn-primary" id="submitBtn">
+                    <i class="fas fa-save me-1"></i> {{ action }} Vehicle
+                </button>
+            </div>
+        </form>
+
+    </div>
+</div>
+
+<div class="modal fade" id="customerModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">
+                    <i class="fas fa-user-plus me-2 aq-text-primary"></i>
+                    Add New Customer
+                </h5>
+                <button class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <div class="mb-3">
+                    <label class="form-label fw-semibold">Full Name <span class="text-danger">*</span></label>
+                    <input type="text" id="quickCustName" class="form-control" placeholder="Customer name">
+                </div>
+                <div class="mb-3">
+                    <label class="form-label fw-semibold">Phone Number <span class="text-danger">*</span></label>
+                    <input type="text" id="quickCustPhone" class="form-control" placeholder="Phone number">
+                    <div id="phoneMatchAlert" class="alert alert-info small mt-2 py-2 mb-0" style="display:none;"></div>
+                </div>
+                <div id="quickCustError" class="alert alert-danger" style="display:none;"></div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                <button class="btn btn-primary" id="saveQuickCustBtn">
+                    <i class="fas fa-save me-1"></i> Save Customer
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+{% endblock %}
+
+{% block extra_js %}
+<script>
+const CSRF_TOKEN = '{{ csrf_token }}';
+let currentSmartInput = null;
+
+const regSearch = document.getElementById('regSearch');
+const regContinue = document.getElementById('regContinueBtn');
+const existingBox = document.getElementById('existingVehicleBox');
+const existingContent = document.getElementById('existingVehicleContent');
+const viewBtn = document.getElementById('viewExistingBtn');
+const editBtn = document.getElementById('editExistingBtn');
+const regSearchCard = document.getElementById('regSearchCard');
+const vehicleFormCard = document.getElementById('vehicleFormCard');
+const regInput = document.getElementById('regInput');
+
+let regTimer = null;
+
+if (regSearch) {
+    regSearch.addEventListener('input', function () {
+        this.value = this.value.toUpperCase();
+        clearTimeout(regTimer);
+        const q = this.value.trim();
+        existingBox.style.display = 'none';
+        if (q.length < 2) return;
+        regTimer = setTimeout(() => {
+            fetch('/vehicles/registration-check/?reg=' + encodeURIComponent(q))
+                .then(r => r.json())
+                .then(data => {
+                    if (data.exists) {
+                        const v = data.vehicle;
+                        existingContent.innerHTML =
+                            '<div class="row g-2">' +
+                            '<div class="col-md-6"><small class="text-muted">Registration</small><div class="fw-bold fs-5 aq-text-primary">' + v.registration_number + '</div></div>' +
+                            '<div class="col-md-6"><small class="text-muted">Status</small><div><span class="badge bg-success">' + v.status + '</span></div></div>' +
+                            '<div class="col-md-6"><small class="text-muted">Vehicle</small><div class="fw-semibold">' + v.brand + ' ' + v.model + (v.year ? ' (' + v.year + ')' : '') + '</div></div>' +
+                            '<div class="col-md-6"><small class="text-muted">Type</small><div>' + (v.vehicle_type || '—') + '</div></div>' +
+                            '<div class="col-md-6"><small class="text-muted">Color</small><div>' + (v.color || '—') + '</div></div>' +
+                            '<div class="col-md-6"><small class="text-muted">Fuel</small><div>' + (v.fuel_type || '—') + '</div></div>' +
+                            '<div class="col-md-12 mt-2 pt-2 border-top"><small class="text-muted">Owner</small><div><strong>' + v.customer_name + '</strong> <small class="text-muted">(' + v.customer_code + ')' + (v.customer_phone ? ' · ' + v.customer_phone : '') + '</small></div></div>' +
+                            (v.mileage ? '<div class="col-md-6"><small class="text-muted">Mileage</small><div>' + v.mileage + ' km</div></div>' : '') +
+                            '<div class="col-md-6"><small class="text-muted">Registered</small><div>' + v.created_at + '</div></div>' +
+                            '</div>';
+                        viewBtn.href = v.detail_url;
+                        editBtn.href = v.edit_url;
+                        existingBox.style.display = 'block';
+                    }
+                });
+        }, 300);
+    });
+
+    regContinue.addEventListener('click', () => {
+        const reg = regSearch.value.trim().toUpperCase();
+        if (reg.length < 2) {
+            showToast('Enter a valid registration number.', 'error');
+            regSearch.focus();
+            return;
+        }
+        if (existingBox.style.display === 'block') {
+            showToast('Vehicle exists. Use Edit or View buttons.', 'warning');
+            return;
+        }
+        regInput.value = reg;
+        regSearchCard.style.display = 'none';
+        vehicleFormCard.style.display = 'block';
+    });
+
+    regSearch.addEventListener('keydown', (e) => {
+        if (e.key === 'Enter') {
+            e.preventDefault();
+            regContinue.click();
+        }
+    });
+}
+
+if (regInput) {
+    regInput.addEventListener('input', function () {
+        const pos = this.selectionStart;
+        this.value = this.value.toUpperCase();
+        this.setSelectionRange(pos, pos);
+    });
+}
+
+const brandInput = document.getElementById('brandInput');
+const modelInput = document.getElementById('modelInput');
+
+function updateModelState() {
+    if (!brandInput || !modelInput) return;
+    const brandSmart = brandInput._smartInput;
+    const modelSmart = modelInput._smartInput;
+    if (!brandSmart || !modelSmart) return;
+
+    const brandSelected = brandSmart.hiddenInput.value;
+    const brandPending = brandSmart.pendingHidden.value;
+
+    if (brandSelected || brandPending) {
+        modelSmart.enable();
+        if (brandSelected) {
+            modelSmart.extraParams = 'brand_id=' + brandSelected;
+            modelSmart.placeholder = 'Type model name...';
+        } else {
+            modelSmart.extraParams = '';
+            modelSmart.placeholder = 'Type model name (new brand)...';
+        }
+        modelSmart.input.placeholder = modelSmart.placeholder;
+    } else {
+        modelSmart.disable();
+        modelSmart.input.placeholder = 'Select brand first...';
+    }
+}
+
+if (brandInput) {
+    // Track last brand to know when brand actually changed
+    let lastBrandValue = brandInput._smartInput ? 
+        (brandInput._smartInput.hiddenInput.value || 
+         brandInput._smartInput.pendingHidden.value) : '';
+
+    brandInput.addEventListener('aq:selected', (e) => {
+        // Only clear model if brand actually changed
+        const newVal = String(e.detail.id);
+        if (newVal !== lastBrandValue) {
+            const modelSmart = modelInput._smartInput;
+            if (modelSmart) {
+                modelSmart.input.value = '';
+                modelSmart.hiddenInput.value = '';
+                modelSmart.pendingHidden.value = '';
+                modelSmart.clearBtn.style.display = 'none';
+                modelSmart.pendingHint.style.display = 'none';
+            }
+            lastBrandValue = newVal;
+        }
+        updateModelState();
+    });
+
+    brandInput.addEventListener('aq:pending', (e) => {
+        // Only clear model if the pending value is different from before
+        const newVal = 'pending:' + e.detail.value;
+        if (newVal !== lastBrandValue) {
+            const modelSmart = modelInput._smartInput;
+            if (modelSmart) {
+                modelSmart.input.value = '';
+                modelSmart.hiddenInput.value = '';
+                modelSmart.pendingHidden.value = '';
+                modelSmart.clearBtn.style.display = 'none';
+                modelSmart.pendingHint.style.display = 'none';
+            }
+            lastBrandValue = newVal;
+        }
+        updateModelState();
+    });
+
+    brandInput.addEventListener('aq:cleared', () => {
+        if (modelInput._smartInput) modelInput._smartInput.disable();
+        lastBrandValue = '';
+    });
+}
+setTimeout(() => updateModelState(), 300);
+
+document.addEventListener('aq:pending', (e) => {
+    if (e.target.id === 'customerInput') {
+        currentSmartInput = e.target._smartInput;
+        const query = e.detail.value;
+
+        document.getElementById('quickCustName').value = '';
+        document.getElementById('quickCustPhone').value = '';
+        document.getElementById('quickCustError').style.display = 'none';
+        document.getElementById('phoneMatchAlert').style.display = 'none';
+
+        if (/^\d/.test(query)) {
+            document.getElementById('quickCustPhone').value = query;
+        } else {
+            document.getElementById('quickCustName').value = query;
+        }
+        new bootstrap.Modal(document.getElementById('customerModal')).show();
+    }
+});
+
+const quickPhone = document.getElementById('quickCustPhone');
+if (quickPhone) {
+    quickPhone.addEventListener('input', function () {
+        const phone = this.value.trim();
+        const alertBox = document.getElementById('phoneMatchAlert');
+        if (phone.length < 4) {
+            alertBox.style.display = 'none';
+            return;
+        }
+        fetch('/customers/phone-lookup/?phone=' + encodeURIComponent(phone))
+            .then(r => r.json())
+            .then(data => {
+                if (data.match) {
+                    alertBox.style.display = 'block';
+                    alertBox.innerHTML =
+                        '<i class="fas fa-user me-1"></i> Existing: <strong>' + data.match.name + '</strong> (' + data.match.customer_code + ') <button type="button" class="btn btn-sm btn-info ms-2" id="useExistingCustBtn">Use This</button>';
+                    document.getElementById('useExistingCustBtn').onclick = () => {
+                        currentSmartInput.setSelected({
+                            id: data.match.id,
+                            label: data.match.name,
+                            name: data.match.name,
+                            meta: data.match.customer_code + ' · ' + data.match.phone,
+                        });
+                        bootstrap.Modal.getInstance(document.getElementById('customerModal')).hide();
+                        showToast('Customer selected.', 'success');
+                    };
+                } else {
+                    alertBox.style.display = 'none';
+                }
+            });
+    });
+}
+
+const saveCustBtn = document.getElementById('saveQuickCustBtn');
+if (saveCustBtn) {
+    saveCustBtn.addEventListener('click', function () {
+        const name = document.getElementById('quickCustName').value.trim();
+        const phone = document.getElementById('quickCustPhone').value.trim();
+        const errBox = document.getElementById('quickCustError');
+        errBox.style.display = 'none';
+
+        if (!name) {
+            errBox.textContent = 'Name required.';
+            errBox.style.display = 'block';
+            return;
+        }
+        if (!phone) {
+            errBox.textContent = 'Phone required.';
+            errBox.style.display = 'block';
+            return;
+        }
+
+        this.disabled = true;
+        const fd = new FormData();
+        fd.append('name', name);
+        fd.append('phone', phone);
+
+        fetch('/vehicles/customers/quick-create/', {
+            method: 'POST',
+            headers: { 'X-CSRFToken': CSRF_TOKEN },
+            body: fd,
+        })
+        .then(r => r.json())
+        .then(data => {
+            this.disabled = false;
+            if (data.success) {
+                currentSmartInput.setSelected(data.item);
+                bootstrap.Modal.getInstance(document.getElementById('customerModal')).hide();
+                showToast(data.message, 'success');
+            } else {
+                errBox.textContent = data.error;
+                errBox.style.display = 'block';
+            }
+        });
+    });
+}
+
+const vehForm = document.getElementById('vehicleForm');
+if (vehForm) {
+    vehForm.addEventListener('submit', function (e) {
+        const missing = [];
+        if (!regInput.value.trim()) missing.push('Registration');
+
+        const custSmart = document.getElementById('customerInput')._smartInput;
+        if (!custSmart.hiddenInput.value) missing.push('Customer');
+
+        const brandSmart = brandInput._smartInput;
+        const modelSmart = modelInput._smartInput;
+        if (!brandSmart.hiddenInput.value && !brandSmart.pendingHidden.value) missing.push('Brand');
+        if (!modelSmart.hiddenInput.value && !modelSmart.pendingHidden.value) missing.push('Model');
+
+        if (missing.length > 0) {
+            e.preventDefault();
+            showToast('Missing: ' + missing.join(', '), 'error');
+        }
+    });
+}
+</script>
+{% endblock %}

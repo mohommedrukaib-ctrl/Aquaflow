@@ -1,0 +1,104 @@
+{% extends "base/base.html" %}
+
+{% block title %}Bookings — AquaFlow{% endblock %}
+{% block page_icon %}fas fa-calendar-check{% endblock %}
+{% block page_title %}Bookings{% endblock %}
+{% block page_subtitle %}Scheduled vehicle services{% endblock %}
+{% block breadcrumbs %}<span>/</span><span class="current">Bookings</span>{% endblock %}
+
+{% block content %}
+
+<div class="aq-panel">
+    <div class="aq-panel-head">
+        <div class="aq-chips">
+            <span class="aq-chip pri"><i class="fas fa-calendar-check"></i> Bookings <b>{{ page_obj.paginator.count }}</b></span>
+        </div>
+        {% if can_manage %}
+        <a href="{% url 'booking_create' %}" class="btn btn-sm btn-primary"><i class="fas fa-plus me-1"></i>Add Booking</a>
+        {% endif %}
+    </div>
+
+    <form method="get" class="aq-toolbar">
+        <div class="input-group" style="width:300px;">
+            <span class="input-group-text"><i class="fas fa-search"></i></span>
+            <input type="text" name="q" class="form-control" value="{{ query }}" placeholder="Booking#, customer, vehicle…">
+        </div>
+        <input type="date" name="date" class="form-control" style="width:145px;" value="{{ date }}">
+        <select name="status" class="form-select" style="width:140px;">
+            <option value="">All Statuses</option>
+            {% for value, label in status_choices %}
+            <option value="{{ value }}" {% if status == value %}selected{% endif %}>{{ label }}</option>
+            {% endfor %}
+        </select>
+        <button class="btn btn-outline-primary btn-sm"><i class="fas fa-filter me-1"></i>Filter</button>
+        <a href="/bookings/" class="btn btn-outline-secondary btn-sm"><i class="fas fa-rotate"></i></a>
+    </form>
+
+    <div class="aq-panel-body flush">
+        <div class="aq-table-scroll">
+            <table class="table table-hover">
+                <thead>
+                    <tr>
+                        <th>Booking</th>
+                        <th class="nowrap">Date / Time</th>
+                        <th>Customer</th>
+                        <th>Vehicle</th>
+                        <th>Service</th>
+                        <th>Branch</th>
+                        <th>Status</th>
+                        <th style="width:70px;"></th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for b in bookings %}
+                    <tr>
+                        <td class="nowrap"><a href="{% url 'booking_detail' b.pk %}"><code>{{ b.booking_number }}</code></a></td>
+                        <td class="nowrap">
+                            {{ b.scheduled_date|date:"d M Y" }}
+                            <span class="text-muted">· {{ b.scheduled_time|time:"H:i" }}</span>
+                        </td>
+                        <td>
+                            {{ b.customer.name|truncatechars:20 }}
+                            <span class="text-muted d-block" style="font-size:10px;">{{ b.customer.phone }}</span>
+                        </td>
+                        <td class="nowrap"><code>{{ b.vehicle.registration_number }}</code></td>
+                        <td>{{ b.service.name|truncatechars:22 }}</td>
+                        <td>{{ b.branch.name|truncatechars:14 }}</td>
+                        <td>
+                            {% if b.status == 'pending' %}<span class="badge bg-warning">Pending</span>
+                            {% elif b.status == 'confirmed' %}<span class="badge bg-primary">Confirmed</span>
+                            {% elif b.status == 'arrived' %}<span class="badge bg-info">Arrived</span>
+                            {% elif b.status == 'completed' %}<span class="badge bg-success">Completed</span>
+                            {% elif b.status == 'cancelled' %}<span class="badge bg-danger">Cancelled</span>
+                            {% else %}<span class="badge bg-secondary">{{ b.get_status_display }}</span>{% endif %}
+                        </td>
+                        <td class="nowrap text-end">
+                            <a href="{% url 'booking_detail' b.pk %}" class="btn btn-sm btn-outline-primary btn-icon"><i class="fas fa-eye"></i></a>
+                            {% if can_manage %}<a href="{% url 'booking_edit' b.pk %}" class="btn btn-sm btn-outline-secondary btn-icon"><i class="fas fa-pen"></i></a>{% endif %}
+                        </td>
+                    </tr>
+                    {% empty %}
+                    <tr><td colspan="8">
+                        <div class="aq-empty"><i class="fas fa-calendar-xmark"></i><h5>No bookings found</h5></div>
+                    </td></tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+
+        {% if bookings %}
+        <div class="aq-pagebar">
+            <span>{{ page_obj.paginator.count }} booking{{ page_obj.paginator.count|pluralize }} · Page {{ page_obj.number }}/{{ page_obj.paginator.num_pages }}</span>
+            {% if page_obj.has_other_pages %}
+            <ul class="pagination pagination-sm mb-0">
+                {% if page_obj.has_previous %}<li class="page-item"><a class="page-link" href="?page={{ page_obj.previous_page_number }}&q={{ query }}&status={{ status }}&date={{ date }}">‹</a></li>{% endif %}
+                <li class="page-item disabled"><span class="page-link">{{ page_obj.number }}</span></li>
+                {% if page_obj.has_next %}<li class="page-item"><a class="page-link" href="?page={{ page_obj.next_page_number }}&q={{ query }}&status={{ status }}&date={{ date }}">›</a></li>{% endif %}
+            </ul>
+            {% endif %}
+        </div>
+        {% endif %}
+    </div>
+</div>
+
+{% endblock %}

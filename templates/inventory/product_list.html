@@ -1,0 +1,592 @@
+{% extends "base/base.html" %}
+{% load aquaflow_tags %}
+
+{% block title %}Inventory — AquaFlow{% endblock %}
+{% block page_icon %}fas fa-boxes{% endblock %}
+{% block page_title %}Inventory{% endblock %}
+{% block page_subtitle %}Manage products, prices, and stock{% endblock %}
+
+{% block breadcrumbs %}
+<span>/</span>
+<span class="current">Inventory</span>
+{% endblock %}
+
+{% block extra_css %}
+<style>
+.editable-cell {
+    cursor: pointer;
+    padding: 4px 8px;
+    border-radius: 4px;
+    display: inline-block;
+    min-width: 60px;
+}
+.editable-cell:hover {
+    background: var(--aq-hover-bg);
+    outline: 1px dashed var(--aq-primary);
+}
+.editable-input {
+    width: 100%;
+    padding: 4px 8px;
+    border: 2px solid var(--aq-primary);
+    border-radius: 4px;
+    font-size: 13px;
+}
+.price-cell { font-weight: 600; color: var(--aq-success); }
+.stock-low { color: #f44236; font-weight: 700; }
+.stock-ok  { color: var(--aq-text); font-weight: 600; }
+.stock-badge {
+    display: inline-block;
+    padding: 2px 8px;
+    border-radius: 10px;
+    font-size: 11px;
+    font-weight: 600;
+}
+.stock-badge.low {
+    background: rgba(244,66,54,0.15);
+    color: #f44236;
+}
+</style>
+{% endblock %}
+
+{% block content %}
+
+<div class="row g-3 mb-3">
+    <div class="col-md-4">
+        <div class="aq-stat-card">
+            <div class="aq-stat-info">
+                <h6>Total Products</h6>
+                <div class="aq-stat-value">{{ total_products }}</div>
+                <div class="aq-stat-meta">In inventory</div>
+            </div>
+            <div class="aq-stat-icon primary"><i class="fas fa-boxes"></i></div>
+        </div>
+    </div>
+    <div class="col-md-4">
+        <a href="?stock=low" class="aq-stat-card" style="text-decoration:none;">
+            <div class="aq-stat-info">
+                <h6>Low Stock</h6>
+                <div class="aq-stat-value" style="color:{% if low_stock_count > 0 %}#f44236{% else %}#14b898{% endif %};">
+                    {{ low_stock_count }}
+                </div>
+                <div class="aq-stat-meta">Below reorder level</div>
+            </div>
+            <div class="aq-stat-icon danger"><i class="fas fa-exclamation-triangle"></i></div>
+        </a>
+    </div>
+    <div class="col-md-4">
+        <a href="/inventory/movements/" class="aq-stat-card" style="text-decoration:none;">
+            <div class="aq-stat-info">
+                <h6>Stock Movements</h6>
+                <div class="aq-stat-value" style="font-size:16px;">View History</div>
+                <div class="aq-stat-meta">All transactions</div>
+            </div>
+            <div class="aq-stat-icon info"><i class="fas fa-exchange-alt"></i></div>
+        </a>
+    </div>
+</div>
+
+<div class="card">
+    <div class="card-header d-flex justify-content-between align-items-center">
+        <strong>
+            <i class="fas fa-boxes me-2 aq-text-primary"></i>
+            Products
+            <span class="badge bg-secondary ms-2">{{ total_count }}</span>
+        </strong>
+        {% if can_manage %}
+        <button class="btn btn-primary btn-sm" onclick="openAddProductModal()">
+            <i class="fas fa-plus me-1"></i> Add Product
+        </button>
+        {% endif %}
+    </div>
+
+    <div class="card-body">
+        <form method="GET" class="row g-2 mb-3">
+            <div class="col-md-5">
+                <input type="text" name="q" class="form-control" placeholder="Search products..." value="{{ search }}">
+            </div>
+            <div class="col-md-3">
+                <select name="category" class="form-select" onchange="this.form.submit()">
+                    <option value="">All Categories</option>
+                    {% for cat in categories %}
+                    <option value="{{ cat.pk }}" {% if category == cat.pk|stringformat:"s" %}selected{% endif %}>
+                        {{ cat.name }}
+                    </option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="col-md-2">
+                <select name="stock" class="form-select" onchange="this.form.submit()">
+                    <option value="">All Stock</option>
+                    <option value="low" {% if stock_filter == 'low' %}selected{% endif %}>Low Stock</option>
+                </select>
+            </div>
+            <div class="col-md-2">
+                <button class="btn btn-primary w-100"><i class="fas fa-search me-1"></i>Search</button>
+            </div>
+        </form>
+
+        {% if products %}
+        <div class="table-responsive">
+            <table class="table table-hover align-middle">
+                <thead>
+                    <tr>
+                        <th>SKU</th>
+                        <th>Product Name</th>
+                        <th>Category</th>
+                        <th>Cost</th>
+                        <th>Selling Price</th>
+                        <th>Reorder Level</th>
+                        <th>Current Stock</th>
+                        <th class="text-end">Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for p in products %}
+                    <tr data-id="{{ p.pk }}">
+                        <td><code class="small">{{ p.sku }}</code></td>
+                        <td>
+                            {% if can_manage %}
+                            <span class="editable-cell" data-field="name" data-id="{{ p.pk }}">
+                                {{ p.name }}
+                            </span>
+                            {% else %}
+                            <a href="/inventory/products/{{ p.pk }}/">{{ p.name }}</a>
+                            {% endif %}
+                        </td>
+                        <td>
+                            {% if p.category %}
+                            <span class="badge bg-light text-dark border">{{ p.category.name }}</span>
+                            {% else %}<span class="text-muted">—</span>{% endif %}
+                        </td>
+                        <td>
+                            {% if can_manage %}
+                            <span class="editable-cell" data-field="cost_price" data-id="{{ p.pk }}" data-type="number">
+                                {{ p.cost_price|floatformat:2 }}
+                            </span>
+                            {% else %}{{ p.cost_price|floatformat:2 }}{% endif %}
+                        </td>
+                        <td class="price-cell">
+                            {% if can_manage %}
+                            <span class="editable-cell" data-field="selling_price" data-id="{{ p.pk }}" data-type="number">
+                                {{ p.selling_price|floatformat:2 }}
+                            </span>
+                            {% else %}{{ p.selling_price|floatformat:2 }}{% endif %}
+                        </td>
+                        <td>
+                            {% if can_manage %}
+                            <span class="editable-cell" data-field="reorder_level" data-id="{{ p.pk }}" data-type="number">
+                                {{ p.reorder_level|floatformat:2 }}
+                            </span>
+                            {% else %}{{ p.reorder_level|floatformat:2 }}{% endif %}
+                        </td>
+                        <td>
+                            <span class="{% if p.is_low %}stock-low{% else %}stock-ok{% endif %}">
+                                {{ p.current_stock|floatformat:2 }}
+                            </span>
+                            {% if p.is_low %}
+                            <span class="stock-badge low ms-1">LOW</span>
+                            {% endif %}
+                        </td>
+                        <td class="text-end">
+                            <div class="btn-group btn-group-sm">
+                                <a href="/inventory/products/{{ p.pk }}/" class="btn btn-outline-primary" title="View / Manage Stock">
+                                    <i class="fas fa-eye"></i>
+                                </a>
+                                {% if can_manage %}
+                                <button class="btn btn-outline-success" title="Stock In" onclick="openStockInModal({{ p.pk }}, '{{ p.name|escapejs }}')">
+                                    <i class="fas fa-plus"></i>
+                                </button>
+                                <button class="btn btn-outline-warning" title="Adjust" onclick="openAdjustModal({{ p.pk }}, '{{ p.name|escapejs }}', {{ p.current_stock }})">
+                                    <i class="fas fa-edit"></i>
+                                </button>
+                                <button class="btn btn-outline-danger" title="Delete" onclick="deleteProduct({{ p.pk }}, '{{ p.name|escapejs }}')">
+                                    <i class="fas fa-trash"></i>
+                                </button>
+                                {% endif %}
+                            </div>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+
+        {% if page_obj.has_other_pages %}
+        <nav class="mt-3">
+            <ul class="pagination pagination-sm justify-content-center">
+                {% if page_obj.has_previous %}
+                <li class="page-item"><a class="page-link" href="?page={{ page_obj.previous_page_number }}&q={{ search }}">Previous</a></li>
+                {% endif %}
+                <li class="page-item disabled"><span class="page-link">Page {{ page_obj.number }} of {{ page_obj.paginator.num_pages }}</span></li>
+                {% if page_obj.has_next %}
+                <li class="page-item"><a class="page-link" href="?page={{ page_obj.next_page_number }}&q={{ search }}">Next</a></li>
+                {% endif %}
+            </ul>
+        </nav>
+        {% endif %}
+
+        {% else %}
+        <div class="text-center py-5">
+            <i class="fas fa-box-open fa-3x text-muted mb-3"></i>
+            <h5 class="text-muted">No products found</h5>
+            {% if can_manage %}
+            <button class="btn btn-primary mt-2" onclick="openAddProductModal()">
+                <i class="fas fa-plus me-1"></i> Add First Product
+            </button>
+            {% endif %}
+        </div>
+        {% endif %}
+
+        <div class="alert alert-info small mt-3">
+            <i class="fas fa-info-circle me-1"></i>
+            <strong>Tip:</strong> Click any product name or price to edit inline. Press Enter to save.
+        </div>
+    </div>
+</div>
+
+<!-- Add Product Modal -->
+<div class="modal fade" id="productModal" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title"><i class="fas fa-box me-2"></i>Add New Product</h5>
+                <button class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <div class="mb-3">
+                    <label class="form-label fw-semibold">Product Name <span class="text-danger">*</span></label>
+                    <input type="text" id="newProdName" class="form-control" placeholder="e.g. Car Wax 500ml">
+                </div>
+                <div class="row g-2 mb-3">
+                    <div class="col-md-6">
+                        <label class="form-label fw-semibold">Selling Price <span class="text-danger">*</span></label>
+                        <input type="number" id="newProdSelling" class="form-control" min="0" step="0.01">
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label fw-semibold">Cost Price</label>
+                        <input type="number" id="newProdCost" class="form-control" min="0" step="0.01">
+                    </div>
+                </div>
+                <div class="row g-2 mb-3">
+                    <div class="col-md-6">
+                        <label class="form-label fw-semibold">Reorder Level</label>
+                        <input type="number" id="newProdReorder" class="form-control" min="0" step="0.01">
+                        <small class="text-muted">Alert when stock drops to this level.</small>
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label fw-semibold">Initial Stock</label>
+                        <input type="number" id="newProdInitial" class="form-control" min="0" step="0.01">
+                        <small class="text-muted">Starting inventory count.</small>
+                    </div>
+                </div>
+                <div class="mb-3">
+                    <label class="form-label fw-semibold">Category</label>
+                    <select id="newProdCategory" class="form-select">
+                        <option value="">— None —</option>
+                        {% for cat in categories %}
+                        <option value="{{ cat.pk }}">{{ cat.name }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div id="prodError" class="alert alert-danger" style="display:none;"></div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                <button class="btn btn-primary" id="saveProdBtn"><i class="fas fa-save me-1"></i>Save</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Stock In Modal -->
+<div class="modal fade" id="stockInModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title"><i class="fas fa-plus-circle me-2 aq-text-success"></i>Add Stock — <span id="stockInProdName"></span></h5>
+                <button class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <div class="mb-3">
+                    <label class="form-label fw-semibold">Quantity <span class="text-danger">*</span></label>
+                    <input type="number" id="stockInQty" class="form-control form-control-lg" min="0.01" step="0.01">
+                </div>
+                <div class="mb-3">
+                    <label class="form-label fw-semibold">Unit Cost (optional)</label>
+                    <input type="number" id="stockInCost" class="form-control" min="0" step="0.01">
+                    <small class="text-muted">Updates product cost if provided.</small>
+                </div>
+                <div class="mb-3">
+                    <label class="form-label fw-semibold">Reason / Notes</label>
+                    <input type="text" id="stockInReason" class="form-control" value="Stock received">
+                </div>
+                <div id="stockInError" class="alert alert-danger" style="display:none;"></div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                <button class="btn btn-success" id="saveStockInBtn"><i class="fas fa-plus me-1"></i>Add Stock</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Adjust Modal -->
+<div class="modal fade" id="adjustModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title"><i class="fas fa-edit me-2 aq-text-warning"></i>Adjust Stock — <span id="adjProdName"></span></h5>
+                <button class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <div class="alert alert-info small">
+                    Current stock: <strong id="adjCurrent"></strong>
+                </div>
+                <div class="mb-3">
+                    <label class="form-label fw-semibold">Adjustment Type</label>
+                    <select id="adjType" class="form-select">
+                        <option value="set">Set to specific value</option>
+                        <option value="add">Add quantity</option>
+                        <option value="subtract">Subtract quantity</option>
+                    </select>
+                </div>
+                <div class="mb-3">
+                    <label class="form-label fw-semibold">Quantity <span class="text-danger">*</span></label>
+                    <input type="number" id="adjQty" class="form-control form-control-lg" step="0.01">
+                </div>
+                <div class="mb-3">
+                    <label class="form-label fw-semibold">Reason <span class="text-danger">*</span></label>
+                    <textarea id="adjReason" class="form-control" rows="2" placeholder="Why is this adjustment needed?"></textarea>
+                </div>
+                <div id="adjError" class="alert alert-danger" style="display:none;"></div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                <button class="btn btn-warning" id="saveAdjBtn"><i class="fas fa-save me-1"></i>Adjust</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+{% endblock %}
+
+{% block extra_js %}
+<script>
+const CSRF_TOKEN = '{{ csrf_token }}';
+let currentProdId = null;
+
+// ─── Inline Edit ─────────────────────────────────────────────
+document.querySelectorAll('.editable-cell').forEach(cell => {
+    cell.addEventListener('click', function () {
+        if (this.querySelector('input')) return;
+        const val = this.textContent.trim();
+        const field = this.dataset.field;
+        const id = this.dataset.id;
+        const type = this.dataset.type || 'text';
+
+        this.dataset.original = val;
+        this.innerHTML = `<input type="${type === 'number' ? 'number' : 'text'}" class="editable-input" value="${val.replace(/,/g, '')}" ${type === 'number' ? 'step="0.01" min="0"' : ''}>`;
+        const input = this.querySelector('input');
+        input.focus();
+        input.select();
+
+        input.addEventListener('blur', () => saveInlineEdit(this, id, field));
+        input.addEventListener('keydown', e => {
+            if (e.key === 'Enter') input.blur();
+            if (e.key === 'Escape') this.textContent = this.dataset.original;
+        });
+    });
+});
+
+function saveInlineEdit(cell, id, field) {
+    const input = cell.querySelector('input');
+    if (!input) return;
+    const value = input.value.trim();
+    const original = cell.dataset.original;
+    if (value === original) { cell.textContent = original; return; }
+
+    const fd = new FormData();
+    fd.append('field', field);
+    fd.append('value', value);
+
+    fetch(`/inventory/products/${id}/edit-inline/`, {
+        method: 'POST',
+        headers: { 'X-CSRFToken': CSRF_TOKEN },
+        body: fd,
+    })
+    .then(r => r.json())
+    .then(data => {
+        if (data.success) {
+            const display = cell.dataset.type === 'number' ? parseFloat(data.value).toFixed(2) : data.value;
+            cell.textContent = display;
+            showToast(data.message, 'success');
+        } else {
+            cell.textContent = original;
+            showToast(data.error, 'error');
+        }
+    });
+}
+
+// ─── Add Product ─────────────────────────────────────────────
+function openAddProductModal() {
+    ['newProdName', 'newProdSelling', 'newProdCost', 'newProdReorder', 'newProdInitial'].forEach(id => document.getElementById(id).value = '');
+    document.getElementById('newProdCategory').value = '';
+    document.getElementById('prodError').style.display = 'none';
+    new bootstrap.Modal(document.getElementById('productModal')).show();
+    setTimeout(() => document.getElementById('newProdName').focus(), 300);
+}
+
+document.getElementById('saveProdBtn').addEventListener('click', function () {
+    const name = document.getElementById('newProdName').value.trim();
+    const selling = document.getElementById('newProdSelling').value.trim();
+    const cost = document.getElementById('newProdCost').value.trim() || '0';
+    const reorder = document.getElementById('newProdReorder').value.trim() || '0';
+    const initial = document.getElementById('newProdInitial').value.trim() || '0';
+    const cat = document.getElementById('newProdCategory').value;
+    const err = document.getElementById('prodError');
+    err.style.display = 'none';
+
+    if (!name) { err.textContent = 'Name required.'; err.style.display = 'block'; return; }
+    if (!selling) { err.textContent = 'Selling price required.'; err.style.display = 'block'; return; }
+
+    this.disabled = true;
+    const fd = new FormData();
+    fd.append('name', name);
+    fd.append('selling_price', selling);
+    fd.append('cost_price', cost);
+    fd.append('reorder_level', reorder);
+    fd.append('initial_stock', initial);
+    if (cat) fd.append('category_id', cat);
+
+    fetch('/inventory/products/create/', {
+        method: 'POST',
+        headers: { 'X-CSRFToken': CSRF_TOKEN },
+        body: fd,
+    })
+    .then(r => r.json())
+    .then(data => {
+        this.disabled = false;
+        if (data.success) {
+            bootstrap.Modal.getInstance(document.getElementById('productModal')).hide();
+            showToast(data.message, 'success');
+            setTimeout(() => location.reload(), 800);
+        } else {
+            err.textContent = data.error;
+            err.style.display = 'block';
+        }
+    });
+});
+
+// ─── Stock In ────────────────────────────────────────────────
+function openStockInModal(id, name) {
+    currentProdId = id;
+    document.getElementById('stockInProdName').textContent = name;
+    document.getElementById('stockInQty').value = '';
+    document.getElementById('stockInCost').value = '';
+    document.getElementById('stockInReason').value = 'Stock received';
+    document.getElementById('stockInError').style.display = 'none';
+    new bootstrap.Modal(document.getElementById('stockInModal')).show();
+    setTimeout(() => document.getElementById('stockInQty').focus(), 300);
+}
+
+document.getElementById('saveStockInBtn').addEventListener('click', function () {
+    const qty = document.getElementById('stockInQty').value.trim();
+    const cost = document.getElementById('stockInCost').value.trim() || '0';
+    const reason = document.getElementById('stockInReason').value.trim();
+    const err = document.getElementById('stockInError');
+    err.style.display = 'none';
+
+    if (!qty || parseFloat(qty) <= 0) { err.textContent = 'Valid quantity required.'; err.style.display = 'block'; return; }
+
+    this.disabled = true;
+    const fd = new FormData();
+    fd.append('quantity', qty);
+    fd.append('unit_cost', cost);
+    fd.append('reason', reason);
+
+    fetch(`/inventory/products/${currentProdId}/stock-in/`, {
+        method: 'POST',
+        headers: { 'X-CSRFToken': CSRF_TOKEN },
+        body: fd,
+    })
+    .then(r => r.json())
+    .then(data => {
+        this.disabled = false;
+        if (data.success) {
+            bootstrap.Modal.getInstance(document.getElementById('stockInModal')).hide();
+            showToast(data.message, 'success');
+            setTimeout(() => location.reload(), 800);
+        } else {
+            err.textContent = data.error;
+            err.style.display = 'block';
+        }
+    });
+});
+
+// ─── Adjust ──────────────────────────────────────────────────
+function openAdjustModal(id, name, currentStock) {
+    currentProdId = id;
+    document.getElementById('adjProdName').textContent = name;
+    document.getElementById('adjCurrent').textContent = currentStock;
+    document.getElementById('adjType').value = 'set';
+    document.getElementById('adjQty').value = currentStock;
+    document.getElementById('adjReason').value = '';
+    document.getElementById('adjError').style.display = 'none';
+    new bootstrap.Modal(document.getElementById('adjustModal')).show();
+    setTimeout(() => document.getElementById('adjQty').focus(), 300);
+}
+
+document.getElementById('saveAdjBtn').addEventListener('click', function () {
+    const type = document.getElementById('adjType').value;
+    const qty = document.getElementById('adjQty').value.trim();
+    const reason = document.getElementById('adjReason').value.trim();
+    const err = document.getElementById('adjError');
+    err.style.display = 'none';
+
+    if (!qty) { err.textContent = 'Quantity required.'; err.style.display = 'block'; return; }
+    if (!reason) { err.textContent = 'Reason required.'; err.style.display = 'block'; return; }
+
+    this.disabled = true;
+    const fd = new FormData();
+    fd.append('quantity', qty);
+    fd.append('type', type);
+    fd.append('reason', reason);
+
+    fetch(`/inventory/products/${currentProdId}/adjust/`, {
+        method: 'POST',
+        headers: { 'X-CSRFToken': CSRF_TOKEN },
+        body: fd,
+    })
+    .then(r => r.json())
+    .then(data => {
+        this.disabled = false;
+        if (data.success) {
+            bootstrap.Modal.getInstance(document.getElementById('adjustModal')).hide();
+            showToast(data.message, 'success');
+            setTimeout(() => location.reload(), 800);
+        } else {
+            err.textContent = data.error;
+            err.style.display = 'block';
+        }
+    });
+});
+
+// ─── Delete ──────────────────────────────────────────────────
+function deleteProduct(id, name) {
+    if (!confirm(`Delete "${name}"?\nThis will move it to trash.`)) return;
+    fetch(`/inventory/products/${id}/delete/`, {
+        method: 'POST',
+        headers: { 'X-CSRFToken': CSRF_TOKEN },
+    })
+    .then(r => r.json())
+    .then(data => {
+        if (data.success) {
+            document.querySelector(`tr[data-id="${id}"]`)?.remove();
+            showToast(data.message, 'success');
+        } else {
+            showToast(data.error, 'error');
+        }
+    });
+}
+</script>
+{% endblock %}

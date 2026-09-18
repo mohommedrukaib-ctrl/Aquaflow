@@ -1,0 +1,213 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <title>{{ invoice.invoice_number }}</title>
+    <style>
+        @media print {
+            body { margin: 0; }
+            .no-print { display: none !important; }
+            @page { margin: 15mm; size: A4; }
+        }
+        body {
+            font-family: Arial, sans-serif;
+            font-size: 13px;
+            max-width: 210mm;
+            margin: 10px auto;
+            padding: 20px 30px;
+            color: #333;
+            background: #fff;
+        }
+        .inv-header { display: flex; justify-content: space-between; align-items: start; margin-bottom: 25px; padding-bottom: 15px; border-bottom: 3px solid #04a9f5; }
+        .inv-header .logo-side { display: flex; align-items: center; gap: 15px; }
+        .inv-header .logo-side img { max-height: 70px; }
+        .inv-header .biz-name { font-size: 22px; font-weight: bold; color: #1a2035; }
+        .inv-header .biz-details { font-size: 11px; color: #666; line-height: 1.6; }
+        .inv-header .inv-title { text-align: right; }
+        .inv-header .inv-number { font-size: 24px; font-weight: bold; color: #04a9f5; }
+        .inv-meta { display: flex; justify-content: space-between; margin-bottom: 25px; }
+        .inv-meta-box { }
+        .inv-meta-box h6 { color: #999; font-size: 10px; text-transform: uppercase; margin: 0 0 6px; }
+        .inv-meta-box p { margin: 0; font-size: 13px; line-height: 1.5; }
+        table.items { width: 100%; border-collapse: collapse; margin: 15px 0; }
+        table.items th { background: #1a2035; color: white; padding: 10px 12px; text-align: left; font-size: 11px; text-transform: uppercase; }
+        table.items td { padding: 10px 12px; border-bottom: 1px solid #eee; }
+        table.items tr:hover { background: #f9f9f9; }
+        table.items .r { text-align: right; }
+        .totals { width: 45%; margin-left: auto; margin-top: 15px; }
+        .totals td { padding: 6px 12px; font-size: 13px; }
+        .totals .grand { font-size: 20px; font-weight: bold; border-top: 3px solid #1a2035; color: #04a9f5; }
+        .payment-box { background: #f0f4f8; padding: 12px 16px; border-radius: 8px; margin-top: 15px; }
+        .footer { text-align: center; margin-top: 30px; padding-top: 15px; border-top: 1px solid #ddd; color: #999; font-size: 10px; }
+        .terms { margin-top: 20px; font-size: 10px; color: #999; }
+        .format-bar {
+            background: #f0f0f0; padding: 10px; text-align: center;
+            margin-bottom: 15px; border-radius: 6px;
+        }
+        .format-bar select { padding: 6px 12px; border-radius: 4px; border: 1px solid #ccc; }
+        .format-bar button { padding: 8px 20px; background: #04a9f5; color: white; border: none; border-radius: 4px; cursor: pointer; margin-left: 8px; }
+    </style>
+</head>
+<body>
+
+<div class="no-print format-bar">
+    <select onchange="changeFormat(this.value)">
+        {% for val, label in formats %}
+        <option value="{{ val }}" {% if current_format == val %}selected{% endif %}>{{ label }}</option>
+        {% endfor %}
+    </select>
+    <button onclick="window.print()">🖨 Print</button>
+    <button onclick="window.close()" style="background:#666;">Close</button>
+</div>
+
+<div class="inv-header">
+    <div class="logo-side">
+        {% if business.logo and business.show_logo_on_receipt %}
+        <img src="{{ business.logo.url }}" alt="Logo">
+        {% endif %}
+        <div>
+            <div class="biz-name">{{ business.name }}</div>
+            <div class="biz-details">
+                {% if business.address_line1 %}{{ business.address_line1 }}<br>{% endif %}
+                {% if business.address_line2 %}{{ business.address_line2 }}<br>{% endif %}
+                {% if business.city %}{{ business.city }}{% if business.state %}, {{ business.state }}{% endif %} {{ business.postal_code }}<br>{% endif %}
+                {{ business.country }}<br>
+                {% if business.phone %}Tel: {{ business.phone }}{% endif %}
+                {% if business.email %} | {{ business.email }}{% endif %}
+                {% if business.tax_number %}<br>{{ business.tax_name }} No: {{ business.tax_number }}{% endif %}
+                {% if business.registration_number %}<br>Reg No: {{ business.registration_number }}{% endif %}
+            </div>
+        </div>
+    </div>
+    <div class="inv-title">
+        <div style="font-size:12px; color:#999; text-transform:uppercase; letter-spacing:2px;">TAX INVOICE</div>
+        <div class="inv-number">{{ invoice.invoice_number }}</div>
+        <div style="font-size:11px; color:#666; margin-top:8px;">
+            Date: {{ invoice.created_at|date:"d M Y" }}<br>
+            Time: {{ invoice.created_at|time:"H:i" }}<br>
+            Order: {{ order.order_number }}
+        </div>
+    </div>
+</div>
+
+<div class="inv-meta">
+    <div class="inv-meta-box">
+        <h6>Bill To</h6>
+        <p>
+            <strong>{{ order.customer.name }}</strong><br>
+            {{ order.customer.customer_code }}<br>
+            {% if order.customer.phone %}Tel: {{ order.customer.phone }}<br>{% endif %}
+            {% if order.customer.email %}{{ order.customer.email }}<br>{% endif %}
+            {% if order.customer.address %}{{ order.customer.address }}{% endif %}
+        </p>
+    </div>
+    {% if order.vehicle %}
+    <div class="inv-meta-box">
+        <h6>Vehicle Details</h6>
+        <p>
+            <strong>{{ order.vehicle.registration_number }}</strong><br>
+            {{ order.vehicle.brand.name }} {{ order.vehicle.model.name }}<br>
+            {% if order.vehicle.vehicle_type %}Type: {{ order.vehicle.vehicle_type.name }}<br>{% endif %}
+            {% if order.vehicle.color %}Color: {{ order.vehicle.color.name }}<br>{% endif %}
+            {% if order.vehicle.year %}Year: {{ order.vehicle.year }}{% endif %}
+        </p>
+    </div>
+    {% endif %}
+    <div class="inv-meta-box">
+        <h6>Branch</h6>
+        <p>{{ order.branch.name }}</p>
+        <h6 style="margin-top:8px;">Processed By</h6>
+        <p>{{ order.created_by.get_full_name|default:order.created_by.username }}</p>
+    </div>
+</div>
+
+<table class="items">
+    <thead>
+        <tr>
+            <th style="width:5%;">#</th>
+            <th style="width:35%;">Description</th>
+            <th style="width:10%;">Type</th>
+            <th class="r" style="width:8%;">Qty</th>
+            <th class="r" style="width:12%;">Unit Price</th>
+            <th class="r" style="width:10%;">Discount</th>
+            {% if business.show_tax_on_receipt %}
+            <th class="r" style="width:10%;">Tax</th>
+            {% endif %}
+            <th class="r" style="width:12%;">Total</th>
+        </tr>
+    </thead>
+    <tbody>
+        {% for item in items %}
+        <tr>
+            <td>{{ forloop.counter }}</td>
+            <td><strong>{{ item.description_snapshot }}</strong></td>
+            <td>{{ item.get_item_type_display }}</td>
+            <td class="r">{{ item.quantity|floatformat:2 }}</td>
+            <td class="r">Rs. {{ item.unit_price_snapshot|floatformat:2 }}</td>
+            <td class="r">Rs. {{ item.discount|floatformat:2 }}</td>
+            {% if business.show_tax_on_receipt %}
+            <td class="r">Rs. {{ item.tax|floatformat:2 }}</td>
+            {% endif %}
+            <td class="r"><strong>Rs. {{ item.line_total|floatformat:2 }}</strong></td>
+        </tr>
+        {% endfor %}
+    </tbody>
+</table>
+
+<table class="totals">
+    <tr>
+        <td style="color:#666;">Subtotal</td>
+        <td class="r">Rs. {{ invoice.subtotal|floatformat:2 }}</td>
+    </tr>
+    {% if invoice.discount_amount > 0 %}
+    <tr>
+        <td style="color:#666;">Discount</td>
+        <td class="r" style="color:red;">- Rs. {{ invoice.discount_amount|floatformat:2 }}</td>
+    </tr>
+    {% endif %}
+    {% if invoice.tax_amount > 0 and business.show_tax_on_receipt %}
+    <tr>
+        <td style="color:#666;">{{ business.tax_name }} ({{ business.tax_percentage }}%)</td>
+        <td class="r">Rs. {{ invoice.tax_amount|floatformat:2 }}</td>
+    </tr>
+    {% endif %}
+    <tr class="grand">
+        <td>GRAND TOTAL</td>
+        <td class="r">Rs. {{ invoice.total|floatformat:2 }}</td>
+    </tr>
+</table>
+
+<div class="payment-box">
+    <strong>Payment Details:</strong>
+    <table style="width:100%; margin-top:6px;">
+        {% for pmt in payments %}
+        <tr>
+            <td>{{ pmt.payment_method.name }}</td>
+            {% if pmt.reference %}<td>Ref: {{ pmt.reference }}</td>{% else %}<td></td>{% endif %}
+            <td class="r"><strong>Rs. {{ pmt.amount|floatformat:2 }}</strong></td>
+        </tr>
+        {% endfor %}
+    </table>
+</div>
+
+<div class="terms">
+    <strong>Terms & Conditions:</strong><br>
+    • All services are non-refundable after vehicle leaves premises.<br>
+    • We are not responsible for items left inside vehicles.<br>
+    • This is a computer-generated invoice and does not require a signature.
+</div>
+
+<div class="footer">
+    {{ business.receipt_footer|default:"Thank you for choosing us!" }}<br>
+    {{ business.name }} | {{ business.phone }}<br>
+    Powered by AquaFlow — Quantum Axis
+</div>
+
+<script>
+function changeFormat(fmt) {
+    window.location.href = '/pos/receipt/{{ invoice.pk }}/?format=' + fmt;
+}
+</script>
+
+</body>
+</html>

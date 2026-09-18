@@ -1,0 +1,298 @@
+{% extends "base/base.html" %}
+
+{% block title %}Business Settings — AquaFlow{% endblock %}
+{% block page_icon %}fas fa-building{% endblock %}
+{% block page_title %}Business Settings{% endblock %}
+{% block page_subtitle %}Configure your business information{% endblock %}
+
+{% block breadcrumbs %}
+<span>/</span>
+<span class="current">Business Settings</span>
+{% endblock %}
+
+{% block content %}
+<form method="post" enctype="multipart/form-data">
+    {% csrf_token %}
+
+    <div class="row g-3">
+
+        <!-- Business Info -->
+        <div class="col-lg-8">
+            <div class="card mb-3">
+                <div class="card-header">
+                    <strong><i class="fas fa-building me-2 aq-text-primary"></i>Business Information</strong>
+                </div>
+                <div class="card-body">
+                    <div class="row g-3">
+                        <div class="col-md-8">
+                            <label class="form-label fw-semibold">Business Name <span class="text-danger">*</span></label>
+                            <input type="text" name="name" class="form-control" value="{{ business.name }}" required>
+                            <small class="text-muted">Displayed on receipts, dashboard, and login page.</small>
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label fw-semibold">Registration Number</label>
+                            <input type="text" name="registration_number" class="form-control" value="{{ business.registration_number }}">
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label fw-semibold">Legal Name</label>
+                            <input type="text" name="legal_name" class="form-control" value="{{ business.legal_name }}">
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label fw-semibold">Tagline</label>
+                            <input type="text" name="tagline" class="form-control" value="{{ business.tagline }}" placeholder="Short slogan">
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Address -->
+            <div class="card mb-3">
+                <div class="card-header">
+                    <strong><i class="fas fa-map-marker-alt me-2 aq-text-primary"></i>Address</strong>
+                </div>
+                <div class="card-body">
+                    <div class="row g-3">
+                        <div class="col-md-12">
+                            <label class="form-label fw-semibold">Address Line 1</label>
+                            <input type="text" name="address_line1" class="form-control" value="{{ business.address_line1 }}">
+                        </div>
+                        <div class="col-md-12">
+                            <label class="form-label fw-semibold">Address Line 2</label>
+                            <input type="text" name="address_line2" class="form-control" value="{{ business.address_line2 }}">
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label fw-semibold">City</label>
+                            <input type="text" name="city" class="form-control" value="{{ business.city }}">
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label fw-semibold">State / Province</label>
+                            <input type="text" name="state" class="form-control" value="{{ business.state }}">
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label fw-semibold">Postal Code</label>
+                            <input type="text" name="postal_code" class="form-control" value="{{ business.postal_code }}">
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label fw-semibold">Country</label>
+                            <input type="text" name="country" class="form-control" value="{{ business.country }}">
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label fw-semibold">Timezone</label>
+                            <select name="timezone" class="form-select">
+                                {% for tz in timezones %}
+                                <option value="{{ tz }}" {% if business.timezone == tz %}selected{% endif %}>{{ tz }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Contact -->
+            <div class="card mb-3">
+                <div class="card-header">
+                    <strong><i class="fas fa-phone me-2 aq-text-primary"></i>Contact Details</strong>
+                </div>
+                <div class="card-body">
+                    <div class="row g-3">
+                        <div class="col-md-6">
+                            <label class="form-label fw-semibold">Primary Phone</label>
+                            <input type="text" name="phone" class="form-control" value="{{ business.phone }}">
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label fw-semibold">Secondary Phone</label>
+                            <input type="text" name="phone2" class="form-control" value="{{ business.phone2 }}">
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label fw-semibold">Email</label>
+                            <input type="email" name="email" class="form-control" value="{{ business.email }}">
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label fw-semibold">Website</label>
+                            <input type="url" name="website" class="form-control" value="{{ business.website }}" placeholder="https://">
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Currency -->
+            <div class="card mb-3">
+                <div class="card-header">
+                    <strong><i class="fas fa-dollar-sign me-2 aq-text-primary"></i>Currency</strong>
+                </div>
+                <div class="card-body">
+                    <div class="row g-3">
+                        <div class="col-md-4">
+                            <label class="form-label fw-semibold">Currency Code</label>
+                            <select name="currency_code" class="form-select" id="currencySelect">
+                                {% for code, symbol, name in currencies %}
+                                <option value="{{ code }}"
+                                    data-symbol="{{ symbol }}"
+                                    data-name="{{ name }}"
+                                    {% if business.currency_code == code %}selected{% endif %}>
+                                    {{ code }} — {{ name }}
+                                </option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label fw-semibold">Symbol</label>
+                            <input type="text" name="currency_symbol" id="currencySymbol" class="form-control" value="{{ business.currency_symbol }}">
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label fw-semibold">Currency Name</label>
+                            <input type="text" name="currency_name" id="currencyName" class="form-control" value="{{ business.currency_name }}">
+                        </div>
+                    </div>
+                    <div class="alert alert-warning small mt-3 mb-0">
+                        <i class="fas fa-info-circle me-1"></i>
+                        Currency changes affect display only. Historical amounts remain unchanged.
+                    </div>
+                </div>
+            </div>
+
+            <!-- Tax -->
+            <div class="card mb-3">
+                <div class="card-header">
+                    <strong><i class="fas fa-percent me-2 aq-text-primary"></i>Tax Settings</strong>
+                </div>
+                <div class="card-body">
+                    <div class="form-check form-switch mb-3">
+                        <input type="checkbox" id="taxEnabled" name="tax_enabled" value="true" class="form-check-input" role="switch"
+                               {% if business.tax_enabled %}checked{% endif %}>
+                        <label for="taxEnabled" class="form-check-label fw-semibold">
+                            Enable Tax on Sales
+                        </label>
+                    </div>
+
+                    <div class="row g-3">
+                        <div class="col-md-4">
+                            <label class="form-label fw-semibold">Tax Name</label>
+                            <input type="text" name="tax_name" class="form-control" value="{{ business.tax_name }}" placeholder="VAT, GST, NBT, etc.">
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label fw-semibold">Tax Percentage</label>
+                            <div class="input-group">
+                                <input type="number" name="tax_percentage" class="form-control" value="{{ business.tax_percentage }}" min="0" max="100" step="0.01">
+                                <span class="input-group-text">%</span>
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label fw-semibold">Tax Number</label>
+                            <input type="text" name="tax_number" class="form-control" value="{{ business.tax_number }}">
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Print Settings -->
+            <div class="card mb-3">
+                <div class="card-header">
+                    <strong><i class="fas fa-print me-2 aq-text-primary"></i>Receipt & Print Settings</strong>
+                </div>
+                <div class="card-body">
+                    <div class="row g-3">
+                        <div class="col-md-6">
+                            <label class="form-label fw-semibold">Default Print Format</label>
+                            <select name="print_format" class="form-select">
+                                {% for value, label in print_formats %}
+                                <option value="{{ value }}" {% if business.print_format == value %}selected{% endif %}>{{ label }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label fw-semibold">Receipt Options</label>
+                            <div class="form-check">
+                                <input type="checkbox" id="showTax" name="show_tax_on_receipt" value="true" class="form-check-input"
+                                       {% if business.show_tax_on_receipt %}checked{% endif %}>
+                                <label for="showTax" class="form-check-label">Show tax on receipts</label>
+                            </div>
+                            <div class="form-check">
+                                <input type="checkbox" id="showLogo" name="show_logo_on_receipt" value="true" class="form-check-input"
+                                       {% if business.show_logo_on_receipt %}checked{% endif %}>
+                                <label for="showLogo" class="form-check-label">Show logo on receipts</label>
+                            </div>
+                        </div>
+                        <div class="col-md-12">
+                            <label class="form-label fw-semibold">Receipt Footer Message</label>
+                            <textarea name="receipt_footer" class="form-control" rows="2" placeholder="Thank you for your business!">{{ business.receipt_footer }}</textarea>
+                            <small class="text-muted">Appears at the bottom of every receipt.</small>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Logo & Preview -->
+        <div class="col-lg-4">
+            <div class="card mb-3">
+                <div class="card-header">
+                    <strong><i class="fas fa-image me-2 aq-text-primary"></i>Business Logo</strong>
+                </div>
+                <div class="card-body text-center">
+                    {% if business.logo %}
+                    <img src="{{ business.logo.url }}" alt="Logo" style="max-width:180px; max-height:180px; margin-bottom:12px;" class="border rounded">
+                    <div class="form-check mb-3">
+                        <input type="checkbox" id="deleteLogo" name="delete_logo" value="true" class="form-check-input">
+                        <label for="deleteLogo" class="form-check-label text-danger small">
+                            Delete current logo
+                        </label>
+                    </div>
+                    {% else %}
+                    <div class="text-muted py-4 mb-3">
+                        <i class="fas fa-image fa-3x mb-2"></i>
+                        <div>No logo uploaded</div>
+                    </div>
+                    {% endif %}
+
+                    <label class="form-label fw-semibold small">Upload New Logo</label>
+                    <input type="file" name="logo" class="form-control" accept="image/*">
+                    <small class="text-muted d-block mt-1">JPG, PNG, GIF. Recommended: 400x400px</small>
+                </div>
+            </div>
+
+            <div class="card mb-3">
+                <div class="card-header">
+                    <strong><i class="fas fa-eye me-2 aq-text-info"></i>Live Preview</strong>
+                </div>
+                <div class="card-body text-center" style="background:#fff; color:#000; font-family: monospace; padding: 20px;">
+                    {% if business.logo %}
+                    <img src="{{ business.logo.url }}" style="max-width:80px; margin-bottom:8px;">
+                    {% endif %}
+                    <div style="font-weight: bold; font-size:16px;">{{ business.name }}</div>
+                    {% if business.address_line1 %}<div style="font-size:11px;">{{ business.address_line1 }}</div>{% endif %}
+                    {% if business.city %}<div style="font-size:11px;">{{ business.city }}, {{ business.country }}</div>{% endif %}
+                    {% if business.phone %}<div style="font-size:11px;">Tel: {{ business.phone }}</div>{% endif %}
+                    {% if business.tax_number %}<div style="font-size:11px;">Tax: {{ business.tax_number }}</div>{% endif %}
+                    <hr style="margin: 8px 0;">
+                    <div style="font-size:11px;">Sample Receipt</div>
+                    <div style="font-size:11px;">Item                {{ business.currency_symbol }} 1,000.00</div>
+                    {% if business.tax_enabled %}
+                    <div style="font-size:11px;">{{ business.tax_name }} ({{ business.tax_percentage }}%)   {{ business.currency_symbol }} {{ business.tax_percentage|floatformat:0 }}0.00</div>
+                    {% endif %}
+                    <hr style="margin: 8px 0;">
+                    <div style="font-size:11px;">{{ business.receipt_footer|default:"Thank you!" }}</div>
+                </div>
+            </div>
+
+            <div class="d-grid">
+                <button type="submit" class="btn btn-primary btn-lg">
+                    <i class="fas fa-save me-1"></i>Save All Settings
+                </button>
+            </div>
+        </div>
+    </div>
+</form>
+
+{% endblock %}
+
+{% block extra_js %}
+<script>
+// Auto-fill symbol and name when currency changes
+document.getElementById('currencySelect').addEventListener('change', function () {
+    const opt = this.options[this.selectedIndex];
+    document.getElementById('currencySymbol').value = opt.dataset.symbol;
+    document.getElementById('currencyName').value = opt.dataset.name;
+});
+</script>
+{% endblock %}

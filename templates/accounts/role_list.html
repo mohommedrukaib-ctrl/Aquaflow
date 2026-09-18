@@ -1,0 +1,229 @@
+{% extends "base/base.html" %}
+
+{% block title %}Roles — AquaFlow{% endblock %}
+{% block page_icon %}fas fa-user-shield{% endblock %}
+{% block page_title %}Roles & Permissions{% endblock %}
+{% block page_subtitle %}Manage user roles and permissions{% endblock %}
+
+{% block breadcrumbs %}
+<span>/</span>
+<a href="/system/">System</a>
+<span>/</span>
+<span class="current">Roles</span>
+{% endblock %}
+
+{% block content %}
+
+<div class="alert alert-info">
+    <i class="fas fa-info-circle me-2"></i>
+    <strong>System Roles</strong> are default roles (SUPER_ADMIN, OWNER, etc.) — cannot be deleted.
+    <strong>Custom Roles</strong> can be created, edited, and deleted freely.
+</div>
+
+<div class="row g-3 mb-4">
+    <div class="col-md-4">
+        <div class="aq-stat-card">
+            <div class="aq-stat-info">
+                <h6>Total Roles</h6>
+                <div class="aq-stat-value">{{ roles.count }}</div>
+            </div>
+            <div class="aq-stat-icon primary"><i class="fas fa-user-shield"></i></div>
+        </div>
+    </div>
+    <div class="col-md-4">
+        <div class="aq-stat-card">
+            <div class="aq-stat-info">
+                <h6>System Roles</h6>
+                <div class="aq-stat-value">{{ roles|length }}</div>
+                <div class="aq-stat-meta">Cannot delete</div>
+            </div>
+            <div class="aq-stat-icon warning"><i class="fas fa-lock"></i></div>
+        </div>
+    </div>
+    <div class="col-md-4">
+        <div class="aq-stat-card">
+            <div class="aq-stat-info">
+                <h6>Available Permissions</h6>
+                <div class="aq-stat-value">{{ total_permissions }}</div>
+            </div>
+            <div class="aq-stat-icon info"><i class="fas fa-key"></i></div>
+        </div>
+    </div>
+</div>
+
+<div class="card">
+    <div class="card-header d-flex justify-content-between align-items-center">
+        <strong><i class="fas fa-list me-2"></i>All Roles</strong>
+        <div class="d-flex gap-2">
+            <a href="/accounts/users/" class="btn btn-outline-secondary btn-sm">
+                <i class="fas fa-users me-1"></i>Manage Users
+            </a>
+            <button class="btn btn-primary btn-sm" onclick="openCreateModal()">
+                <i class="fas fa-plus me-1"></i>Create Role
+            </button>
+        </div>
+    </div>
+    <div class="card-body p-0">
+        <table class="table table-hover mb-0">
+            <thead>
+                <tr>
+                    <th>Role</th>
+                    <th>Description</th>
+                    <th class="text-center">Users</th>
+                    <th class="text-center">Permissions</th>
+                    <th class="text-center">Type</th>
+                    <th class="text-end">Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for role in roles %}
+                <tr>
+                    <td>
+                        <strong>{{ role.name }}</strong><br>
+                        <code class="small text-muted">{{ role.code }}</code>
+                    </td>
+                    <td><small class="text-muted">{{ role.description|default:"—" }}</small></td>
+                    <td class="text-center">
+                        <span class="badge bg-info">{{ role.user_count }}</span>
+                    </td>
+                    <td class="text-center">
+                        {% if role.code == 'SUPER_ADMIN' %}
+                        <span class="badge bg-success">ALL</span>
+                        {% else %}
+                        <span class="badge bg-secondary">{{ role.permission_count }}</span>
+                        {% endif %}
+                    </td>
+                    <td class="text-center">
+                        {% if role.is_system %}
+                        <span class="badge bg-warning">System</span>
+                        {% else %}
+                        <span class="badge bg-primary">Custom</span>
+                        {% endif %}
+                    </td>
+                    <td class="text-end">
+                        <a href="/accounts/roles/{{ role.pk }}/edit/" class="btn btn-sm btn-outline-primary">
+                            <i class="fas fa-edit"></i> Edit
+                        </a>
+                        {% if not role.is_system %}
+                        <button class="btn btn-sm btn-outline-danger" onclick="deleteRole({{ role.pk }}, '{{ role.name|escapejs }}')">
+                            <i class="fas fa-trash"></i>
+                        </button>
+                        {% endif %}
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+
+<!-- Create Role Modal -->
+<div class="modal fade" id="createModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title"><i class="fas fa-plus me-2"></i>Create New Role</h5>
+                <button class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <div class="mb-3">
+                    <label class="form-label fw-semibold">Role Name <span class="text-danger">*</span></label>
+                    <input type="text" id="roleName" class="form-control" placeholder="e.g. Assistant Manager">
+                </div>
+                <div class="mb-3">
+                    <label class="form-label fw-semibold">Description</label>
+                    <textarea id="roleDesc" class="form-control" rows="2" placeholder="What can this role do?"></textarea>
+                </div>
+                <div class="mb-3">
+                    <label class="form-label fw-semibold">Copy permissions from (optional)</label>
+                    <select id="copyFrom" class="form-select">
+                        <option value="">— Start fresh (no permissions) —</option>
+                        {% for role in roles %}
+                        <option value="{{ role.pk }}">{{ role.name }}</option>
+                        {% endfor %}
+                    </select>
+                    <small class="text-muted">You can edit permissions after creating.</small>
+                </div>
+                <div id="createError" class="alert alert-danger" style="display:none;"></div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                <button class="btn btn-primary" id="saveRoleBtn"><i class="fas fa-save me-1"></i>Create Role</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+{% endblock %}
+
+{% block extra_js %}
+<script>
+const CSRF_TOKEN = '{{ csrf_token }}';
+
+function openCreateModal() {
+    document.getElementById('roleName').value = '';
+    document.getElementById('roleDesc').value = '';
+    document.getElementById('copyFrom').value = '';
+    document.getElementById('createError').style.display = 'none';
+    new bootstrap.Modal(document.getElementById('createModal')).show();
+    setTimeout(() => document.getElementById('roleName').focus(), 300);
+}
+
+document.getElementById('saveRoleBtn').addEventListener('click', function () {
+    const name = document.getElementById('roleName').value.trim();
+    const desc = document.getElementById('roleDesc').value.trim();
+    const copy = document.getElementById('copyFrom').value;
+    const err = document.getElementById('createError');
+    err.style.display = 'none';
+
+    if (!name) {
+        err.textContent = 'Name required.';
+        err.style.display = 'block';
+        return;
+    }
+
+    this.disabled = true;
+    const fd = new FormData();
+    fd.append('name', name);
+    fd.append('description', desc);
+    if (copy) fd.append('copy_from', copy);
+
+    fetch('/accounts/roles/create/', {
+        method: 'POST',
+        headers: { 'X-CSRFToken': CSRF_TOKEN },
+        body: fd,
+    })
+    .then(r => r.json())
+    .then(data => {
+        this.disabled = false;
+        if (data.success) {
+            showToast(data.message, 'success');
+            setTimeout(() => {
+                window.location.href = `/accounts/roles/${data.role_id}/edit/`;
+            }, 800);
+        } else {
+            err.textContent = data.error;
+            err.style.display = 'block';
+        }
+    });
+});
+
+function deleteRole(id, name) {
+    if (!confirm(`Delete role "${name}"?\nThis cannot be undone.`)) return;
+
+    fetch(`/accounts/roles/${id}/delete/`, {
+        method: 'POST',
+        headers: { 'X-CSRFToken': CSRF_TOKEN },
+    })
+    .then(r => r.json())
+    .then(data => {
+        if (data.success) {
+            showToast(data.message, 'success');
+            setTimeout(() => location.reload(), 800);
+        } else {
+            showToast(data.error, 'error');
+        }
+    });
+}
+</script>
+{% endblock %}

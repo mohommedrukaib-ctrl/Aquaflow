@@ -1,0 +1,305 @@
+{% extends "base/base.html" %}
+{% load aquaflow_tags %}
+
+{% block title %}Dashboard — {{ AQUAFLOW_SYSTEM_NAME }}{% endblock %}
+{% block page_icon %}fas fa-gauge-high{% endblock %}
+{% block page_title %}Dashboard{% endblock %}
+{% block page_subtitle %}{{ BUSINESS_NAME }}{% endblock %}
+{% block breadcrumbs %}<span>/</span><span class="current">Dashboard</span>{% endblock %}
+
+{% block extra_css %}
+<style>
+.dash-grid { display: grid; grid-template-columns: 1fr 320px; gap: 8px; align-items: start; }
+@media (max-width: 1200px) { .dash-grid { grid-template-columns: 1fr; } }
+
+.mini-chart { height: 116px; position: relative; width: 100%; }
+.mini-chart svg { position: absolute; inset: 0; width: 100%; height: 100%; overflow: visible; }
+.mini-x {
+    display: flex; justify-content: space-between;
+    font-size: 9px; color: var(--aq-text-soft);
+    padding-top: 3px; border-top: 1px solid var(--aq-border); margin-top: 3px;
+}
+
+.mini-list { list-style: none; margin: 0; padding: 0; }
+.mini-list li {
+    display: flex; justify-content: space-between; align-items: center; gap: 8px;
+    padding: 5px 10px; border-bottom: 1px solid var(--aq-border); font-size: 11.5px;
+}
+.mini-list li:last-child { border-bottom: none; }
+.mini-list .ml-main { font-weight: 650; color: var(--aq-text); line-height: 1.25; }
+.mini-list .ml-sub  { font-size: 10px; color: var(--aq-text-muted); }
+.mini-list .ml-val  { font-weight: 700; font-variant-numeric: tabular-nums; white-space: nowrap; }
+
+.svc-rank {
+    width: 18px; height: 18px; border-radius: 3px;
+    background: var(--aq-primary-soft); color: var(--aq-primary);
+    display: flex; align-items: center; justify-content: center;
+    font-size: 9px; font-weight: 700; flex-shrink: 0;
+}
+</style>
+{% endblock %}
+
+{% block content %}
+
+<!-- ══ KPI STRIP ══════════════════════════════════════════ -->
+<div class="aq-kpi-grid">
+    <div class="aq-kpi suc">
+        <div class="aq-kpi-ico"><i class="fas fa-sack-dollar"></i></div>
+        <div class="aq-kpi-body">
+            <div class="aq-kpi-label">Today's Sales</div>
+            <div class="aq-kpi-value">{% format_currency stats.todays_sales %}</div>
+            <div class="aq-kpi-sub">
+                {% if stats.sales_up %}
+                <span class="aq-text-success"><i class="fas fa-arrow-up"></i> {{ stats.sales_change }}%</span>
+                {% else %}
+                <span class="aq-text-danger"><i class="fas fa-arrow-down"></i> {{ stats.sales_change }}%</span>
+                {% endif %}
+                vs yesterday
+            </div>
+        </div>
+    </div>
+
+    <div class="aq-kpi">
+        <div class="aq-kpi-ico"><i class="fas fa-receipt"></i></div>
+        <div class="aq-kpi-body">
+            <div class="aq-kpi-label">Orders Today</div>
+            <div class="aq-kpi-value">{{ stats.todays_orders|default:0 }}</div>
+            <div class="aq-kpi-sub">completed</div>
+        </div>
+    </div>
+
+    <div class="aq-kpi pur">
+        <div class="aq-kpi-ico"><i class="fas fa-spray-can-sparkles"></i></div>
+        <div class="aq-kpi-body">
+            <div class="aq-kpi-label">Washes Today</div>
+            <div class="aq-kpi-value">{{ stats.todays_washes|default:0 }}</div>
+            <div class="aq-kpi-sub">vehicles serviced</div>
+        </div>
+    </div>
+
+    <div class="aq-kpi warn">
+        <div class="aq-kpi-ico"><i class="fas fa-calendar-check"></i></div>
+        <div class="aq-kpi-body">
+            <div class="aq-kpi-label">Pending Bookings</div>
+            <div class="aq-kpi-value">{{ stats.pending_bookings|default:0 }}</div>
+            <div class="aq-kpi-sub">upcoming</div>
+        </div>
+    </div>
+
+    <div class="aq-kpi">
+        <div class="aq-kpi-ico"><i class="fas fa-users"></i></div>
+        <div class="aq-kpi-body">
+            <div class="aq-kpi-label">Customers</div>
+            <div class="aq-kpi-value">{{ stats.total_customers|default:0 }}</div>
+            <div class="aq-kpi-sub">+{{ stats.new_customers_week|default:0 }} this week</div>
+        </div>
+    </div>
+
+    <div class="aq-kpi">
+        <div class="aq-kpi-ico"><i class="fas fa-car"></i></div>
+        <div class="aq-kpi-body">
+            <div class="aq-kpi-label">Vehicles</div>
+            <div class="aq-kpi-value">{{ stats.total_vehicles|default:0 }}</div>
+            <div class="aq-kpi-sub">registered</div>
+        </div>
+    </div>
+</div>
+
+<!-- ══ MAIN GRID ══════════════════════════════════════════ -->
+<div class="dash-grid">
+
+    <!-- LEFT -->
+    <div>
+        <!-- Revenue chart -->
+        <div class="aq-panel">
+            <div class="aq-panel-head">
+                <strong><i class="fas fa-chart-line aq-text-primary me-1"></i>Revenue — Last 7 Days</strong>
+                <span class="aq-chip suc"><i class="fas fa-sack-dollar"></i> Today <b>{% format_currency stats.todays_sales %}</b></span>
+            </div>
+            <div class="aq-panel-body">
+                <div class="mini-chart" id="revChart">
+                    <svg preserveAspectRatio="none">
+                        <defs>
+                            <linearGradient id="gRev" x1="0" y1="0" x2="0" y2="1">
+                                <stop offset="0%"   stop-color="var(--aq-primary)" stop-opacity="0.22"/>
+                                <stop offset="100%" stop-color="var(--aq-primary)" stop-opacity="0"/>
+                            </linearGradient>
+                        </defs>
+                        <path id="revArea" fill="url(#gRev)" d=""></path>
+                        <path id="revLine" fill="none" stroke="var(--aq-primary)" stroke-width="2"
+                              stroke-linecap="round" stroke-linejoin="round" d=""></path>
+                        <g id="revDots"></g>
+                    </svg>
+                </div>
+                <div class="mini-x">
+                    {% for day in sales_chart %}<span>{{ day.day }}</span>{% endfor %}
+                </div>
+            </div>
+        </div>
+
+        <!-- Recent orders -->
+        <div class="aq-panel">
+            <div class="aq-panel-head">
+                <strong><i class="fas fa-clock-rotate-left aq-text-primary me-1"></i>Recent Orders</strong>
+                <a href="/orders/" class="btn btn-sm btn-outline-secondary">View All</a>
+            </div>
+            <div class="aq-panel-body flush">
+                <div class="table-responsive">
+                    <table class="table table-hover">
+                        <thead>
+                            <tr>
+                                <th>Order #</th>
+                                <th>Vehicle</th>
+                                <th>Customer</th>
+                                <th class="nowrap">Date</th>
+                                <th class="num">Amount</th>
+                                <th>Status</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for order in recent_orders %}
+                            <tr>
+                                <td class="nowrap"><a href="/orders/{{ order.pk }}/"><code>{{ order.order_number }}</code></a></td>
+                                <td class="nowrap">{{ order.vehicle.registration_number|default:"—" }}</td>
+                                <td>{{ order.customer.name|truncatechars:24 }}</td>
+                                <td class="nowrap text-muted">{{ order.created_at|date:"d M · H:i" }}</td>
+                                <td class="num"><strong>{% format_currency order.total %}</strong></td>
+                                <td>
+                                    {% if order.status == 'completed' %}<span class="badge bg-success">Paid</span>
+                                    {% elif order.status == 'draft' %}<span class="badge bg-info">Draft</span>
+                                    {% elif order.status == 'void' %}<span class="badge bg-dark">Void</span>
+                                    {% else %}<span class="badge bg-secondary">{{ order.get_status_display }}</span>{% endif %}
+                                </td>
+                            </tr>
+                            {% empty %}
+                            <tr><td colspan="6" class="text-center text-muted py-3">No recent orders.</td></tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- RIGHT -->
+    <div>
+        <!-- Today's bookings -->
+        <div class="aq-panel">
+            <div class="aq-panel-head">
+                <strong><i class="fas fa-calendar-day aq-text-primary me-1"></i>Today's Schedule</strong>
+                <a href="/bookings/" class="btn btn-sm btn-outline-secondary">All</a>
+            </div>
+            <div class="aq-panel-body flush">
+                <ul class="mini-list">
+                    {% for b in todays_bookings %}
+                    <li>
+                        <div style="min-width:0;">
+                            <div class="ml-main">{{ b.vehicle.registration_number }}</div>
+                            <div class="ml-sub">{{ b.service.name|default:"General Wash"|truncatechars:26 }}</div>
+                            <div class="ml-sub"><i class="far fa-clock"></i> {{ b.scheduled_time|time:"H:i" }} · {{ b.customer.name|truncatechars:16 }}</div>
+                        </div>
+                        <div>
+                            {% if b.status == 'pending' %}<span class="badge bg-warning">Pending</span>
+                            {% elif b.status == 'arrived' %}<span class="badge bg-info">Arrived</span>
+                            {% elif b.status == 'confirmed' %}<span class="badge bg-primary">Confirmed</span>
+                            {% else %}<span class="badge bg-success">{{ b.get_status_display }}</span>{% endif %}
+                        </div>
+                    </li>
+                    {% empty %}
+                    <li><span class="text-muted" style="font-size:11px;">No bookings today.</span></li>
+                    {% endfor %}
+                </ul>
+            </div>
+        </div>
+
+        <!-- Top services -->
+        <div class="aq-panel">
+            <div class="aq-panel-head">
+                <strong><i class="fas fa-ranking-star aq-text-primary me-1"></i>Top Services (30d)</strong>
+            </div>
+            <div class="aq-panel-body flush">
+                <ul class="mini-list">
+                    {% for svc in top_services %}
+                    <li>
+                        <div class="d-flex gap-2 align-items-center" style="min-width:0;">
+                            <span class="svc-rank">{{ forloop.counter }}</span>
+                            <div style="min-width:0;">
+                                <div class="ml-main">{{ svc.service__name|truncatechars:22 }}</div>
+                                <div class="ml-sub">{{ svc.count }} sold</div>
+                            </div>
+                        </div>
+                        <div class="ml-val">{% format_currency svc.revenue %}</div>
+                    </li>
+                    {% empty %}
+                    <li><span class="text-muted" style="font-size:11px;">No sales data.</span></li>
+                    {% endfor %}
+                </ul>
+            </div>
+        </div>
+
+        <!-- Payment breakdown -->
+        <div class="aq-panel">
+            <div class="aq-panel-head">
+                <strong><i class="fas fa-money-bill-wave aq-text-primary me-1"></i>Payments Today</strong>
+                <a href="/payments/summary/" class="btn btn-sm btn-outline-secondary">Summary</a>
+            </div>
+            <div class="aq-panel-body flush">
+                <ul class="mini-list">
+                    {% for p in payment_breakdown %}
+                    <li>
+                        <div>
+                            <div class="ml-main">{{ p.payment_method__name }}</div>
+                            <div class="ml-sub">{{ p.count }} transaction{{ p.count|pluralize }}</div>
+                        </div>
+                        <div class="ml-val">{% format_currency p.total %}</div>
+                    </li>
+                    {% empty %}
+                    <li><span class="text-muted" style="font-size:11px;">No payments today.</span></li>
+                    {% endfor %}
+                </ul>
+            </div>
+        </div>
+    </div>
+
+</div>
+
+{% endblock %}
+
+{% block extra_js %}
+<script>
+document.addEventListener('DOMContentLoaded', () => {
+    const box  = document.getElementById('revChart');
+    const line = document.getElementById('revLine');
+    const area = document.getElementById('revArea');
+    const dots = document.getElementById('revDots');
+    if (!box) return;
+
+    const data = [{% for day in sales_chart %}{{ day.total|floatformat:0 }}{% if not forloop.last %},{% endif %}{% endfor %}];
+    if (data.length < 2) return;
+
+    function draw() {
+        const w = box.clientWidth, h = box.clientHeight, pad = 8;
+        const max = Math.max(...data, 1) * 1.15;
+        const yR  = (h - pad * 2) / max;
+        const xS  = w / (data.length - 1);
+
+        const pts = data.map((v, i) => ({ x: i * xS, y: h - pad - (v * yR) }));
+
+        let d = `M ${pts[0].x},${pts[0].y}`;
+        for (let i = 0; i < pts.length - 1; i++) {
+            const a = pts[i], b = pts[i + 1], cx = (a.x + b.x) / 2;
+            d += ` C ${cx},${a.y} ${cx},${b.y} ${b.x},${b.y}`;
+        }
+        line.setAttribute('d', d);
+        area.setAttribute('d', d + ` L ${w},${h} L 0,${h} Z`);
+
+        dots.innerHTML = pts.map(p =>
+            `<circle cx="${p.x}" cy="${p.y}" r="2.5" fill="var(--aq-surface)"
+                     stroke="var(--aq-primary)" stroke-width="1.8"/>`).join('');
+    }
+
+    draw();
+    window.addEventListener('resize', draw);
+});
+</script>
+{% endblock %}

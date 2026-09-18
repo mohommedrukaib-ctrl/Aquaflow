@@ -1,0 +1,153 @@
+{% extends "base/base.html" %}
+{% load aquaflow_tags %}
+
+{% block title %}Loyalty — AquaFlow{% endblock %}
+{% block page_icon %}fas fa-gift{% endblock %}
+{% block page_title %}Loyalty Program{% endblock %}
+{% block page_subtitle %}Manage customer loyalty points{% endblock %}
+
+{% block breadcrumbs %}
+<span>/</span>
+<span class="current">Loyalty</span>
+{% endblock %}
+
+{% block content %}
+
+<div class="row g-3 mb-3">
+    <div class="col-md-3">
+        <div class="aq-stat-card">
+            <div class="aq-stat-info">
+                <h6>Active Members</h6>
+                <div class="aq-stat-value">{{ total_active }}</div>
+            </div>
+            <div class="aq-stat-icon primary"><i class="fas fa-users"></i></div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="aq-stat-card">
+            <div class="aq-stat-info">
+                <h6>Points Earned</h6>
+                <div class="aq-stat-value">{{ total_earned }}</div>
+            </div>
+            <div class="aq-stat-icon success"><i class="fas fa-plus-circle"></i></div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="aq-stat-card">
+            <div class="aq-stat-info">
+                <h6>Points Redeemed</h6>
+                <div class="aq-stat-value">{{ total_redeemed }}</div>
+            </div>
+            <div class="aq-stat-icon warning"><i class="fas fa-gift"></i></div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="aq-stat-card">
+            <div class="aq-stat-info">
+                <h6>Program Status</h6>
+                <div class="aq-stat-value" style="font-size:16px;">
+                    {% if config.is_enabled %}<span class="text-success">ACTIVE</span>{% else %}<span class="text-danger">OFF</span>{% endif %}
+                </div>
+            </div>
+            <div class="aq-stat-icon info"><i class="fas fa-toggle-on"></i></div>
+        </div>
+    </div>
+</div>
+
+<div class="row g-3">
+    <div class="col-lg-8">
+        <div class="card">
+            <div class="card-header"><strong><i class="fas fa-trophy me-2"></i>Top Customers by Points</strong></div>
+            <div class="card-body p-0">
+                <table class="table mb-0">
+                    <thead>
+                        <tr><th>#</th><th>Customer</th><th>Phone</th><th class="text-end">Points</th><th></th></tr>
+                    </thead>
+                    <tbody>
+                        {% for c in top_customers %}
+                        <tr>
+                            <td>{{ forloop.counter }}</td>
+                            <td>{{ c.name }}</td>
+                            <td>{{ c.phone }}</td>
+                            <td class="text-end fw-bold">{{ c.loyalty_points }}</td>
+                            <td>
+                                <a href="/loyalty/customer/{{ c.pk }}/" class="btn btn-sm btn-outline-primary">History</a>
+                            </td>
+                        </tr>
+                        {% empty %}
+                        <tr><td colspan="5" class="text-center text-muted py-4">No customers with points yet.</td></tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-lg-4">
+        <div class="card">
+            <div class="card-header"><strong><i class="fas fa-cog me-2"></i>Settings</strong></div>
+            <div class="card-body">
+                <div class="mb-3">
+                    <label class="form-label fw-semibold">
+                        <input type="checkbox" id="cfgEnabled" {% if config.is_enabled %}checked{% endif %}>
+                        Enable Loyalty Program
+                    </label>
+                </div>
+                <div class="mb-3">
+                    <label class="form-label fw-semibold">Points per Rs. 100 spent</label>
+                    <input type="number" id="cfgPoints" class="form-control" value="{{ config.points_per_currency }}" step="0.01" min="0">
+                </div>
+                <div class="mb-3">
+                    <label class="form-label fw-semibold">Rs. per Point (redemption)</label>
+                    <input type="number" id="cfgCurrency" class="form-control" value="{{ config.currency_per_point }}" step="0.01" min="0">
+                </div>
+                <div class="mb-3">
+                    <label class="form-label fw-semibold">Min Points to Redeem</label>
+                    <input type="number" id="cfgMinRedeem" class="form-control" value="{{ config.min_points_to_redeem }}" min="0">
+                </div>
+                <div class="mb-3">
+                    <label class="form-label fw-semibold">Max Redemption %</label>
+                    <input type="number" id="cfgMaxPct" class="form-control" value="{{ config.max_redemption_percent }}" step="0.01" min="0" max="100">
+                </div>
+                {% if can_manage %}
+                <button class="btn btn-primary w-100" id="saveCfgBtn">
+                    <i class="fas fa-save me-1"></i>Save Settings
+                </button>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+
+{% endblock %}
+
+{% block extra_js %}
+<script>
+const CSRF_TOKEN = '{{ csrf_token }}';
+
+document.getElementById('saveCfgBtn')?.addEventListener('click', function () {
+    this.disabled = true;
+    const fd = new FormData();
+    fd.append('is_enabled', document.getElementById('cfgEnabled').checked ? 'true' : 'false');
+    fd.append('points_per_currency', document.getElementById('cfgPoints').value);
+    fd.append('currency_per_point', document.getElementById('cfgCurrency').value);
+    fd.append('min_points_to_redeem', document.getElementById('cfgMinRedeem').value);
+    fd.append('max_redemption_percent', document.getElementById('cfgMaxPct').value);
+
+    fetch('/loyalty/config/', {
+        method: 'POST',
+        headers: { 'X-CSRFToken': CSRF_TOKEN },
+        body: fd,
+    })
+    .then(r => r.json())
+    .then(data => {
+        this.disabled = false;
+        if (data.success) {
+            showToast(data.message, 'success');
+        } else {
+            showToast(data.error, 'error');
+        }
+    });
+});
+</script>
+{% endblock %}

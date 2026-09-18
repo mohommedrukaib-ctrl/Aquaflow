@@ -1,0 +1,13 @@
+
+{
+    "[html]": {
+        "editor.formatOnSave": false,
+        "editor.formatOnPaste": false,
+        "editor.formatOnType": false
+    },
+    "html.format.enable": false,
+    "editor.formatOnSave": false,
+    "files.associations": {
+        "*.html": "django-html"
+    }
+}

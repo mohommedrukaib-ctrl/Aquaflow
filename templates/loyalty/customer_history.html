@@ -1,0 +1,82 @@
+{% extends "base/base.html" %}
+{% load aquaflow_tags %}
+
+{% block title %}{{ customer.name }} — Loyalty History{% endblock %}
+{% block page_icon %}fas fa-history{% endblock %}
+{% block page_title %}{{ customer.name }} — Loyalty{% endblock %}
+
+{% block breadcrumbs %}
+<span>/</span>
+<a href="/loyalty/">Loyalty</a>
+<span>/</span>
+<span class="current">{{ customer.name }}</span>
+{% endblock %}
+
+{% block content %}
+<div class="row g-3 mb-3">
+    <div class="col-md-6">
+        <div class="aq-stat-card">
+            <div class="aq-stat-info">
+                <h6>Current Balance</h6>
+                <div class="aq-stat-value" style="font-size:36px;">{{ customer.loyalty_points }}</div>
+                <div class="aq-stat-meta">Points</div>
+            </div>
+            <div class="aq-stat-icon warning"><i class="fas fa-gift"></i></div>
+        </div>
+    </div>
+    <div class="col-md-6">
+        <div class="aq-stat-card">
+            <div class="aq-stat-info">
+                <h6>{{ customer.name }}</h6>
+                <div class="aq-stat-value" style="font-size:16px;">{{ customer.customer_code }}</div>
+                <div class="aq-stat-meta">{{ customer.phone }}</div>
+            </div>
+            <div class="aq-stat-icon primary"><i class="fas fa-user"></i></div>
+        </div>
+    </div>
+</div>
+
+<div class="card">
+    <div class="card-header"><strong>Transaction History</strong></div>
+    <div class="card-body p-0">
+        <table class="table mb-0">
+            <thead>
+                <tr>
+                    <th>Date</th>
+                    <th>Type</th>
+                    <th>Description</th>
+                    <th class="text-end">Points</th>
+                    <th class="text-end">Balance</th>
+                    <th>By</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for tx in transactions %}
+                <tr>
+                    <td><small>{{ tx.created_at|date:"d M Y H:i" }}</small></td>
+                    <td>
+                        {% if tx.transaction_type == 'earn' %}
+                        <span class="badge bg-success">Earned</span>
+                        {% elif tx.transaction_type == 'redeem' %}
+                        <span class="badge bg-warning">Redeemed</span>
+                        {% elif tx.transaction_type == 'adjust' %}
+                        <span class="badge bg-info">Adjustment</span>
+                        {% else %}
+                        <span class="badge bg-secondary">{{ tx.get_transaction_type_display }}</span>
+                        {% endif %}
+                    </td>
+                    <td>{{ tx.description|default:"—" }}</td>
+                    <td class="text-end fw-bold {% if tx.points < 0 %}text-danger{% else %}text-success{% endif %}">
+                        {% if tx.points > 0 %}+{% endif %}{{ tx.points }}
+                    </td>
+                    <td class="text-end">{{ tx.balance_after }}</td>
+                    <td><small>{{ tx.created_by.username|default:"—" }}</small></td>
+                </tr>
+                {% empty %}
+                <tr><td colspan="6" class="text-center text-muted py-4">No transactions yet.</td></tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+{% endblock %}

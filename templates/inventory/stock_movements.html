@@ -1,0 +1,113 @@
+{% extends "base/base.html" %}
+{% load aquaflow_tags %}
+
+{% block title %}Stock Movements — AquaFlow{% endblock %}
+{% block page_icon %}fas fa-exchange-alt{% endblock %}
+{% block page_title %}Stock Movements{% endblock %}
+{% block page_subtitle %}All inventory transactions{% endblock %}
+
+{% block breadcrumbs %}
+<span>/</span>
+<a href="/inventory/">Inventory</a>
+<span>/</span>
+<span class="current">Movements</span>
+{% endblock %}
+
+{% block content %}
+<div class="card">
+    <div class="card-header">
+        <strong><i class="fas fa-exchange-alt me-2 aq-text-primary"></i>Stock Transactions ({{ total_count }})</strong>
+    </div>
+    <div class="card-body">
+
+        <form method="GET" class="row g-2 mb-3">
+            <div class="col-md-4">
+                <input type="text" name="q" class="form-control" placeholder="Product name, SKU, notes..." value="{{ search }}">
+            </div>
+            <div class="col-md-2">
+                <select name="type" class="form-select">
+                    <option value="">All Types</option>
+                    {% for val, label in type_choices %}
+                    <option value="{{ val }}" {% if tx_type == val %}selected{% endif %}>{{ label }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="col-md-2">
+                <input type="date" name="date_from" class="form-control" value="{{ date_from }}">
+            </div>
+            <div class="col-md-2">
+                <input type="date" name="date_to" class="form-control" value="{{ date_to }}">
+            </div>
+            <div class="col-md-2">
+                <button class="btn btn-primary w-100"><i class="fas fa-search me-1"></i>Filter</button>
+            </div>
+        </form>
+
+        <div class="table-responsive">
+            <table class="table table-hover align-middle">
+                <thead>
+                    <tr>
+                        <th>Date</th>
+                        <th>Product</th>
+                        <th>Branch</th>
+                        <th>Type</th>
+                        <th class="text-end">Change</th>
+                        <th class="text-end">After</th>
+                        <th>User</th>
+                        <th>Notes</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for tx in transactions %}
+                    <tr>
+                        <td><small>{{ tx.created_at|date:"d M Y H:i" }}</small></td>
+                        <td>
+                            <a href="/inventory/products/{{ tx.product.pk }}/">
+                                {{ tx.product.name }}
+                            </a>
+                            <br><small class="text-muted">{{ tx.product.sku }}</small>
+                        </td>
+                        <td>{{ tx.branch.name }}</td>
+                        <td>
+                            {% if tx.transaction_type == 'purchase' %}
+                            <span class="badge bg-success">Purchase</span>
+                            {% elif tx.transaction_type == 'sale' %}
+                            <span class="badge bg-danger">Sale</span>
+                            {% elif tx.transaction_type == 'adjustment' %}
+                            <span class="badge bg-warning">Adjustment</span>
+                            {% elif tx.transaction_type == 'initial' %}
+                            <span class="badge bg-info">Initial</span>
+                            {% else %}
+                            <span class="badge bg-secondary">{{ tx.get_transaction_type_display }}</span>
+                            {% endif %}
+                        </td>
+                        <td class="text-end fw-bold {% if tx.quantity < 0 %}text-danger{% else %}text-success{% endif %}">
+                            {% if tx.quantity > 0 %}+{% endif %}{{ tx.quantity|floatformat:2 }}
+                        </td>
+                        <td class="text-end">{{ tx.quantity_after|floatformat:2 }}</td>
+                        <td><small>{{ tx.created_by.username|default:"—" }}</small></td>
+                        <td><small>{{ tx.notes|truncatechars:50 }}</small></td>
+                    </tr>
+                    {% empty %}
+                    <tr><td colspan="8" class="text-center text-muted py-4">No transactions found.</td></tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+
+        {% if page_obj.has_other_pages %}
+        <nav class="mt-3">
+            <ul class="pagination pagination-sm justify-content-center">
+                {% if page_obj.has_previous %}
+                <li class="page-item"><a class="page-link" href="?page={{ page_obj.previous_page_number }}">Previous</a></li>
+                {% endif %}
+                <li class="page-item disabled"><span class="page-link">Page {{ page_obj.number }} of {{ page_obj.paginator.num_pages }}</span></li>
+                {% if page_obj.has_next %}
+                <li class="page-item"><a class="page-link" href="?page={{ page_obj.next_page_number }}">Next</a></li>
+                {% endif %}
+            </ul>
+        </nav>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}

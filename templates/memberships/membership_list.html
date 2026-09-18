@@ -1,0 +1,287 @@
+{% extends "base/base.html" %}
+{% load aquaflow_tags %}
+
+{% block title %}Memberships — AquaFlow{% endblock %}
+{% block page_icon %}fas fa-star{% endblock %}
+{% block page_title %}Customer Memberships{% endblock %}
+{% block page_subtitle %}Active membership subscriptions{% endblock %}
+
+{% block breadcrumbs %}
+<span>/</span>
+<span class="current">Memberships</span>
+{% endblock %}
+
+{% block content %}
+
+<div class="row g-3 mb-3">
+    <div class="col-md-4">
+        <div class="aq-stat-card">
+            <div class="aq-stat-info">
+                <h6>Active Members</h6>
+                <div class="aq-stat-value">{{ active_count }}</div>
+            </div>
+            <div class="aq-stat-icon success"><i class="fas fa-star"></i></div>
+        </div>
+    </div>
+    <div class="col-md-4">
+        <div class="aq-stat-card">
+            <div class="aq-stat-info">
+                <h6>Total Memberships</h6>
+                <div class="aq-stat-value">{{ total_count }}</div>
+            </div>
+            <div class="aq-stat-icon primary"><i class="fas fa-users"></i></div>
+        </div>
+    </div>
+    <div class="col-md-4">
+        <div class="aq-stat-card">
+            <div class="aq-stat-info">
+                <h6>Expired</h6>
+                <div class="aq-stat-value">{{ expired_count }}</div>
+            </div>
+            <div class="aq-stat-icon danger"><i class="fas fa-calendar-times"></i></div>
+        </div>
+    </div>
+</div>
+
+<div class="card">
+    <div class="card-header d-flex justify-content-between align-items-center">
+        <strong><i class="fas fa-list me-2"></i>Memberships</strong>
+        <div class="d-flex gap-2">
+            <a href="/memberships/plans/" class="btn btn-outline-secondary btn-sm">
+                <i class="fas fa-award me-1"></i>Manage Plans
+            </a>
+            {% if can_manage %}
+            <button class="btn btn-primary btn-sm" onclick="openAddModal()">
+                <i class="fas fa-plus me-1"></i>Sell Membership
+            </button>
+            {% endif %}
+        </div>
+    </div>
+    <div class="card-body">
+        <form method="GET" class="row g-2 mb-3">
+            <div class="col-md-8">
+                <input type="text" name="q" class="form-control" placeholder="Search membership#, customer..." value="{{ search }}">
+            </div>
+            <div class="col-md-2">
+                <select name="status" class="form-select" onchange="this.form.submit()">
+                    <option value="">All Status</option>
+                    {% for v, label in status_choices %}
+                    <option value="{{ v }}" {% if status == v %}selected{% endif %}>{{ label }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="col-md-2">
+                <button class="btn btn-primary w-100"><i class="fas fa-search"></i></button>
+            </div>
+        </form>
+
+        {% if memberships %}
+        <div class="table-responsive">
+            <table class="table table-hover align-middle">
+                <thead>
+                    <tr>
+                        <th>Member #</th>
+                        <th>Customer</th>
+                        <th>Plan</th>
+                        <th>Start</th>
+                        <th>Expires</th>
+                        <th>Washes</th>
+                        <th>Status</th>
+                        <th></th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for m in memberships %}
+                    <tr>
+                        <td><a href="/memberships/{{ m.pk }}/"><strong>{{ m.membership_number }}</strong></a></td>
+                        <td>
+                            {{ m.customer.name }}<br>
+                            <small class="text-muted">{{ m.customer.phone }}</small>
+                        </td>
+                        <td>
+                            <span class="badge" style="background:{{ m.plan.color }}; color:white;">
+                                {{ m.plan.name }}
+                            </span>
+                        </td>
+                        <td><small>{{ m.start_date|date:"d M Y" }}</small></td>
+                        <td>
+                            <small>{{ m.expiry_date|date:"d M Y" }}</small>
+                            {% if m.status == 'active' %}
+                            <br><small class="text-muted">{{ m.days_remaining }} days left</small>
+                            {% endif %}
+                        </td>
+                        <td>
+                            {% if m.wash_count_total == 0 %}
+                            <span class="badge bg-info">Unlimited</span>
+                            {% else %}
+                            <strong>{{ m.wash_count_remaining }}</strong> / {{ m.wash_count_total }}
+                            {% endif %}
+                        </td>
+                        <td>
+                            {% if m.status == 'active' %}
+                            <span class="badge bg-success">Active</span>
+                            {% elif m.status == 'expired' %}
+                            <span class="badge bg-danger">Expired</span>
+                            {% else %}
+                            <span class="badge bg-secondary">{{ m.get_status_display }}</span>
+                            {% endif %}
+                        </td>
+                        <td>
+                            <a href="/memberships/{{ m.pk }}/" class="btn btn-sm btn-outline-primary">
+                                <i class="fas fa-eye"></i>
+                            </a>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+
+        {% if page_obj.has_other_pages %}
+        <nav class="mt-3">
+            <ul class="pagination pagination-sm justify-content-center">
+                {% if page_obj.has_previous %}
+                <li class="page-item"><a class="page-link" href="?page={{ page_obj.previous_page_number }}">Previous</a></li>
+                {% endif %}
+                <li class="page-item disabled"><span class="page-link">Page {{ page_obj.number }}</span></li>
+                {% if page_obj.has_next %}
+                <li class="page-item"><a class="page-link" href="?page={{ page_obj.next_page_number }}">Next</a></li>
+                {% endif %}
+            </ul>
+        </nav>
+        {% endif %}
+
+        {% else %}
+        <div class="text-center py-5">
+            <i class="fas fa-star fa-3x text-muted mb-3"></i>
+            <h5 class="text-muted">No memberships yet</h5>
+            {% if can_manage %}
+            <button class="btn btn-primary mt-2" onclick="openAddModal()">
+                <i class="fas fa-plus me-1"></i>Sell First Membership
+            </button>
+            {% endif %}
+        </div>
+        {% endif %}
+    </div>
+</div>
+
+<!-- Sell Membership Modal -->
+<div class="modal fade" id="addModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title"><i class="fas fa-star me-2"></i>Sell Membership</h5>
+                <button class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <div class="mb-3">
+                    <label class="form-label fw-semibold">Customer <span class="text-danger">*</span></label>
+                    <div class="aq-smart-input" id="memCustomer"
+                        data-name="customer"
+                        data-search-url="/customers/search/"
+                        data-create-url="/vehicles/customers/quick-create/"
+                        data-results-key="customers"
+                        data-label="Customer"
+                        data-placeholder="Search customer..."
+                        data-required="true"></div>
+                </div>
+                <div class="mb-3">
+                    <label class="form-label fw-semibold">Plan <span class="text-danger">*</span></label>
+                    <select id="memPlan" class="form-select">
+                        <option value="">— Select Plan —</option>
+                        {% for p in plans %}
+                        <option value="{{ p.pk }}" data-price="{{ p.price }}">
+                            {{ p.name }} — Rs. {{ p.price }} ({{ p.wash_count }} washes)
+                        </option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="row g-2 mb-3">
+                    <div class="col-md-6">
+                        <label class="form-label fw-semibold">Start Date</label>
+                        <input type="date" id="memStart" class="form-control" value="{% now 'Y-m-d' %}">
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label fw-semibold">Amount Paid</label>
+                        <input type="number" id="memAmount" class="form-control" min="0" step="0.01">
+                    </div>
+                </div>
+                <div class="mb-3">
+                    <label class="form-label fw-semibold">Notes</label>
+                    <textarea id="memNotes" class="form-control" rows="2"></textarea>
+                </div>
+                <div id="memError" class="alert alert-danger" style="display:none;"></div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                <button class="btn btn-primary" id="saveMemBtn"><i class="fas fa-save me-1"></i>Save</button>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+const CSRF_TOKEN = '{{ csrf_token }}';
+
+function openAddModal() {
+    document.getElementById('memPlan').value = '';
+    document.getElementById('memStart').value = '{% now "Y-m-d" %}';
+    document.getElementById('memAmount').value = '';
+    document.getElementById('memNotes').value = '';
+    document.getElementById('memError').style.display = 'none';
+
+    const cust = document.getElementById('memCustomer')._smartInput;
+    if (cust) {
+        cust.input.value = '';
+        cust.hiddenInput.value = '';
+        cust.clearBtn.style.display = 'none';
+    }
+
+    new bootstrap.Modal(document.getElementById('addModal')).show();
+}
+
+// Auto-fill amount when plan selected
+document.getElementById('memPlan').addEventListener('change', function () {
+    const price = this.options[this.selectedIndex].dataset.price;
+    if (price) document.getElementById('memAmount').value = price;
+});
+
+document.getElementById('saveMemBtn').addEventListener('click', function () {
+    const cust = document.getElementById('memCustomer')._smartInput;
+    const customerId = cust.hiddenInput.value;
+    const planId = document.getElementById('memPlan').value;
+    const err = document.getElementById('memError');
+    err.style.display = 'none';
+
+    if (!customerId) { err.textContent = 'Customer required.'; err.style.display = 'block'; return; }
+    if (!planId) { err.textContent = 'Plan required.'; err.style.display = 'block'; return; }
+
+    this.disabled = true;
+    const fd = new FormData();
+    fd.append('customer_id', customerId);
+    fd.append('plan_id', planId);
+    fd.append('start_date', document.getElementById('memStart').value);
+    fd.append('amount_paid', document.getElementById('memAmount').value || '0');
+    fd.append('notes', document.getElementById('memNotes').value);
+
+    fetch('/memberships/create/', {
+        method: 'POST',
+        headers: { 'X-CSRFToken': CSRF_TOKEN },
+        body: fd,
+    })
+    .then(r => r.json())
+    .then(data => {
+        this.disabled = false;
+        if (data.success) {
+            showToast(data.message, 'success');
+            setTimeout(() => location.reload(), 600);
+        } else {
+            err.textContent = data.error;
+            err.style.display = 'block';
+        }
+    });
+});
+</script>
+{% endblock %}

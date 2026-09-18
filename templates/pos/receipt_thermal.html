@@ -1,0 +1,152 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <title>{{ invoice.invoice_number }}</title>
+    <style>
+        @media print {
+            body { margin: 0; }
+            .no-print { display: none !important; }
+            @page { margin: 5mm; size: 80mm auto; }
+        }
+        body {
+            font-family: 'Courier New', monospace;
+            font-size: 12px;
+            width: 72mm;
+            margin: 10px auto;
+            padding: 5px;
+            color: #000;
+            background: #fff;
+        }
+        .center { text-align: center; }
+        .right { text-align: right; }
+        .bold { font-weight: bold; }
+        .line { border-top: 1px dashed #000; margin: 6px 0; }
+        .double-line { border-top: 2px solid #000; margin: 6px 0; }
+        table { width: 100%; border-collapse: collapse; }
+        td { padding: 1px 0; vertical-align: top; }
+        .total-row td { font-weight: bold; font-size: 14px; }
+        .format-bar {
+            background: #f0f0f0;
+            padding: 10px;
+            margin: 0 auto 15px;
+            text-align: center;
+            max-width: 400px;
+            border-radius: 6px;
+        }
+        .format-bar select { padding: 6px 12px; border-radius: 4px; border: 1px solid #ccc; }
+        .format-bar button { padding: 8px 20px; background: #04a9f5; color: white; border: none; border-radius: 4px; cursor: pointer; margin-left: 8px; }
+    </style>
+</head>
+<body>
+
+<div class="no-print format-bar">
+    <select id="formatSelect" onchange="changeFormat(this.value)">
+        {% for val, label in formats %}
+        <option value="{{ val }}" {% if current_format == val %}selected{% endif %}>{{ label }}</option>
+        {% endfor %}
+    </select>
+    <button onclick="window.print()">🖨 Print</button>
+    <button onclick="window.close()" style="background:#666;">Close</button>
+</div>
+
+<div class="center">
+    {% if business.logo and business.show_logo_on_receipt %}
+    <img src="{{ business.logo.url }}" style="max-width:60px; margin-bottom:4px;"><br>
+    {% endif %}
+    <div class="bold" style="font-size:14px;">{{ business.name }}</div>
+    {% if business.address_line1 %}<div>{{ business.address_line1 }}</div>{% endif %}
+    {% if business.city %}<div>{{ business.city }}{% if business.state %}, {{ business.state }}{% endif %}</div>{% endif %}
+    {% if business.phone %}<div>Tel: {{ business.phone }}</div>{% endif %}
+    {% if business.tax_number %}<div>{{ business.tax_name }}: {{ business.tax_number }}</div>{% endif %}
+</div>
+
+<div class="line"></div>
+
+<table>
+    <tr><td>Invoice:</td><td class="right bold">{{ invoice.invoice_number }}</td></tr>
+    <tr><td>Order:</td><td class="right">{{ order.order_number }}</td></tr>
+    <tr><td>Date:</td><td class="right">{{ invoice.created_at|date:"d M Y H:i" }}</td></tr>
+    <tr><td>Cashier:</td><td class="right">{{ order.created_by.username }}</td></tr>
+</table>
+
+<div class="line"></div>
+
+<table>
+    <tr><td>Customer:</td><td class="right">{{ order.customer.name }}</td></tr>
+    {% if order.vehicle %}
+    <tr><td>Vehicle:</td><td class="right">{{ order.vehicle.registration_number }}</td></tr>
+    {% endif %}
+</table>
+
+<div class="line"></div>
+
+<table>
+    {% for item in items %}
+    <tr>
+        <td colspan="2">{{ item.description_snapshot }}</td>
+    </tr>
+    <tr>
+        <td>{{ item.quantity|floatformat:0 }} x Rs.{{ item.unit_price_snapshot|floatformat:2 }}</td>
+        <td class="right">Rs.{{ item.line_total|floatformat:2 }}</td>
+    </tr>
+    {% endfor %}
+</table>
+
+<div class="line"></div>
+
+<table>
+    <tr>
+        <td>Subtotal</td>
+        <td class="right">Rs.{{ invoice.subtotal|floatformat:2 }}</td>
+    </tr>
+    {% if invoice.discount_amount > 0 %}
+    <tr>
+        <td>Discount</td>
+        <td class="right">-Rs.{{ invoice.discount_amount|floatformat:2 }}</td>
+    </tr>
+    {% endif %}
+    {% if invoice.tax_amount > 0 %}
+    <tr>
+        <td>{{ business.tax_name }}</td>
+        <td class="right">Rs.{{ invoice.tax_amount|floatformat:2 }}</td>
+    </tr>
+    {% endif %}
+</table>
+
+<div class="double-line"></div>
+
+<table>
+    <tr class="total-row">
+        <td>TOTAL</td>
+        <td class="right">Rs.{{ invoice.total|floatformat:2 }}</td>
+    </tr>
+</table>
+
+<div class="line"></div>
+
+<div class="bold">Payment:</div>
+<table>
+    {% for pmt in payments %}
+    <tr>
+        <td>{{ pmt.payment_method.name }}</td>
+        <td class="right">Rs.{{ pmt.amount|floatformat:2 }}</td>
+    </tr>
+    {% endfor %}
+</table>
+
+<div class="line"></div>
+
+<div class="center">
+    {{ business.receipt_footer|default:"Thank you!" }}<br>
+    <small>Powered by AquaFlow — Quantum Axis</small>
+</div>
+
+<script>
+function changeFormat(fmt) {
+    window.location.href = '/pos/receipt/{{ invoice.pk }}/?format=' + fmt;
+}
+</script>
+
+</body>
+</html>

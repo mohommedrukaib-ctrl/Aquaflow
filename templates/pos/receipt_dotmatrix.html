@@ -1,0 +1,102 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <title>{{ invoice.invoice_number }}</title>
+    <style>
+        @media print {
+            body { margin: 0; }
+            .no-print { display: none !important; }
+            @page { margin: 10mm; }
+        }
+        body {
+            font-family: 'Courier New', monospace;
+            font-size: 11px;
+            width: 210mm;
+            max-width: 100%;
+            margin: 10px auto;
+            padding: 10px 20px;
+            color: #000;
+            background: #fff;
+            line-height: 1.6;
+        }
+        .header { text-align: center; margin-bottom: 10px; }
+        .sep { border: none; border-top: 1px solid #000; margin: 8px 0; }
+        .dsep { border: none; border-top: 2px solid #000; margin: 8px 0; }
+        table { width: 100%; border-collapse: collapse; }
+        th, td { text-align: left; padding: 2px 4px; }
+        .r { text-align: right; }
+        .b { font-weight: bold; }
+        .total-line td { font-weight: bold; font-size: 13px; border-top: 2px solid #000; padding-top: 4px; }
+        .format-bar {
+            background: #f0f0f0; padding: 10px; text-align: center;
+            margin-bottom: 15px; border-radius: 6px;
+        }
+        .format-bar select { padding: 6px 12px; border-radius: 4px; border: 1px solid #ccc; }
+        .format-bar button { padding: 8px 20px; background: #04a9f5; color: white; border: none; border-radius: 4px; cursor: pointer; margin-left: 8px; }
+    </style>
+</head>
+<body>
+
+<div class="no-print format-bar">
+    <select id="formatSelect" onchange="changeFormat(this.value)">
+        {% for val, label in formats %}
+        <option value="{{ val }}" {% if current_format == val %}selected{% endif %}>{{ label }}</option>
+        {% endfor %}
+    </select>
+    <button onclick="window.print()">🖨 Print</button>
+    <button onclick="window.close()" style="background:#666;">Close</button>
+</div>
+
+<pre class="header">
+================================================================================
+                          {{ business.name|upper }}
+{% if business.address_line1 %}                  {{ business.address_line1 }}{% endif %}
+{% if business.city %}                  {{ business.city }}, {{ business.country }}{% endif %}
+{% if business.phone %}                  Tel: {{ business.phone }}{% endif %}
+{% if business.tax_number %}                  {{ business.tax_name }}: {{ business.tax_number }}{% endif %}
+================================================================================
+</pre>
+
+<pre>
+  INVOICE: {{ invoice.invoice_number }}          ORDER: {{ order.order_number }}
+  DATE:    {{ invoice.created_at|date:"d M Y H:i" }}     CASHIER: {{ order.created_by.username }}
+
+  CUSTOMER: {{ order.customer.name }}{% if order.vehicle %}
+  VEHICLE:  {{ order.vehicle.registration_number }}{% endif %}
+</pre>
+
+<hr class="sep">
+
+<pre>
+  DESCRIPTION                          QTY    PRICE        TOTAL
+  --------------------------------------------------------------------------
+{% for item in items %}  {{ item.description_snapshot|ljust:35 }}  {{ item.quantity|floatformat:0|rjust:4 }}  {{ item.unit_price_snapshot|floatformat:2|rjust:10 }}  {{ item.line_total|floatformat:2|rjust:12 }}
+{% endfor %}</pre>
+
+<hr class="sep">
+
+<pre>
+                                           SUBTOTAL:  Rs.{{ invoice.subtotal|floatformat:2|rjust:12 }}{% if invoice.discount_amount > 0 %}
+                                           DISCOUNT:  -Rs.{{ invoice.discount_amount|floatformat:2|rjust:11 }}{% endif %}{% if invoice.tax_amount > 0 %}
+                                           {{ business.tax_name|ljust:10 }}  Rs.{{ invoice.tax_amount|floatformat:2|rjust:12 }}{% endif %}
+  ==========================================================================
+                                           TOTAL:     Rs.{{ invoice.total|floatformat:2|rjust:12 }}
+  ==========================================================================
+
+  PAYMENT:
+{% for pmt in payments %}  {{ pmt.payment_method.name|ljust:20 }}                         Rs.{{ pmt.amount|floatformat:2|rjust:12 }}
+{% endfor %}
+  --------------------------------------------------------------------------
+                    {{ business.receipt_footer|default:"Thank you for your business!" }}
+                          Powered by AquaFlow — Quantum Axis
+</pre>
+
+<script>
+function changeFormat(fmt) {
+    window.location.href = '/pos/receipt/{{ invoice.pk }}/?format=' + fmt;
+}
+</script>
+
+</body>
+</html>

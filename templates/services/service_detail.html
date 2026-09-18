@@ -1,0 +1,463 @@
+{% extends "base/base.html" %}
+{% load aquaflow_tags %}
+
+{% block title %}{{ service.name }} — {{ AQUAFLOW_SYSTEM_NAME }}{% endblock %}
+{% block page_title %}
+<i class="fas fa-concierge-bell me-2 text-primary"></i>
+{{ service.name }}
+{% endblock %}
+
+{% block breadcrumbs %}
+{% for crumb in breadcrumbs %}
+{% if crumb.url %}
+<li class="breadcrumb-item">
+    <a href="{{ crumb.url }}">{{ crumb.label }}</a>
+</li>
+{% else %}
+<li class="breadcrumb-item active">{{ crumb.label }}</li>
+{% endif %}
+{% endfor %}
+{% endblock %}
+
+{% block content %}
+<div class="row">
+
+    <!-- Service Info -->
+    <div class="col-md-4">
+        <div class="card mb-4">
+            <div class="card-body">
+                <div class="d-flex justify-content-between
+                            align-items-start mb-3">
+                    <div>
+                        <h5 class="fw-bold mb-1">{{ service.name }}</h5>
+                        {% if service.category %}
+                        <span class="badge bg-light text-dark border">
+                            {{ service.category.name }}
+                        </span>
+                        {% endif %}
+                    </div>
+                    <span class="{{ service.is_active|yesno:'badge bg-success,badge bg-secondary' }}">
+                        {{ service.is_active|yesno:'Active,Inactive' }}
+                    </span>
+                </div>
+
+                {% if service.description %}
+                <p class="text-muted small">{{ service.description }}</p>
+                {% endif %}
+
+                <table class="table table-borderless table-sm mb-0">
+                    <tr>
+                        <td class="text-muted">Duration</td>
+                        <td class="fw-semibold">
+                            {{ service.duration_display }}
+                        </td>
+                    </tr>
+                    <tr>
+                        <td class="text-muted">Tax</td>
+                        <td>
+                            {% if service.tax_override_enabled %}
+                            <span class="badge bg-warning text-dark">
+                                {{ service.tax_override_percentage }}%
+                                (override)
+                            </span>
+                            {% else %}
+                            <span class="text-muted small">
+                                Business default
+                                {% if TAX_ENABLED %}
+                                ({{ TAX_NAME }} {{ TAX_PERCENTAGE }}%)
+                                {% else %}
+                                (No tax)
+                                {% endif %}
+                            </span>
+                            {% endif %}
+                        </td>
+                    </tr>
+                    <tr>
+                        <td class="text-muted">Prices</td>
+                        <td>
+                            <span class="badge bg-info">
+                                {{ prices.count }} price(s) set
+                            </span>
+                        </td>
+                    </tr>
+                </table>
+            </div>
+        </div>
+
+        <!-- Actions -->
+        {% if can_manage %}
+        <div class="d-grid gap-2">
+            <a href="{% url 'service_edit' service.pk %}"
+               class="btn btn-outline-primary">
+                <i class="fas fa-edit me-1"></i> Edit Service
+            </a>
+            <button type="button"
+                    class="btn btn-outline-danger"
+                    onclick="confirmDelete(
+                        {{ service.pk }},
+                        '{{ service.name|escapejs }}'
+                    )">
+                <i class="fas fa-trash me-1"></i> Delete Service
+            </button>
+            <a href="/services/" class="btn btn-outline-secondary">
+                <i class="fas fa-arrow-left me-1"></i> Back to List
+            </a>
+        </div>
+        {% endif %}
+    </div>
+
+    <!-- Pricing -->
+    <div class="col-md-8">
+        <div class="card">
+            <div class="card-header d-flex justify-content-between
+                        align-items-center">
+                <strong>
+                    <i class="fas fa-tags me-2"></i>
+                    Pricing
+                </strong>
+                {% if can_manage %}
+                <button type="button"
+                        class="btn btn-primary btn-sm"
+                        onclick="openAddPriceModal()">
+                    <i class="fas fa-plus me-1"></i> Add Price
+                </button>
+                {% endif %}
+            </div>
+
+            <div class="card-body p-0">
+
+                {% if prices %}
+                <table class="table table-hover mb-0">
+                    <thead>
+                        <tr>
+                            <th>Vehicle Type</th>
+                            <th>Branch</th>
+                            <th>Price</th>
+                            <th>Valid From</th>
+                            <th>Valid To</th>
+                            <th>Status</th>
+                            {% if can_manage %}
+                            <th></th>
+                            {% endif %}
+                        </tr>
+                    </thead>
+                    <tbody id="pricesTableBody">
+                        {% for price in prices %}
+                        <tr id="price-row-{{ price.pk }}">
+                            <td>
+                                {{ price.vehicle_type.name|default:"All types" }}
+                            </td>
+                            <td>
+                                {{ price.branch.name|default:"All branches" }}
+                            </td>
+                            <td>
+                                <strong class="text-success">
+                                    {% format_currency price.price %}
+                                </strong>
+                            </td>
+                            <td>
+                                <small>
+                                    {{ price.effective_from|date:"d M Y"|default:"—" }}
+                                </small>
+                            </td>
+                            <td>
+                                <small>
+                                    {{ price.effective_to|date:"d M Y"|default:"—" }}
+                                </small>
+                            </td>
+                            <td>
+                                <span class="{{ price.is_active|yesno:'badge bg-success,badge bg-secondary' }}">
+                                    {{ price.is_active|yesno:'Active,Inactive' }}
+                                </span>
+                            </td>
+                            {% if can_manage %}
+                            <td>
+                                <button type="button"
+                                        class="btn btn-sm btn-outline-danger"
+                                        onclick="deletePrice(
+                                            {{ service.pk }},
+                                            {{ price.pk }}
+                                        )">
+                                    <i class="fas fa-times"></i>
+                                </button>
+                            </td>
+                            {% endif %}
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+
+                {% else %}
+                <div class="text-center py-5" id="noPricesMsg">
+                    <i class="fas fa-tags fa-2x text-muted mb-2"></i>
+                    <p class="text-muted mb-2">
+                        No prices configured yet.
+                    </p>
+                    <p class="text-muted small">
+                        Add a default price first, then add
+                        vehicle-type specific prices if needed.
+                    </p>
+                    {% if can_manage %}
+                    <button type="button"
+                            class="btn btn-primary btn-sm"
+                            onclick="openAddPriceModal()">
+                        <i class="fas fa-plus me-1"></i>
+                        Add First Price
+                    </button>
+                    {% endif %}
+                </div>
+                {% endif %}
+
+            </div>
+        </div>
+
+        <!-- Price Guide -->
+        <div class="card mt-3">
+            <div class="card-body py-3">
+                <h6 class="fw-semibold mb-2">
+                    <i class="fas fa-info-circle text-info me-2"></i>
+                    Price Priority Guide
+                </h6>
+                <ol class="mb-0 small text-muted">
+                    <li>Branch + Vehicle Type (most specific)</li>
+                    <li>Branch only</li>
+                    <li>Vehicle Type only</li>
+                    <li>Default (no branch, no vehicle type)</li>
+                </ol>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Add Price Modal -->
+<div class="modal fade" id="addPriceModal" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">
+                    <i class="fas fa-tag me-2"></i>
+                    Add Price — {{ service.name }}
+                </h5>
+                <button type="button"
+                        class="btn-close"
+                        data-bs-dismiss="modal">
+                </button>
+            </div>
+            <div class="modal-body">
+                <form id="addPriceForm">
+                    {% csrf_token %}
+                    <div class="row g-3">
+                        <div class="col-md-6">
+                            <label class="form-label fw-semibold">
+                                Vehicle Type
+                            </label>
+                            {{ price_form.vehicle_type }}
+                            <small class="text-muted">
+                                Leave blank for all vehicle types.
+                            </small>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label fw-semibold">
+                                Branch
+                            </label>
+                            {{ price_form.branch }}
+                            <small class="text-muted">
+                                Leave blank for all branches.
+                            </small>
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label fw-semibold">
+                                Price ({{ CURRENCY_SYMBOL }})
+                                <span class="text-danger">*</span>
+                            </label>
+                            {{ price_form.price }}
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label fw-semibold">
+                                Valid From
+                            </label>
+                            {{ price_form.effective_from }}
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label fw-semibold">
+                                Valid To
+                            </label>
+                            {{ price_form.effective_to }}
+                        </div>
+                        <div class="col-md-12">
+                            <div class="form-check">
+                                {{ price_form.is_active }}
+                                <label class="form-check-label"
+                                       for="id_is_active">
+                                    Active
+                                </label>
+                            </div>
+                        </div>
+                    </div>
+                    <div id="priceFormErrors"
+                         class="alert alert-danger mt-3"
+                         style="display:none;">
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-secondary"
+                        data-bs-dismiss="modal">Cancel</button>
+                <button class="btn btn-primary" id="savePriceBtn">
+                    <i class="fas fa-save me-1"></i> Save Price
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Delete Modal -->
+<div class="modal fade" id="deleteModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header bg-danger text-white">
+                <h5 class="modal-title">Confirm Delete</h5>
+                <button type="button"
+                        class="btn-close btn-close-white"
+                        data-bs-dismiss="modal">
+                </button>
+            </div>
+            <div class="modal-body">
+                <p>
+                    Delete service
+                    <strong>{{ service.name }}</strong>?
+                </p>
+                <p class="text-muted mb-0">
+                    Moved to Trash. Old invoices are not affected.
+                </p>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-secondary"
+                        data-bs-dismiss="modal">Cancel</button>
+                <button class="btn btn-danger"
+                        id="confirmDeleteBtn">
+                    Move to Trash
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+const CSRF_TOKEN = '{{ csrf_token }}';
+const SERVICE_ID = {{ service.pk }};
+
+// ─── Add Price Modal ──────────────────────────────────────────
+function openAddPriceModal() {
+    document.getElementById('addPriceForm').reset();
+    document.getElementById('priceFormErrors').style.display = 'none';
+    new bootstrap.Modal(
+        document.getElementById('addPriceModal')
+    ).show();
+}
+
+document.getElementById('savePriceBtn')
+    .addEventListener('click', function () {
+        const form = document.getElementById('addPriceForm');
+        const errDiv = document.getElementById('priceFormErrors');
+        errDiv.style.display = 'none';
+
+        this.disabled = true;
+        this.innerHTML =
+            '<i class="fas fa-spinner fa-spin me-1"></i>';
+
+        const formData = new FormData(form);
+
+        fetch(`/services/${SERVICE_ID}/prices/add/`, {
+            method: 'POST',
+            headers: {
+                'X-Requested-With': 'XMLHttpRequest',
+                'X-CSRFToken': CSRF_TOKEN,
+            },
+            body: formData,
+        })
+        .then(r => r.json())
+        .then(data => {
+            this.disabled = false;
+            this.innerHTML =
+                '<i class="fas fa-save me-1"></i> Save Price';
+
+            if (data.success) {
+                bootstrap.Modal.getInstance(
+                    document.getElementById('addPriceModal')
+                ).hide();
+                showToast(data.message, 'success');
+                setTimeout(() => location.reload(), 800);
+            } else {
+                errDiv.style.display = 'block';
+                if (data.errors) {
+                    const msgs = Object.values(data.errors).flat();
+                    errDiv.textContent = msgs.join(' ');
+                } else {
+                    errDiv.textContent = data.error || 'Failed.';
+                }
+            }
+        })
+        .catch(() => {
+            this.disabled = false;
+            this.innerHTML =
+                '<i class="fas fa-save me-1"></i> Save Price';
+            showToast('Network error.', 'error');
+        });
+    });
+
+// ─── Delete Price ─────────────────────────────────────────────
+function deletePrice(serviceId, priceId) {
+    if (!confirm('Remove this price?')) return;
+
+    fetch(`/services/${serviceId}/prices/${priceId}/delete/`, {
+        method: 'POST',
+        headers: { 'X-CSRFToken': CSRF_TOKEN },
+    })
+    .then(r => r.json())
+    .then(data => {
+        if (data.success) {
+            document.getElementById(`price-row-${priceId}`)
+                ?.remove();
+            showToast(data.message, 'success');
+        } else {
+            showToast(data.error, 'error');
+        }
+    });
+}
+
+// ─── Delete Service ───────────────────────────────────────────
+let deleteServiceId = null;
+
+function confirmDelete(id, name) {
+    deleteServiceId = id;
+    new bootstrap.Modal(
+        document.getElementById('deleteModal')
+    ).show();
+}
+
+document.getElementById('confirmDeleteBtn')
+    .addEventListener('click', function () {
+        this.disabled = true;
+        fetch(`/services/${deleteServiceId}/delete/`, {
+            method: 'POST',
+            headers: { 'X-CSRFToken': CSRF_TOKEN },
+        })
+        .then(r => r.json())
+        .then(data => {
+            if (data.success) {
+                showToast(data.message, 'success');
+                setTimeout(
+                    () => window.location.href = '/services/',
+                    1000
+                );
+            } else {
+                showToast(data.error, 'error');
+                this.disabled = false;
+            }
+        });
+    });
+</script>
+{% endblock %}

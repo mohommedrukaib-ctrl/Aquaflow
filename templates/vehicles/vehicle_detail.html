@@ -1,0 +1,273 @@
+{% extends "base/base.html" %}
+{% load aquaflow_tags %}
+
+{% block title %}
+{{ vehicle.registration_number }} — {{ AQUAFLOW_SYSTEM_NAME }}
+{% endblock %}
+
+{% block page_title %}
+<i class="fas fa-car me-2 text-primary"></i>
+{{ vehicle.registration_number }}
+{% endblock %}
+
+{% block breadcrumbs %}
+{% for crumb in breadcrumbs %}
+{% if crumb.url %}
+<li class="breadcrumb-item">
+    <a href="{{ crumb.url }}">{{ crumb.label }}</a>
+</li>
+{% else %}
+<li class="breadcrumb-item active">{{ crumb.label }}</li>
+{% endif %}
+{% endfor %}
+{% endblock %}
+
+{% block content %}
+<div class="row">
+
+    <!-- Vehicle Info -->
+    <div class="col-md-4">
+        <div class="card mb-4">
+            <div class="card-body text-center py-4">
+                <div style="width:80px;height:80px;
+                            background:#e8f4fd;border-radius:50%;
+                            display:flex;align-items:center;
+                            justify-content:center;margin:0 auto 16px;">
+                    <i class="fas fa-car fa-2x text-primary"></i>
+                </div>
+                <h5 class="fw-bold mb-1">
+                    {{ vehicle.registration_number }}
+                </h5>
+                <div class="text-muted">
+                    {{ vehicle.brand.name }} {{ vehicle.model.name }}
+                </div>
+                {% if vehicle.year %}
+                <div class="text-muted small">
+                    Year: {{ vehicle.year }}
+                </div>
+                {% endif %}
+                <div class="mt-2">
+                    <span class="{{ vehicle.status|status_badge }}">
+                        {{ vehicle.get_status_display }}
+                    </span>
+                </div>
+            </div>
+        </div>
+
+        <div class="card mb-4">
+            <div class="card-header">
+                <strong>Vehicle Details</strong>
+            </div>
+            <div class="card-body p-0">
+                <table class="table table-borderless table-sm mb-0">
+                    <tr>
+                        <td class="text-muted ps-3">Brand</td>
+                        <td class="fw-semibold">
+                            {{ vehicle.brand.name }}
+                        </td>
+                    </tr>
+                    <tr>
+                        <td class="text-muted ps-3">Model</td>
+                        <td>{{ vehicle.model.name }}</td>
+                    </tr>
+                    <tr>
+                        <td class="text-muted ps-3">Type</td>
+                        <td>
+                            {{ vehicle.vehicle_type.name|default:"—" }}
+                        </td>
+                    </tr>
+                    <tr>
+                        <td class="text-muted ps-3">Color</td>
+                        <td>
+                            <div class="d-flex align-items-center gap-2">
+                                {% if vehicle.color and vehicle.color.hex_code %}
+                                <div style="width:14px;height:14px;
+                                            border-radius:50%;
+                                            background:{{ vehicle.color.hex_code }};
+                                            border:1px solid #ddd;">
+                                </div>
+                                {% endif %}
+                                {{ vehicle.color.name|default:"—" }}
+                            </div>
+                        </td>
+                    </tr>
+                    <tr>
+                        <td class="text-muted ps-3">Fuel</td>
+                        <td>{{ vehicle.fuel_type.name|default:"—" }}</td>
+                    </tr>
+                    <tr>
+                        <td class="text-muted ps-3">Year</td>
+                        <td>{{ vehicle.year|default:"—" }}</td>
+                    </tr>
+                    <tr>
+                        <td class="text-muted ps-3">Mileage</td>
+                        <td>
+                            {% if vehicle.mileage %}
+                            {{ vehicle.mileage|floatformat:0 }} km
+                            {% else %}—{% endif %}
+                        </td>
+                    </tr>
+                </table>
+            </div>
+        </div>
+
+        <!-- Customer -->
+        <div class="card mb-4">
+            <div class="card-header">
+                <strong>Owner</strong>
+            </div>
+            <div class="card-body">
+                <div class="d-flex align-items-center gap-3">
+                    <div style="width:40px;height:40px;
+                                background:#e8f4fd;border-radius:50%;
+                                display:flex;align-items:center;
+                                justify-content:center;">
+                        <i class="fas fa-user text-primary"></i>
+                    </div>
+                    <div>
+                        <div class="fw-semibold">
+                            <a href="{% url 'customer_detail' vehicle.customer.pk %}"
+                               class="text-decoration-none text-dark">
+                                {{ vehicle.customer.name }}
+                            </a>
+                        </div>
+                        <div class="text-muted small">
+                            {{ vehicle.customer.customer_code }}
+                            {% if vehicle.customer.phone %}
+                            · {{ vehicle.customer.phone }}
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Actions -->
+        <div class="d-grid gap-2">
+            {% if can_edit %}
+            <a href="{% url 'vehicle_edit' vehicle.pk %}"
+               class="btn btn-outline-primary">
+                <i class="fas fa-edit me-1"></i> Edit Vehicle
+            </a>
+            {% endif %}
+            <a href="{% url 'customer_detail' vehicle.customer.pk %}"
+               class="btn btn-outline-secondary">
+                <i class="fas fa-user me-1"></i> View Customer
+            </a>
+            <a href="/vehicles/" class="btn btn-outline-secondary">
+                <i class="fas fa-arrow-left me-1"></i> Back to List
+            </a>
+            {% if can_delete %}
+            <button type="button"
+                    class="btn btn-outline-danger"
+                    onclick="confirmDelete(
+                        {{ vehicle.pk }},
+                        '{{ vehicle.registration_number }}'
+                    )">
+                <i class="fas fa-trash me-1"></i> Delete Vehicle
+            </button>
+            {% endif %}
+        </div>
+    </div>
+
+    <!-- Notes -->
+    <div class="col-md-8">
+        {% if vehicle.notes %}
+        <div class="card mb-4">
+            <div class="card-header">
+                <strong><i class="fas fa-sticky-note me-2"></i>Notes</strong>
+            </div>
+            <div class="card-body">
+                <p class="text-muted mb-0">{{ vehicle.notes }}</p>
+            </div>
+        </div>
+        {% endif %}
+
+        <div class="card">
+            <div class="card-header">
+                <strong>
+                    <i class="fas fa-history me-2"></i>
+                    Wash History
+                </strong>
+            </div>
+            <div class="card-body text-center py-4">
+                <i class="fas fa-car-wash fa-2x text-muted mb-2"></i>
+                <p class="text-muted">
+                    Wash history will appear here in Phase 9.
+                </p>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Delete Modal -->
+<div class="modal fade" id="deleteModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header bg-danger text-white">
+                <h5 class="modal-title">
+                    <i class="fas fa-exclamation-triangle me-2"></i>
+                    Confirm Delete
+                </h5>
+                <button type="button"
+                        class="btn-close btn-close-white"
+                        data-bs-dismiss="modal">
+                </button>
+            </div>
+            <div class="modal-body">
+                <p>
+                    Delete vehicle
+                    <strong id="deleteVehicleReg"></strong>?
+                </p>
+                <p class="text-muted mb-0">
+                    <i class="fas fa-info-circle me-1"></i>
+                    Moved to Trash. Restorable by Super Admin.
+                </p>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-secondary"
+                        data-bs-dismiss="modal">
+                    Cancel
+                </button>
+                <button class="btn btn-danger" id="confirmDeleteBtn">
+                    <i class="fas fa-trash me-1"></i> Move to Trash
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+const CSRF_TOKEN = '{{ csrf_token }}';
+let deleteVehicleId = null;
+
+function confirmDelete(id, reg) {
+    deleteVehicleId = id;
+    document.getElementById('deleteVehicleReg').textContent = reg;
+    new bootstrap.Modal(document.getElementById('deleteModal')).show();
+}
+
+document.getElementById('confirmDeleteBtn')
+    .addEventListener('click', function () {
+        this.disabled = true;
+        fetch(`/vehicles/${deleteVehicleId}/delete/`, {
+            method: 'POST',
+            headers: { 'X-CSRFToken': CSRF_TOKEN },
+        })
+        .then(r => r.json())
+        .then(data => {
+            if (data.success) {
+                showToast(data.message, 'success');
+                setTimeout(
+                    () => window.location.href = '/vehicles/', 1000
+                );
+            } else {
+                showToast(data.error, 'error');
+                this.disabled = false;
+            }
+        });
+    });
+</script>
+{% endblock %}

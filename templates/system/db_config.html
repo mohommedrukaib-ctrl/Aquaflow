@@ -1,0 +1,399 @@
+{% extends "base/base.html" %}
+
+{% block title %}Database Configuration — AquaFlow{% endblock %}
+{% block page_icon %}fas fa-server{% endblock %}
+{% block page_title %}Database Configuration{% endblock %}
+{% block page_subtitle %}Super Admin only — change with caution{% endblock %}
+
+{% block breadcrumbs %}
+<span>/</span>
+<a href="/system/">System</a>
+<span>/</span>
+<span class="current">Database</span>
+{% endblock %}
+
+{% block extra_css %}
+<style>
+.masked-input { font-family: monospace; letter-spacing: 4px; }
+.test-result-box {
+    background: var(--aq-surface-2);
+    border: 1px solid var(--aq-border);
+    border-radius: 8px;
+    padding: 15px;
+    margin-top: 12px;
+}
+.test-result-box.success { border-color: #14b898; background: rgba(29,233,182,0.05); }
+.test-result-box.failed  { border-color: #f44236; background: rgba(244,66,54,0.05); }
+</style>
+{% endblock %}
+
+{% block content %}
+
+<div class="alert alert-danger">
+    <i class="fas fa-shield-alt me-2"></i>
+    <strong>CRITICAL WARNING:</strong> Changing database configuration will disconnect from the current database.
+    A safety backup will be created automatically. You must restart the server for changes to take effect.
+</div>
+
+<div class="row g-3">
+
+    <!-- Current Config -->
+    <div class="col-lg-4">
+        <div class="card mb-3">
+            <div class="card-header bg-success text-white">
+                <strong><i class="fas fa-check-circle me-2"></i>Current Active Config</strong>
+            </div>
+            <div class="card-body">
+                <table class="table table-borderless table-sm mb-0">
+                    <tr>
+                        <td class="text-muted">Engine</td>
+                        <td><code class="small">{{ current.engine }}</code></td>
+                    </tr>
+                    <tr>
+                        <td class="text-muted">Host</td>
+                        <td><code>{{ current.host }}</code></td>
+                    </tr>
+                    <tr>
+                        <td class="text-muted">Port</td>
+                        <td><code>{{ current.port }}</code></td>
+                    </tr>
+                    <tr>
+                        <td class="text-muted">Database</td>
+                        <td><strong>{{ current.db_name }}</strong></td>
+                    </tr>
+                    <tr>
+                        <td class="text-muted">Username</td>
+                        <td><code>{{ current.username }}</code></td>
+                    </tr>
+                    <tr>
+                        <td class="text-muted">Password</td>
+                        <td class="masked-input">••••••••••••</td>
+                    </tr>
+                    <tr>
+                        <td class="text-muted">SSL Mode</td>
+                        <td>{{ current.ssl_mode }}</td>
+                    </tr>
+                </table>
+            </div>
+        </div>
+
+        {% if last_good %}
+        <div class="card">
+            <div class="card-header">
+                <strong><i class="fas fa-history me-2 aq-text-warning"></i>Last Known Good</strong>
+            </div>
+            <div class="card-body">
+                <p class="mb-1"><strong>{{ last_good.db_name }}</strong></p>
+                <p class="text-muted small mb-2">
+                    {{ last_good.username }}@{{ last_good.host }}:{{ last_good.port }}
+                </p>
+                <button class="btn btn-warning btn-sm w-100" onclick="openRollbackModal()">
+                    <i class="fas fa-undo me-1"></i>Rollback to This
+                </button>
+            </div>
+        </div>
+        {% endif %}
+    </div>
+
+    <!-- Change Config Form -->
+    <div class="col-lg-8">
+        <div class="card">
+            <div class="card-header">
+                <strong><i class="fas fa-edit me-2 aq-text-primary"></i>Change Database Configuration</strong>
+            </div>
+            <div class="card-body">
+
+                <div class="row g-3">
+                    <div class="col-md-8">
+                        <label class="form-label fw-semibold">Host <span class="text-danger">*</span></label>
+                        <input type="text" id="cfgHost" class="form-control" value="{{ current.host }}" placeholder="127.0.0.1 or remote-server.com">
+                    </div>
+                    <div class="col-md-4">
+                        <label class="form-label fw-semibold">Port <span class="text-danger">*</span></label>
+                        <input type="text" id="cfgPort" class="form-control" value="{{ current.port }}" placeholder="5432">
+                    </div>
+
+                    <div class="col-md-6">
+                        <label class="form-label fw-semibold">Database Name <span class="text-danger">*</span></label>
+                        <input type="text" id="cfgDbName" class="form-control" value="{{ current.db_name }}">
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label fw-semibold">Username <span class="text-danger">*</span></label>
+                        <input type="text" id="cfgUsername" class="form-control" value="{{ current.username }}">
+                    </div>
+
+                    <div class="col-md-12">
+                        <label class="form-label fw-semibold">Password <span class="text-danger">*</span></label>
+                        <div class="input-group">
+                            <input type="password" id="cfgPassword" class="form-control" placeholder="Enter new password">
+                            <div class="input-group-text">
+                                <div class="form-check mb-0">
+                                    <input type="checkbox" id="cfgUseExisting" class="form-check-input">
+                                    <label class="form-check-label ms-1 small" for="cfgUseExisting">
+                                        Keep existing password
+                                    </label>
+                                </div>
+                            </div>
+                        </div>
+                        <small class="text-muted">Current password is never shown. Enter new password OR check "Keep existing".</small>
+                    </div>
+
+                    <div class="col-md-6">
+                        <label class="form-label fw-semibold">SSL Mode</label>
+                        <select id="cfgSslMode" class="form-select">
+                            {% for value, label in ssl_choices %}
+                            <option value="{{ value }}" {% if current.ssl_mode == value %}selected{% endif %}>{{ label }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                </div>
+
+                <div class="mt-4 d-flex gap-2">
+                    <button class="btn btn-info" id="testBtn">
+                        <i class="fas fa-plug me-1"></i>Test Connection
+                    </button>
+                    <button class="btn btn-primary" id="applyBtn" disabled>
+                        <i class="fas fa-save me-1"></i>Apply Configuration
+                    </button>
+                </div>
+
+                <div id="testResult" style="display:none;"></div>
+
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Apply Confirmation Modal -->
+<div class="modal fade" id="applyModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header bg-warning">
+                <h5 class="modal-title"><i class="fas fa-exclamation-triangle me-2"></i>Confirm Database Change</h5>
+                <button class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <div class="alert alert-danger">
+                    <strong>⚠ CRITICAL:</strong> This will change your database connection.
+                    <ul class="mb-0 mt-2">
+                        <li>Auto-backup of current DB will be created</li>
+                        <li>Current config will be saved as "last known good"</li>
+                        <li>Server MUST be restarted after apply</li>
+                    </ul>
+                </div>
+                <div class="mb-3">
+                    <label class="form-label fw-semibold">Type "APPLY" to confirm</label>
+                    <input type="text" id="applyConfirm" class="form-control" placeholder="APPLY">
+                </div>
+                <div class="mb-3">
+                    <label class="form-label fw-semibold">Your Admin Password</label>
+                    <input type="password" id="applyAdminPassword" class="form-control">
+                </div>
+                <div id="applyError" class="alert alert-danger" style="display:none;"></div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                <button class="btn btn-warning" id="confirmApplyBtn">
+                    <i class="fas fa-check me-1"></i>Apply Now
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Rollback Modal -->
+<div class="modal fade" id="rollbackModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header bg-warning">
+                <h5 class="modal-title"><i class="fas fa-undo me-2"></i>Rollback Configuration</h5>
+                <button class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <p>Rollback to previous database configuration?</p>
+                <div class="mb-3">
+                    <label class="form-label fw-semibold">Your Admin Password</label>
+                    <input type="password" id="rollbackPassword" class="form-control">
+                </div>
+                <div id="rollbackError" class="alert alert-danger" style="display:none;"></div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                <button class="btn btn-warning" id="confirmRollbackBtn">
+                    <i class="fas fa-undo me-1"></i>Rollback
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+{% endblock %}
+
+{% block extra_js %}
+<script>
+const CSRF_TOKEN = '{{ csrf_token }}';
+let lastTestPassed = false;
+
+function getFormData() {
+    const fd = new FormData();
+    fd.append('host', document.getElementById('cfgHost').value.trim());
+    fd.append('port', document.getElementById('cfgPort').value.trim());
+    fd.append('db_name', document.getElementById('cfgDbName').value.trim());
+    fd.append('username', document.getElementById('cfgUsername').value.trim());
+    fd.append('password', document.getElementById('cfgPassword').value);
+    fd.append('ssl_mode', document.getElementById('cfgSslMode').value);
+    fd.append('use_existing_password',
+        document.getElementById('cfgUseExisting').checked ? '1' : '0');
+    return fd;
+}
+
+document.getElementById('testBtn').addEventListener('click', function () {
+    this.disabled = true;
+    this.innerHTML = '<i class="fas fa-spinner fa-spin me-1"></i>Testing...';
+
+    const resultBox = document.getElementById('testResult');
+    resultBox.style.display = 'none';
+    lastTestPassed = false;
+    document.getElementById('applyBtn').disabled = true;
+
+    fetch('/system/database/test/', {
+        method: 'POST',
+        headers: { 'X-CSRFToken': CSRF_TOKEN },
+        body: getFormData(),
+    })
+    .then(r => r.json())
+    .then(data => {
+        this.disabled = false;
+        this.innerHTML = '<i class="fas fa-plug me-1"></i>Test Connection';
+
+        if (data.success) {
+            lastTestPassed = true;
+            document.getElementById('applyBtn').disabled = false;
+
+            let html = `
+                <div class="test-result-box success">
+                    <h6 class="mb-3 text-success"><i class="fas fa-check-circle me-1"></i>Connection Successful</h6>
+                    <table class="table table-borderless table-sm mb-0">
+                        <tr><td class="text-muted">Server</td><td>${data.server_version}</td></tr>
+                        <tr><td class="text-muted">Tables</td><td>${data.table_count}</td></tr>
+                        <tr><td class="text-muted">Users</td><td>${data.user_count}</td></tr>
+                        <tr><td class="text-muted">AquaFlow DB</td>
+                            <td>${data.has_aquaflow_tables ? '<span class="text-success">Yes</span>' : '<span class="text-warning">No</span>'}</td></tr>
+                    </table>`;
+
+            if (data.warnings && data.warnings.length > 0) {
+                html += '<div class="alert alert-warning mt-2 mb-0 small">';
+                data.warnings.forEach(w => {
+                    html += `<div><i class="fas fa-exclamation-triangle me-1"></i>${w}</div>`;
+                });
+                html += '</div>';
+            }
+            html += '</div>';
+            resultBox.innerHTML = html;
+        } else {
+            resultBox.innerHTML = `
+                <div class="test-result-box failed">
+                    <h6 class="mb-2 text-danger"><i class="fas fa-times-circle me-1"></i>Connection Failed</h6>
+                    <p class="mb-0">${data.error}</p>
+                </div>`;
+        }
+        resultBox.style.display = 'block';
+    })
+    .catch(err => {
+        this.disabled = false;
+        this.innerHTML = '<i class="fas fa-plug me-1"></i>Test Connection';
+        showToast('Network error', 'error');
+    });
+});
+
+document.getElementById('applyBtn').addEventListener('click', function () {
+    if (!lastTestPassed) {
+        showToast('Please test connection first', 'warning');
+        return;
+    }
+    document.getElementById('applyConfirm').value = '';
+    document.getElementById('applyAdminPassword').value = '';
+    document.getElementById('applyError').style.display = 'none';
+    new bootstrap.Modal(document.getElementById('applyModal')).show();
+});
+
+document.getElementById('confirmApplyBtn').addEventListener('click', function () {
+    const confirm = document.getElementById('applyConfirm').value.trim();
+    const adminPassword = document.getElementById('applyAdminPassword').value.trim();
+    const err = document.getElementById('applyError');
+    err.style.display = 'none';
+
+    if (confirm !== 'APPLY') {
+        err.textContent = 'Type "APPLY" exactly to confirm.';
+        err.style.display = 'block';
+        return;
+    }
+    if (!adminPassword) {
+        err.textContent = 'Your admin password is required.';
+        err.style.display = 'block';
+        return;
+    }
+
+    this.disabled = true;
+    const fd = getFormData();
+    fd.append('confirm', confirm);
+    fd.append('admin_password', adminPassword);
+
+    fetch('/system/database/apply/', {
+        method: 'POST',
+        headers: { 'X-CSRFToken': CSRF_TOKEN },
+        body: fd,
+    })
+    .then(r => r.json())
+    .then(data => {
+        this.disabled = false;
+        if (data.success) {
+            alert('SUCCESS: ' + data.message + '\n\n' + (data.safety_backup || ''));
+            bootstrap.Modal.getInstance(document.getElementById('applyModal')).hide();
+        } else {
+            err.textContent = data.error;
+            err.style.display = 'block';
+        }
+    });
+});
+
+function openRollbackModal() {
+    document.getElementById('rollbackPassword').value = '';
+    document.getElementById('rollbackError').style.display = 'none';
+    new bootstrap.Modal(document.getElementById('rollbackModal')).show();
+}
+
+document.getElementById('confirmRollbackBtn')?.addEventListener('click', function () {
+    const pw = document.getElementById('rollbackPassword').value.trim();
+    const err = document.getElementById('rollbackError');
+    err.style.display = 'none';
+
+    if (!pw) {
+        err.textContent = 'Password required.';
+        err.style.display = 'block';
+        return;
+    }
+
+    this.disabled = true;
+    const fd = new FormData();
+    fd.append('admin_password', pw);
+
+    fetch('/system/database/rollback/', {
+        method: 'POST',
+        headers: { 'X-CSRFToken': CSRF_TOKEN },
+        body: fd,
+    })
+    .then(r => r.json())
+    .then(data => {
+        this.disabled = false;
+        if (data.success) {
+            alert('SUCCESS: ' + data.message);
+            location.reload();
+        } else {
+            err.textContent = data.error;
+            err.style.display = 'block';
+        }
+    });
+});
+</script>
+{% endblock %}

@@ -1,0 +1,349 @@
+{% extends "base/base.html" %}
+{% load aquaflow_tags %}
+
+{% block title %}Trash — AquaFlow{% endblock %}
+{% block page_icon %}fas fa-trash{% endblock %}
+{% block page_title %}Trash / Recycle Bin{% endblock %}
+{% block page_subtitle %}Restore or permanently delete items{% endblock %}
+
+{% block breadcrumbs %}
+<span>/</span>
+<a href="/system/">System</a>
+<span>/</span>
+<span class="current">Trash</span>
+{% endblock %}
+
+{% block extra_css %}
+<style>
+.trash-tabs {
+    display: flex;
+    gap: 6px;
+    flex-wrap: wrap;
+    margin-bottom: 16px;
+}
+.trash-tab {
+    padding: 8px 16px;
+    border: 1px solid var(--aq-border);
+    border-radius: 20px;
+    background: var(--aq-surface);
+    color: var(--aq-text);
+    text-decoration: none;
+    font-size: 13px;
+    transition: all 0.15s;
+}
+.trash-tab:hover {
+    background: var(--aq-hover-bg);
+    color: var(--aq-primary);
+    text-decoration: none;
+}
+.trash-tab.active {
+    background: var(--aq-primary);
+    color: white;
+    border-color: var(--aq-primary);
+}
+.trash-tab .count {
+    display: inline-block;
+    padding: 1px 8px;
+    background: rgba(0,0,0,0.15);
+    border-radius: 10px;
+    font-size: 11px;
+    margin-left: 6px;
+}
+.trash-tab.active .count {
+    background: rgba(255,255,255,0.25);
+}
+.trash-item {
+    background: var(--aq-surface);
+    border: 1px solid var(--aq-border);
+    border-radius: 8px;
+    padding: 14px;
+    margin-bottom: 10px;
+    display: flex;
+    align-items: center;
+    gap: 14px;
+}
+.trash-icon {
+    width: 44px;
+    height: 44px;
+    border-radius: 10px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: white;
+    font-size: 18px;
+    flex-shrink: 0;
+}
+.trash-icon.primary   { background: linear-gradient(135deg, #7266ba, #5949a1); }
+.trash-icon.info      { background: linear-gradient(135deg, #04a9f5, #0388c7); }
+.trash-icon.success   { background: linear-gradient(135deg, #1de9b6, #14b898); }
+.trash-icon.warning   { background: linear-gradient(135deg, #f4c22b, #d9a41f); }
+.trash-icon.secondary { background: linear-gradient(135deg, #6c757d, #4d5459); }
+
+.trash-info { flex: 1; min-width: 0; }
+.trash-name { font-weight: 600; color: var(--aq-text); font-size: 14px; }
+.trash-meta { font-size: 12px; color: var(--aq-text-muted); margin-top: 2px; }
+.trash-deleted { font-size: 11px; color: #f44236; margin-top: 4px; }
+.trash-actions { display: flex; gap: 6px; }
+
+.warning-banner {
+    background: rgba(244, 194, 43, 0.1);
+    border: 1px solid #f4c22b;
+    border-radius: 8px;
+    padding: 14px;
+    margin-bottom: 20px;
+    color: #856404;
+}
+</style>
+{% endblock %}
+
+{% block content %}
+
+<div class="warning-banner">
+    <i class="fas fa-shield-alt me-2"></i>
+    <strong>Super Admin Only:</strong> Items in trash can be restored or permanently deleted.
+    Permanent deletion is only allowed if the item has no historical financial records.
+</div>
+
+<div class="card">
+    <div class="card-header">
+        <strong><i class="fas fa-trash me-2 aq-text-danger"></i>Deleted Items</strong>
+    </div>
+    <div class="card-body">
+
+        <!-- Type tabs -->
+        <div class="trash-tabs">
+            <a href="?type=all{% if search %}&q={{ search }}{% endif %}" class="trash-tab {% if item_type == 'all' %}active{% endif %}">
+                All <span class="count">{{ counts.all }}</span>
+            </a>
+            <a href="?type=customer{% if search %}&q={{ search }}{% endif %}" class="trash-tab {% if item_type == 'customer' %}active{% endif %}">
+                <i class="fas fa-user me-1"></i>Customers <span class="count">{{ counts.customer }}</span>
+            </a>
+            <a href="?type=vehicle{% if search %}&q={{ search }}{% endif %}" class="trash-tab {% if item_type == 'vehicle' %}active{% endif %}">
+                <i class="fas fa-car me-1"></i>Vehicles <span class="count">{{ counts.vehicle }}</span>
+            </a>
+            <a href="?type=service{% if search %}&q={{ search }}{% endif %}" class="trash-tab {% if item_type == 'service' %}active{% endif %}">
+                <i class="fas fa-concierge-bell me-1"></i>Services <span class="count">{{ counts.service }}</span>
+            </a>
+            <a href="?type=product{% if search %}&q={{ search }}{% endif %}" class="trash-tab {% if item_type == 'product' %}active{% endif %}">
+                <i class="fas fa-box me-1"></i>Products <span class="count">{{ counts.product }}</span>
+            </a>
+            <a href="?type=supplier{% if search %}&q={{ search }}{% endif %}" class="trash-tab {% if item_type == 'supplier' %}active{% endif %}">
+                <i class="fas fa-truck me-1"></i>Suppliers <span class="count">{{ counts.supplier }}</span>
+            </a>
+        </div>
+
+        <!-- Search -->
+        <form method="GET" class="mb-3">
+            <input type="hidden" name="type" value="{{ item_type }}">
+            <div class="input-group">
+                <input type="text" name="q" class="form-control" placeholder="Search deleted items..." value="{{ search }}">
+                <button class="btn btn-primary"><i class="fas fa-search me-1"></i>Search</button>
+                {% if search %}
+                <a href="?type={{ item_type }}" class="btn btn-outline-secondary">Clear</a>
+                {% endif %}
+            </div>
+        </form>
+
+        {% if items %}
+        <div>
+            {% for item in items %}
+            <div class="trash-item">
+                <div class="trash-icon {{ item.color }}">
+                    <i class="fas {{ item.icon }}"></i>
+                </div>
+                <div class="trash-info">
+                    <div class="trash-name">{{ item.name }}</div>
+                    <div class="trash-meta">
+                        <span class="badge bg-light text-dark border me-1">{{ item.type_label }}</span>
+                        {{ item.meta }}
+                    </div>
+                    <div class="trash-deleted">
+                        <i class="fas fa-clock me-1"></i>
+                        Deleted {{ item.deleted_at|date:"d M Y H:i" }}
+                        {% if item.deleted_by %} by {{ item.deleted_by.username }}{% endif %}
+                    </div>
+                </div>
+                <div class="trash-actions">
+                    <button class="btn btn-sm btn-success"
+                        onclick="restoreItem('{{ item.type }}', {{ item.id }}, '{{ item.name|escapejs }}')">
+                        <i class="fas fa-undo me-1"></i>Restore
+                    </button>
+                    <button class="btn btn-sm btn-outline-danger"
+                        onclick="purgeItem('{{ item.type }}', {{ item.id }}, '{{ item.name|escapejs }}')">
+                        <i class="fas fa-times me-1"></i>Delete Forever
+                    </button>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+
+        {% if page_obj.has_other_pages %}
+        <nav class="mt-3">
+            <ul class="pagination pagination-sm justify-content-center">
+                {% if page_obj.has_previous %}
+                <li class="page-item"><a class="page-link" href="?type={{ item_type }}&q={{ search }}&page={{ page_obj.previous_page_number }}">Previous</a></li>
+                {% endif %}
+                <li class="page-item disabled"><span class="page-link">Page {{ page_obj.number }}</span></li>
+                {% if page_obj.has_next %}
+                <li class="page-item"><a class="page-link" href="?type={{ item_type }}&q={{ search }}&page={{ page_obj.next_page_number }}">Next</a></li>
+                {% endif %}
+            </ul>
+        </nav>
+        {% endif %}
+
+        {% else %}
+        <div class="text-center py-5">
+            <i class="fas fa-check-circle fa-3x text-success mb-3"></i>
+            <h5 class="text-muted">Trash is empty</h5>
+            <p class="text-muted">No deleted items to show.</p>
+        </div>
+        {% endif %}
+    </div>
+</div>
+
+<!-- Restore Modal -->
+<div class="modal fade" id="restoreModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header bg-success text-white">
+                <h5 class="modal-title"><i class="fas fa-undo me-2"></i>Restore Item</h5>
+                <button class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <p>Restore <strong id="restoreName"></strong>?</p>
+                <p class="text-muted">The item will be moved back to active records.</p>
+                <div id="restoreError" class="alert alert-danger" style="display:none;"></div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                <button class="btn btn-success" id="confirmRestoreBtn">
+                    <i class="fas fa-undo me-1"></i>Restore
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Purge Modal -->
+<div class="modal fade" id="purgeModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header bg-danger text-white">
+                <h5 class="modal-title"><i class="fas fa-exclamation-triangle me-2"></i>Permanent Delete</h5>
+                <button class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <div class="alert alert-danger">
+                    <strong>⚠ CRITICAL WARNING:</strong> This action cannot be undone.
+                    <br>The item will be permanently removed from the database.
+                </div>
+                <p>Delete <strong id="purgeName"></strong> forever?</p>
+
+                <div class="mb-3">
+                    <label class="form-label fw-semibold">Type "DELETE" to confirm</label>
+                    <input type="text" id="purgeConfirm" class="form-control" placeholder="DELETE">
+                </div>
+
+                <div class="mb-3">
+                    <label class="form-label fw-semibold">Your Password</label>
+                    <input type="password" id="purgePassword" class="form-control" placeholder="Enter your password">
+                </div>
+
+                <div id="purgeError" class="alert alert-danger" style="display:none;"></div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                <button class="btn btn-danger" id="confirmPurgeBtn">
+                    <i class="fas fa-times me-1"></i>Delete Forever
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+{% endblock %}
+
+{% block extra_js %}
+<script>
+const CSRF_TOKEN = '{{ csrf_token }}';
+let currentItemType = null;
+let currentItemId = null;
+
+function restoreItem(type, id, name) {
+    currentItemType = type;
+    currentItemId = id;
+    document.getElementById('restoreName').textContent = name;
+    document.getElementById('restoreError').style.display = 'none';
+    new bootstrap.Modal(document.getElementById('restoreModal')).show();
+}
+
+document.getElementById('confirmRestoreBtn').addEventListener('click', function () {
+    this.disabled = true;
+    fetch(`/system/trash/${currentItemType}/${currentItemId}/restore/`, {
+        method: 'POST',
+        headers: { 'X-CSRFToken': CSRF_TOKEN },
+    })
+    .then(r => r.json())
+    .then(data => {
+        this.disabled = false;
+        if (data.success) {
+            showToast(data.message, 'success');
+            setTimeout(() => location.reload(), 600);
+        } else {
+            document.getElementById('restoreError').textContent = data.error;
+            document.getElementById('restoreError').style.display = 'block';
+        }
+    });
+});
+
+function purgeItem(type, id, name) {
+    currentItemType = type;
+    currentItemId = id;
+    document.getElementById('purgeName').textContent = name;
+    document.getElementById('purgeConfirm').value = '';
+    document.getElementById('purgePassword').value = '';
+    document.getElementById('purgeError').style.display = 'none';
+    new bootstrap.Modal(document.getElementById('purgeModal')).show();
+}
+
+document.getElementById('confirmPurgeBtn').addEventListener('click', function () {
+    const confirm = document.getElementById('purgeConfirm').value.trim();
+    const password = document.getElementById('purgePassword').value.trim();
+    const err = document.getElementById('purgeError');
+    err.style.display = 'none';
+
+    if (confirm !== 'DELETE') {
+        err.textContent = 'Type "DELETE" exactly to confirm.';
+        err.style.display = 'block';
+        return;
+    }
+    if (!password) {
+        err.textContent = 'Password required.';
+        err.style.display = 'block';
+        return;
+    }
+
+    this.disabled = true;
+    const fd = new FormData();
+    fd.append('confirm', confirm);
+    fd.append('password', password);
+
+    fetch(`/system/trash/${currentItemType}/${currentItemId}/purge/`, {
+        method: 'POST',
+        headers: { 'X-CSRFToken': CSRF_TOKEN },
+        body: fd,
+    })
+    .then(r => r.json())
+    .then(data => {
+        this.disabled = false;
+        if (data.success) {
+            showToast(data.message, 'success');
+            setTimeout(() => location.reload(), 600);
+        } else {
+            err.textContent = data.error;
+            err.style.display = 'block';
+        }
+    });
+});
+</script>
+{% endblock %}

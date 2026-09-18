@@ -1,0 +1,123 @@
+{% extends "base/base.html" %}
+{% load aquaflow_tags %}
+
+{% block title %}{{ employee.full_name }} — AquaFlow{% endblock %}
+{% block page_icon %}fas fa-id-badge{% endblock %}
+{% block page_title %}{{ employee.full_name }}{% endblock %}
+{% block page_subtitle %}Employee details{% endblock %}
+
+{% block breadcrumbs %}
+<span>/</span>
+<a href="/employees/">Employees</a>
+<span>/</span>
+<span class="current">{{ employee.full_name }}</span>
+{% endblock %}
+
+{% block content %}
+<div class="row g-3">
+
+    <div class="col-lg-4">
+        <div class="card mb-3">
+            <div class="card-body text-center py-4">
+                {% if employee.photo %}
+                <img src="{{ employee.photo.url }}" alt="Photo" style="width:80px; height:80px; border-radius:50%; object-fit:cover;" class="mb-3">
+                {% else %}
+                <div style="width:80px; height:80px; border-radius:50%; background:var(--aq-primary); display:flex; align-items:center; justify-content:center; margin:0 auto 12px; color:white; font-size:28px; font-weight:700;">
+                    {{ employee.first_name|first|upper }}
+                </div>
+                {% endif %}
+                <h5 class="fw-bold mb-1">{{ employee.full_name }}</h5>
+                <code class="text-muted">{{ employee.employee_code }}</code>
+                <div class="mt-2">
+                    {% if employee.status == 'active' %}
+                    <span class="badge bg-success">Active</span>
+                    {% elif employee.status == 'on_leave' %}
+                    <span class="badge bg-warning">On Leave</span>
+                    {% else %}
+                    <span class="badge bg-secondary">Inactive</span>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+
+        <div class="card mb-3">
+            <div class="card-header"><strong>Contact</strong></div>
+            <div class="card-body">
+                <table class="table table-borderless table-sm mb-0">
+                    <tr><td class="text-muted">Phone</td><td>{{ employee.phone|default:"—" }}</td></tr>
+                    <tr><td class="text-muted">Email</td><td>{{ employee.email|default:"—" }}</td></tr>
+                    <tr><td class="text-muted">NIC</td><td>{{ employee.nic_number|default:"—" }}</td></tr>
+                    <tr><td class="text-muted">Address</td><td>{{ employee.address|default:"—" }}</td></tr>
+                </table>
+            </div>
+        </div>
+
+        <div class="card">
+            <div class="card-header"><strong>Employment</strong></div>
+            <div class="card-body">
+                <table class="table table-borderless table-sm mb-0">
+                    <tr><td class="text-muted">Position</td><td>{{ employee.position.name|default:"—" }}</td></tr>
+                    <tr><td class="text-muted">Branch</td><td>{{ employee.branch.name }}</td></tr>
+                    <tr><td class="text-muted">Hire Date</td><td>{{ employee.hire_date|date:"d M Y"|default:"—" }}</td></tr>
+                    <tr><td class="text-muted">Salary</td><td>{% format_currency employee.salary %}</td></tr>
+                    <tr><td class="text-muted">Commission</td><td>{{ employee.commission_rate }}%</td></tr>
+                    <tr><td class="text-muted">Login Account</td><td>
+                        {% if employee.user %}
+                        <span class="badge bg-info">{{ employee.user.username }}</span>
+                        {% else %}
+                        <span class="text-muted">Not linked</span>
+                        {% endif %}
+                    </td></tr>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-lg-8">
+        <!-- Performance Stats (Last 30 Days) -->
+        <div class="row g-3 mb-3">
+            <div class="col-md-4">
+                <div class="aq-stat-card">
+                    <div class="aq-stat-info">
+                        <h6>Washes (30d)</h6>
+                        <div class="aq-stat-value">{{ wash_count }}</div>
+                    </div>
+                    <div class="aq-stat-icon primary"><i class="fas fa-car-wash"></i></div>
+                </div>
+            </div>
+            <div class="col-md-4">
+                <div class="aq-stat-card">
+                    <div class="aq-stat-info">
+                        <h6>Sales (30d)</h6>
+                        <div class="aq-stat-value">{{ sales.count|default:0 }}</div>
+                    </div>
+                    <div class="aq-stat-icon info"><i class="fas fa-cash-register"></i></div>
+                </div>
+            </div>
+            <div class="col-md-4">
+                <div class="aq-stat-card">
+                    <div class="aq-stat-info">
+                        <h6>Revenue (30d)</h6>
+                        <div class="aq-stat-value">{% format_currency sales.total %}</div>
+                    </div>
+                    <div class="aq-stat-icon success"><i class="fas fa-dollar-sign"></i></div>
+                </div>
+            </div>
+        </div>
+
+        {% if employee.notes %}
+        <div class="card mb-3">
+            <div class="card-header"><strong>Notes</strong></div>
+            <div class="card-body">{{ employee.notes|linebreaksbr }}</div>
+        </div>
+        {% endif %}
+
+        <div class="d-flex gap-2">
+            <a href="/employees/" class="btn btn-outline-secondary">
+                <i class="fas fa-arrow-left me-1"></i>Back
+            </a>
+        </div>
+    </div>
+
+</div>
+{% endblock %}

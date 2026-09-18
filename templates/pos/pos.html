@@ -1,0 +1,914 @@
+{% extends "base/base.html" %}
+{% load static %}
+
+{% block title %}POS — AquaFlow{% endblock %}
+{% block page_icon %}fas fa-cash-register{% endblock %}
+{% block page_title %}Point of Sale{% endblock %}
+{% block page_subtitle %}{{ branch.name }} — {{ business.name }}{% endblock %}
+
+{% block breadcrumbs %}
+<span>/</span>
+<span class="current">POS</span>
+{% endblock %}
+
+{% block extra_css %}
+<style>
+.pos-wrap { display: grid; grid-template-columns: 1fr 300px; gap: 8px; align-items: start; }
+@media (max-width: 1100px) { .pos-wrap { grid-template-columns: 1fr; } }
+
+.pos-box {
+    background: var(--aq-surface);
+    border: 1px solid var(--aq-border);
+    border-radius: var(--aq-radius);
+    padding: 7px 8px;
+    margin-bottom: 7px;
+}
+.pos-box-title {
+    font-size: 9.5px; font-weight: 700; letter-spacing: .5px;
+    text-transform: uppercase; color: var(--aq-text-muted);
+    margin-bottom: 4px;
+}
+
+.cart-table { width: 100%; border-collapse: collapse; font-size: 11px; }
+.cart-table th {
+    background: var(--aq-surface-2);
+    padding: 4px 5px; text-align: left;
+    font-size: 9px; text-transform: uppercase; letter-spacing: .4px;
+    color: var(--aq-text-muted);
+    border-bottom: 1px solid var(--aq-border-strong);
+    position: sticky; top: 0; z-index: 2;
+}
+.cart-table td { padding: 3px 5px; border-bottom: 1px solid var(--aq-border); vertical-align: middle; }
+.cart-table tr:hover { background: var(--aq-hover-bg); }
+.cart-table .r { text-align: right; }
+.cart-table .c { text-align: center; }
+
+.cart-input {
+    width: 100%; padding: 2px 5px; height: 22px;
+    border: 1px solid var(--aq-input-border); border-radius: 3px;
+    font-size: 11px; background: var(--aq-input-bg); color: var(--aq-text);
+}
+.cart-input:focus { border-color: var(--aq-primary); outline: none; }
+.cart-name-input  { min-width: 110px; }
+.cart-price-input { width: 70px; text-align: right; }
+.cart-qty-input   { width: 44px; text-align: center; }
+
+.cart-type-badge {
+    display: inline-block; padding: 0 5px; border-radius: 3px;
+    font-size: 8.5px; font-weight: 700; text-transform: uppercase; letter-spacing: .3px;
+}
+.type-service { background: rgba(11,126,196,.14); color: var(--aq-primary); }
+.type-repair  { background: rgba(217,145,0,.16);  color: var(--aq-warning); }
+.type-product { background: rgba(18,160,106,.14); color: var(--aq-success); }
+.type-custom  { background: rgba(107,91,214,.14); color: #6b5bd6; }
+
+.cart-total-cell { font-weight: 700; font-variant-numeric: tabular-nums; }
+.cart-remove-btn { background: none; border: none; color: var(--aq-danger); cursor: pointer; font-size: 11px; padding: 2px 4px; }
+.cart-empty { text-align: center; padding: 22px 12px; color: var(--aq-text-soft); font-size: 11px; }
+.cart-empty i { font-size: 20px; opacity: .25; display: block; margin-bottom: 5px; }
+
+.pos-cart-scroll { max-height: calc(100vh - 360px); min-height: 170px; overflow-y: auto; }
+
+.total-row { display: flex; justify-content: space-between; align-items: center; padding: 2px 0; font-size: 11.5px; }
+.total-row .lbl { color: var(--aq-text-muted); }
+.total-row .val { font-variant-numeric: tabular-nums; font-weight: 600; }
+.total-row.grand {
+    font-size: 16px; font-weight: 800; color: var(--aq-primary);
+    border-top: 1px solid var(--aq-border-strong); padding-top: 5px; margin-top: 4px;
+}
+
+.pay-btn {
+    padding: 6px 4px; border: 1px solid var(--aq-border-strong);
+    background: var(--aq-surface); border-radius: 4px; cursor: pointer;
+    text-align: center; font-weight: 600; font-size: 10.5px;
+    color: var(--aq-text); width: 100%; transition: all .12s;
+}
+.pay-btn:hover { border-color: var(--aq-primary); color: var(--aq-primary); background: var(--aq-primary-soft); }
+
+.vat-toggle {
+    display: flex; align-items: center; gap: 6px;
+    padding: 0 0 5px; border-bottom: 1px solid var(--aq-border); margin-bottom: 5px;
+    font-size: 11px;
+}
+
+.prefill-banner {
+    background: var(--aq-primary-soft);
+    border: 1px dashed var(--aq-primary);
+    border-radius: 4px; padding: 5px 9px; margin-bottom: 7px;
+    color: var(--aq-primary); font-size: 11px; font-weight: 600;
+}
+
+.pos-sticky { position: sticky; top: calc(var(--aq-navbar-h) + 10px); }
+</style>
+{% endblock %}
+
+{% block content %}
+
+{% if prefill %}
+<div class="prefill-banner">
+    <i class="fas fa-wand-magic-sparkles me-1"></i>
+    {{ prefill.job_number|default:"Booking" }} loaded — {{ prefill.customer_name }} · {{ prefill.vehicle_reg }}
+</div>
+{% endif %}
+
+<div class="pos-wrap">
+
+    <!-- ══ LEFT ══════════════════════════════════════════ -->
+    <div>
+
+        <div class="pos-box">
+            <div class="pos-box-title"><i class="fas fa-spray-can-sparkles me-1"></i>Load from Wash Job</div>
+            <div class="aq-smart-input" id="washJobInput" data-name="wash_job"
+                 data-search-url="/pos/wash-jobs/search/" data-create-url="popup"
+                 data-results-key="wash_jobs" data-label="Wash Job"
+                 data-placeholder="Search job#, customer, phone, vehicle… or create new"></div>
+        </div>
+
+        <div class="pos-box">
+            <div class="row g-2">
+                <div class="col-md-6">
+                    <label class="form-label">Customer <span class="text-danger">*</span></label>
+                    <div class="aq-smart-input" id="customerInput" data-name="customer"
+                         data-search-url="/customers/search/" data-create-url="/vehicles/customers/quick-create/"
+                         data-results-key="customers" data-label="Customer"
+                         data-placeholder="Search customer…" data-required="true"></div>
+                </div>
+                <div class="col-md-6">
+                    <label class="form-label">Vehicle</label>
+                    <div class="aq-smart-input" id="vehicleInput" data-name="vehicle"
+                         data-search-url="/vehicles/search/" data-create-url="/bookings/vehicles/quick-create/"
+                         data-results-key="vehicles" data-label="Vehicle"
+                         data-placeholder="Select customer first…" data-uppercase="true" data-disabled="true"></div>
+                    <small class="text-muted d-block" style="font-size:10px;" id="vehicleInfoLine"></small>
+                </div>
+            </div>
+        </div>
+
+        <div class="pos-box">
+            <div class="row g-2">
+                <div class="col-md-5">
+                    <label class="form-label"><i class="fas fa-list-check aq-text-primary me-1"></i>Service / Repair</label>
+                    <div class="aq-smart-input" id="serviceInput" data-name="service"
+                         data-search-url="/bookings/services/search/" data-results-key="services"
+                         data-label="Service" data-placeholder="Search or type new…"></div>
+                </div>
+                <div class="col-md-5">
+                    <label class="form-label"><i class="fas fa-box aq-text-primary me-1"></i>Product</label>
+                    <div class="aq-smart-input" id="productInput" data-name="product"
+                         data-search-url="/pos/products/search/" data-results-key="products"
+                         data-label="Product" data-placeholder="Search or type new…"></div>
+                </div>
+                <div class="col-md-2 d-flex align-items-end">
+                    <button type="button" class="btn btn-sm btn-outline-secondary w-100" onclick="openCustomModal()">
+                        <i class="fas fa-screwdriver-wrench me-1"></i>Custom
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <div class="pos-box">
+            <div class="d-flex justify-content-between align-items-center mb-1">
+                <div class="pos-box-title mb-0"><i class="fas fa-cart-shopping me-1"></i>Cart</div>
+                <button class="btn btn-sm btn-outline-danger" id="clearCartBtn" style="display:none;">
+                    <i class="fas fa-trash me-1"></i>Clear
+                </button>
+            </div>
+            <div class="pos-cart-scroll" id="cartContainer">
+                <div class="cart-empty"><i class="fas fa-cart-shopping"></i>Add services, repairs or products</div>
+            </div>
+        </div>
+
+    </div>
+
+    <!-- ══ RIGHT ═════════════════════════════════════════ -->
+    <div class="pos-sticky">
+
+        <div class="pos-box">
+            <div class="vat-toggle">
+                <input type="checkbox" id="vatToggle" class="form-check-input" {% if tax_enabled %}checked{% endif %}>
+                <label for="vatToggle" class="form-check-label fw-semibold mb-0">
+                    {{ tax_name }} ({{ tax_percentage }}%)
+                </label>
+            </div>
+            <div class="total-row"><span class="lbl">Subtotal</span><span class="val" id="subtotalDisplay">Rs. 0.00</span></div>
+            <div class="total-row">
+                <span class="lbl">Discount</span>
+                <input type="number" id="orderDiscountInput" class="form-control form-control-sm text-end"
+                       value="0" min="0" step="0.01" style="width:82px;">
+            </div>
+            <div class="total-row" id="taxRow" {% if not tax_enabled %}style="display:none;"{% endif %}>
+                <span class="lbl">{{ tax_name }}</span><span class="val" id="taxDisplay">Rs. 0.00</span>
+            </div>
+            <div class="total-row grand"><span>TOTAL</span><span id="grandTotalDisplay">Rs. 0.00</span></div>
+        </div>
+
+        <div class="pos-box">
+            <div class="pos-box-title"><i class="fas fa-money-bill-wave me-1"></i>Payment</div>
+            <div class="row g-1 mb-2">
+                {% for pm in payment_methods %}
+                <div class="col-6">
+                    <button type="button" class="pay-btn" data-method-code="{{ pm.code }}" data-method-name="{{ pm.name }}">
+                        {{ pm.name }}
+                    </button>
+                </div>
+                {% endfor %}
+            </div>
+            <div id="paymentEntries"></div>
+            <button type="button" class="btn btn-sm btn-outline-secondary w-100 mt-1" id="clearPaymentsBtn" style="display:none;">
+                <i class="fas fa-times me-1"></i>Clear Payments
+            </button>
+        </div>
+
+        <button class="btn btn-success btn-lg w-100" id="completeSaleBtn" disabled>
+            <i class="fas fa-circle-check me-1"></i>Complete Sale
+        </button>
+
+    </div>
+</div>
+
+<!-- ══ MODALS (unchanged IDs) ═══════════════════════════ -->
+
+<div class="modal fade" id="customerModal" tabindex="-1">
+    <div class="modal-dialog modal-sm">
+        <div class="modal-content">
+            <div class="modal-header"><h5 class="modal-title"><i class="fas fa-user-plus me-2"></i>Add Customer</h5><button class="btn-close" data-bs-dismiss="modal"></button></div>
+            <div class="modal-body">
+                <div class="mb-2"><label class="form-label">Name <span class="text-danger">*</span></label><input type="text" id="quickCustName" class="form-control"></div>
+                <div class="mb-2"><label class="form-label">Phone <span class="text-danger">*</span></label><input type="text" id="quickCustPhone" class="form-control">
+                    <div id="phoneMatchAlert" class="alert alert-info mt-2 mb-0" style="display:none;"></div></div>
+                <div id="quickCustError" class="alert alert-danger mb-0" style="display:none;"></div>
+            </div>
+            <div class="modal-footer"><button class="btn btn-sm btn-secondary" data-bs-dismiss="modal">Cancel</button><button class="btn btn-sm btn-primary" id="saveQuickCustBtn">Save</button></div>
+        </div>
+    </div>
+</div>
+
+<div class="modal fade" id="productModal" tabindex="-1">
+    <div class="modal-dialog modal-sm">
+        <div class="modal-content">
+            <div class="modal-header"><h5 class="modal-title"><i class="fas fa-box me-2"></i>Add Product</h5><button class="btn-close" data-bs-dismiss="modal"></button></div>
+            <div class="modal-body">
+                <div class="mb-2"><label class="form-label">Name <span class="text-danger">*</span></label><input type="text" id="popProdName" class="form-control"></div>
+                <div class="mb-2"><label class="form-label">Price <span class="text-danger">*</span></label><input type="number" id="popProdPrice" class="form-control" min="0" step="0.01"></div>
+                <div id="popProdError" class="alert alert-danger mb-0" style="display:none;"></div>
+            </div>
+            <div class="modal-footer"><button class="btn btn-sm btn-secondary" data-bs-dismiss="modal">Cancel</button><button class="btn btn-sm btn-primary" id="savePopProdBtn">Save &amp; Add</button></div>
+        </div>
+    </div>
+</div>
+
+<div class="modal fade" id="customItemModal" tabindex="-1">
+    <div class="modal-dialog modal-sm">
+        <div class="modal-content">
+            <div class="modal-header"><h5 class="modal-title"><i class="fas fa-screwdriver-wrench me-2"></i>Custom Item</h5><button class="btn-close" data-bs-dismiss="modal"></button></div>
+            <div class="modal-body">
+                <div class="mb-2"><label class="form-label">Type</label><select id="customType" class="form-select"><option value="repair">Repair</option><option value="service">Service</option><option value="custom">Other</option></select></div>
+                <div class="mb-2"><label class="form-label">Description <span class="text-danger">*</span></label><input type="text" id="customName" class="form-control" placeholder="e.g. Tire Replacement"></div>
+                <div class="row g-2">
+                    <div class="col-6"><label class="form-label">Price</label><input type="number" id="customPrice" class="form-control" min="0" step="0.01" value="0"></div>
+                    <div class="col-6"><label class="form-label">Qty</label><input type="number" id="customQty" class="form-control" min="1" value="1"></div>
+                </div>
+            </div>
+            <div class="modal-footer"><button class="btn btn-sm btn-secondary" data-bs-dismiss="modal">Cancel</button><button class="btn btn-sm btn-warning" id="saveCustomBtn"><i class="fas fa-plus me-1"></i>Add</button></div>
+        </div>
+    </div>
+</div>
+
+<div class="modal fade" id="vehicleModal" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header"><h5 class="modal-title"><i class="fas fa-car me-2"></i>Add Vehicle</h5><button class="btn-close" data-bs-dismiss="modal"></button></div>
+            <div class="modal-body">
+                <div class="alert alert-info py-1"><i class="fas fa-user me-1"></i>For: <strong id="vehicleCustomerName"></strong></div>
+                <div class="row g-2">
+                    <div class="col-12"><label class="form-label">Registration <span class="text-danger">*</span></label><input type="text" id="vehModalReg" class="form-control text-uppercase fw-bold"></div>
+                    <div class="col-md-6"><label class="form-label">Brand <span class="text-danger">*</span></label><div class="aq-smart-input" id="vehModalBrand" data-name="brand" data-search-url="/vehicles/brands/search/" data-create-url="/vehicles/brands/create/" data-results-key="brands" data-label="Brand" data-uppercase="true" data-required="true"></div></div>
+                    <div class="col-md-6"><label class="form-label">Model <span class="text-danger">*</span></label><div class="aq-smart-input" id="vehModalModel" data-name="model" data-search-url="/vehicles/models/search/" data-create-url="/vehicles/models/create/" data-results-key="models" data-label="Model" data-uppercase="true" data-disabled="true" data-required="true"></div></div>
+                    <div class="col-md-4"><label class="form-label">Type</label><div class="aq-smart-input" id="vehModalType" data-name="vehicle_type" data-search-url="/vehicles/types/search/" data-create-url="/vehicles/types/create/" data-results-key="types" data-label="Type" data-uppercase="true"></div></div>
+                    <div class="col-md-4"><label class="form-label">Color</label><div class="aq-smart-input" id="vehModalColor" data-name="color" data-search-url="/vehicles/colors/search/" data-create-url="/vehicles/colors/create/" data-results-key="colors" data-label="Color" data-uppercase="true"></div></div>
+                    <div class="col-md-4"><label class="form-label">Fuel</label><div class="aq-smart-input" id="vehModalFuel" data-name="fuel_type" data-search-url="/vehicles/fuels/search/" data-create-url="/vehicles/fuels/create/" data-results-key="fuels" data-label="Fuel" data-uppercase="true"></div></div>
+                </div>
+                <div id="vehModalError" class="alert alert-danger mt-2 mb-0" style="display:none;"></div>
+            </div>
+            <div class="modal-footer"><button class="btn btn-sm btn-secondary" data-bs-dismiss="modal">Cancel</button><button class="btn btn-sm btn-primary" id="saveVehicleBtn"><i class="fas fa-save me-1"></i>Save</button></div>
+        </div>
+    </div>
+</div>
+
+<div class="modal fade" id="newServiceModal" tabindex="-1">
+    <div class="modal-dialog modal-sm">
+        <div class="modal-content">
+            <div class="modal-header"><h5 class="modal-title"><i class="fas fa-list-check me-2"></i>New Service / Repair</h5><button class="btn-close" data-bs-dismiss="modal"></button></div>
+            <div class="modal-body">
+                <div class="mb-2"><label class="form-label">Type</label><select id="newSvcType" class="form-select"><option value="service">Service</option><option value="repair">Repair</option></select></div>
+                <div class="mb-2"><label class="form-label">Name <span class="text-danger">*</span></label><input type="text" id="newSvcName" class="form-control"></div>
+                <div class="row g-2 mb-2">
+                    <div class="col-6"><label class="form-label">Price <span class="text-danger">*</span></label><input type="number" id="newSvcPrice" class="form-control" min="0" step="0.01"></div>
+                    <div class="col-6"><label class="form-label">Qty</label><input type="number" id="newSvcQty" class="form-control" min="1" value="1"></div>
+                </div>
+                <div class="form-check mb-2"><input type="checkbox" id="newSvcSaveDb" class="form-check-input" checked><label for="newSvcSaveDb" class="form-check-label">Save to database</label></div>
+                <div id="newSvcError" class="alert alert-danger mb-0" style="display:none;"></div>
+            </div>
+            <div class="modal-footer"><button class="btn btn-sm btn-secondary" data-bs-dismiss="modal">Cancel</button><button class="btn btn-sm btn-primary" id="saveNewSvcBtn"><i class="fas fa-plus me-1"></i>Add</button></div>
+        </div>
+    </div>
+</div>
+
+<div class="modal fade" id="newWashModal" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header"><h5 class="modal-title"><i class="fas fa-spray-can-sparkles me-2"></i>New Car Wash / Booking</h5><button class="btn-close" data-bs-dismiss="modal"></button></div>
+            <div class="modal-body">
+                <div class="row g-2">
+                    <div class="col-md-6"><label class="form-label">Customer <span class="text-danger">*</span></label><div class="aq-smart-input" id="washCustInput" data-name="wash_customer" data-search-url="/customers/search/" data-create-url="/vehicles/customers/quick-create/" data-results-key="customers" data-label="Customer" data-placeholder="Search customer…" data-required="true"></div></div>
+                    <div class="col-md-6"><label class="form-label">Vehicle <span class="text-danger">*</span></label><div class="aq-smart-input" id="washVehInput" data-name="wash_vehicle" data-search-url="/vehicles/search/" data-create-url="/bookings/vehicles/quick-create/" data-results-key="vehicles" data-label="Vehicle" data-placeholder="Select customer first…" data-uppercase="true" data-disabled="true" data-required="true"></div></div>
+                    <div class="col-md-6"><label class="form-label">Service</label><div class="aq-smart-input" id="washSvcInput" data-name="wash_service" data-search-url="/bookings/services/search/" data-results-key="services" data-label="Service" data-placeholder="Search service…"></div></div>
+                    <div class="col-md-3"><label class="form-label">Date</label><input type="date" id="washDate" class="form-control"></div>
+                    <div class="col-md-3"><label class="form-label">Time</label><input type="time" id="washTime" class="form-control"></div>
+                    <div class="col-12"><label class="form-label">Notes</label><textarea id="washNotes" class="form-control" rows="2"></textarea></div>
+                </div>
+                <div class="alert alert-info mt-2 mb-0"><i class="fas fa-circle-info me-1"></i><strong>Today</strong> = Walk-in · <strong>Future date</strong> = Booking + Wash Job</div>
+                <div id="washError" class="alert alert-danger mt-2 mb-0" style="display:none;"></div>
+            </div>
+            <div class="modal-footer"><button class="btn btn-sm btn-secondary" data-bs-dismiss="modal">Cancel</button><button class="btn btn-sm btn-primary" id="saveWashBtn"><i class="fas fa-save me-1"></i>Create &amp; Load</button></div>
+        </div>
+    </div>
+</div>
+
+{% endblock %}
+
+{% block extra_js %}
+<script>
+const CSRF_TOKEN = '{{ csrf_token }}';
+const BRANCH_ID = {{ branch.pk }};
+const IDEMPOTENCY_KEY = '{{ idempotency_key }}';
+const TAX_PCT = {{ tax_percentage }};
+const PREFILL_DATA = {{ prefill_json|safe }};
+
+let cart = [];
+let payments = [];
+let currentSmartInput = null;
+let currentWashJobId = null;
+let currentBookingId = null;
+
+function fmtCurrency(v) { return 'Rs. ' + Number(v).toLocaleString('en-LK', {minimumFractionDigits:2, maximumFractionDigits:2}); }
+function escapeHtml(s) { return String(s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
+
+const customerInput = document.getElementById('customerInput');
+const vehicleInput = document.getElementById('vehicleInput');
+const serviceInput = document.getElementById('serviceInput');
+const productInput = document.getElementById('productInput');
+const washJobInput = document.getElementById('washJobInput');
+const vehicleInfoLine = document.getElementById('vehicleInfoLine');
+
+// ─── WASH JOB: Selected → Load ─────────────────────────────
+washJobInput?.addEventListener('aq:selected', (e) => {
+    const job = e.detail;
+    currentWashJobId = job.id;
+    fetch(`/pos/wash-jobs/${job.id}/items/`).then(r=>r.json()).then(data => {
+        if (!data.success) return;
+        const wj = data.wash_job;
+        currentBookingId = wj.booking_id;
+        customerInput._smartInput.setSelected({id:wj.customer_id, label:wj.customer_name, name:wj.customer_name});
+        setTimeout(() => {
+            vehicleInput._smartInput.setSelected({id:wj.vehicle_id, label:wj.vehicle_reg, registration_number:wj.vehicle_reg});
+            setTimeout(() => {
+                cart = [];
+                data.items.forEach(item => { cart.push({name:item.name, type:item.type, unit_price:item.unit_price, quantity:item.quantity, vat:item.vat, service_id:item.service_id, product_id:item.product_id, discount:0}); });
+                renderCart();
+                showToast(`Job ${wj.job_number} loaded!`, 'success');
+            }, 300);
+        }, 300);
+    });
+    washJobInput._smartInput.input.value = '';
+    washJobInput._smartInput.hiddenInput.value = '';
+});
+
+// ─── WASH JOB: Not found → Create popup ─────────────────────
+washJobInput?.addEventListener('aq:pending', (e) => {
+    const now = new Date();
+    document.getElementById('washDate').value = `${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}-${String(now.getDate()).padStart(2,'0')}`;
+    document.getElementById('washTime').value = `${String(now.getHours()).padStart(2,'0')}:${String(now.getMinutes()).padStart(2,'0')}`;
+    document.getElementById('washNotes').value = '';
+    document.getElementById('washError').style.display = 'none';
+
+    ['washCustInput','washVehInput','washSvcInput'].forEach(id => {
+        const el = document.getElementById(id);
+        if (el && !el._smartInput) window.initSmartInput(el);
+        if (el && el._smartInput) { el._smartInput.input.value=''; el._smartInput.hiddenInput.value=''; el._smartInput.pendingHidden.value=''; el._smartInput.clearBtn.style.display='none'; el._smartInput.pendingHint.style.display='none'; }
+    });
+
+    const mc = customerInput._smartInput;
+    if (mc.hiddenInput.value) {
+        const wc = document.getElementById('washCustInput')._smartInput;
+        wc.setSelected({id:mc.hiddenInput.value, label:mc.input.value, name:mc.input.value});
+        setTimeout(() => { const wv=document.getElementById('washVehInput')._smartInput; wv.enable(); wv.extraParams=`customer_id=${mc.hiddenInput.value}`; }, 200);
+    }
+
+    washJobInput._smartInput.input.value=''; washJobInput._smartInput.hiddenInput.value=''; washJobInput._smartInput.pendingHidden.value=''; washJobInput._smartInput.pendingHint.style.display='none';
+    new bootstrap.Modal(document.getElementById('newWashModal')).show();
+});
+
+// Wash popup customer → vehicle
+document.getElementById('washCustInput')?.addEventListener('aq:selected', (e) => {
+    const v=document.getElementById('washVehInput')._smartInput; v.input.value=''; v.hiddenInput.value=''; v.enable(); v.extraParams=`customer_id=${e.detail.id}`; v.placeholder='Search vehicles...'; v.input.placeholder=v.placeholder;
+});
+
+// Save new wash job
+document.getElementById('saveWashBtn')?.addEventListener('click', function () {
+    const err=document.getElementById('washError'); err.style.display='none';
+    const custId=document.getElementById('washCustInput')._smartInput.hiddenInput.value;
+    const vehId=document.getElementById('washVehInput')._smartInput.hiddenInput.value;
+    const si=document.getElementById('washSvcInput')._smartInput;
+    if (!custId) { err.textContent='Customer required.'; err.style.display='block'; return; }
+    if (!vehId) { err.textContent='Vehicle required.'; err.style.display='block'; return; }
+
+    this.disabled=true; this.innerHTML='<i class="fas fa-spinner fa-spin me-1"></i>Creating...';
+    const items = [];
+    if (si.input.value.trim()) items.push({name:si.input.value.trim(), type:'service', unit_price:0, quantity:1, service_id:si.hiddenInput.value||null});
+
+    fetch('/wash/jobs/create/', {
+        method:'POST', headers:{'Content-Type':'application/json','X-CSRFToken':CSRF_TOKEN},
+        body: JSON.stringify({customer_id:custId, vehicle_id:vehId, branch_id:BRANCH_ID, scheduled_date:document.getElementById('washDate').value, scheduled_time:document.getElementById('washTime').value, notes:document.getElementById('washNotes').value.trim(), priority:'normal', items:items}),
+    }).then(r=>r.json()).then(data => {
+        this.disabled=false; this.innerHTML='<i class="fas fa-save me-1"></i>Create & Load';
+        if (data.success) {
+            bootstrap.Modal.getInstance(document.getElementById('newWashModal')).hide();
+            showToast(data.message, 'success');
+            setTimeout(() => { window.location.href=`/pos/?wash_job=${data.job_id}`; }, 500);
+        } else { err.textContent=data.error; err.style.display='block'; }
+    });
+});
+
+// ─── Customer → Vehicle ─────────────────────────────────────
+customerInput?.addEventListener('aq:selected', (e) => {
+    const vs=vehicleInput._smartInput; vs.input.value=''; vs.hiddenInput.value=''; vs.enable(); vs.extraParams=`customer_id=${e.detail.id}`; vs.placeholder='Search vehicles...'; vs.input.placeholder=vs.placeholder; vehicleInfoLine.textContent='';
+});
+customerInput?.addEventListener('aq:cleared', () => { vehicleInput._smartInput.disable(); vehicleInfoLine.textContent=''; });
+vehicleInput?.addEventListener('aq:selected', (e) => {
+    fetch(`/bookings/vehicle-details/${e.detail.id}/`).then(r=>r.json()).then(data => {
+        if (!data.success) return;
+        const v=data.vehicle; let info=`${v.brand} ${v.model}`; if(v.vehicle_type)info+=` · ${v.vehicle_type}`; if(v.color)info+=` · ${v.color}`;
+        vehicleInfoLine.innerHTML=`<i class="fas fa-info-circle me-1"></i>${info}`;
+    });
+});
+
+// ─── Add Service (selected from search) ─────────────────────
+serviceInput?.addEventListener('aq:selected', (e) => {
+    const s=e.detail;
+    const vehicleId=vehicleInput._smartInput.hiddenInput.value;
+    let url=`/pos/service-price/?service_id=${s.id}&branch_id=${BRANCH_ID}`;
+    if(vehicleId) url+=`&vehicle_id=${vehicleId}`;
+    fetch(url).then(r=>r.json()).then(data => {
+        addToCart({name:s.label, type:'service', unit_price:data.success?(parseFloat(data.price)||0):0, quantity:1, vat:true, service_id:s.id, product_id:null, discount:0});
+        serviceInput._smartInput.input.value=''; serviceInput._smartInput.hiddenInput.value=''; serviceInput._smartInput.clearBtn.style.display='none';
+    });
+});
+
+// Service NOT found → auto-create and add
+serviceInput?.addEventListener('aq:pending', (e) => {
+    const name = e.detail.value.trim();
+    if (!name) return;
+    serviceInput._smartInput.input.value = '';
+    serviceInput._smartInput.hiddenInput.value = '';
+    serviceInput._smartInput.pendingHidden.value = '';
+    serviceInput._smartInput.pendingHint.style.display = 'none';
+    serviceInput._smartInput.clearBtn.style.display = 'none';
+    document.getElementById('newSvcName').value = name;
+    document.getElementById('newSvcPrice').value = '';
+    document.getElementById('newSvcQty').value = '1';
+    document.getElementById('newSvcType').value = 'service';
+    document.getElementById('newSvcSaveDb').checked = true;
+    document.getElementById('newSvcError').style.display = 'none';
+    new bootstrap.Modal(document.getElementById('newServiceModal')).show();
+    setTimeout(() => document.getElementById('newSvcPrice').focus(), 300);
+});
+
+document.getElementById('saveNewSvcBtn')?.addEventListener('click', function () {
+    const name = document.getElementById('newSvcName').value.trim();
+    const price = parseFloat(document.getElementById('newSvcPrice').value) || 0;
+    const qty = parseFloat(document.getElementById('newSvcQty').value) || 1;
+    const type = document.getElementById('newSvcType').value;
+    const saveToDb = document.getElementById('newSvcSaveDb').checked;
+    const err = document.getElementById('newSvcError');
+    err.style.display = 'none';
+    if (!name) { err.textContent = 'Name required.'; err.style.display = 'block'; return; }
+    if (price <= 0) { err.textContent = 'Price required.'; err.style.display = 'block'; return; }
+
+    this.disabled = true;
+    this.innerHTML = '<i class="fas fa-spinner fa-spin me-1"></i>Adding...';
+
+    const finishAdd = (serviceId) => {
+        this.disabled = false;
+        this.innerHTML = '<i class="fas fa-plus me-1"></i>Add to Cart';
+        if (serviceId && price > 0) {
+            const pfd = new FormData(); pfd.append('price', price);
+            fetch(`/services/${serviceId}/quick-price/`, { method: 'POST', headers: { 'X-CSRFToken': CSRF_TOKEN }, body: pfd }).catch(() => {});
+        }
+        addToCart({ name: name, type: type, unit_price: price, quantity: qty, vat: true, service_id: serviceId, product_id: null, discount: 0 });
+        bootstrap.Modal.getInstance(document.getElementById('newServiceModal')).hide();
+        showToast(`${name} — Rs. ${price} added.`, 'success');
+    };
+
+    if (saveToDb) {
+        const fd = new FormData(); fd.append('name', name);
+        fetch('/bookings/services/create/', { method: 'POST', headers: { 'X-CSRFToken': CSRF_TOKEN }, body: fd })
+        .then(r => r.json()).then(data => { finishAdd(data.success ? (data.item?.id || null) : null); })
+        .catch(() => { finishAdd(null); });
+    } else { finishAdd(null); }
+});
+// ─── Add Product (selected) ─────────────────────────────────
+productInput?.addEventListener('aq:selected', (e) => {
+    const p=e.detail;
+    addToCart({name:p.label, type:'product', unit_price:parseFloat(p.price)||0, quantity:1, vat:true, service_id:null, product_id:p.id, discount:0});
+    productInput._smartInput.input.value=''; productInput._smartInput.hiddenInput.value=''; productInput._smartInput.clearBtn.style.display='none';
+});
+
+// Product NOT found → popup
+productInput?.addEventListener('aq:pending', (e) => {
+    currentSmartInput=e.target._smartInput;
+    document.getElementById('popProdName').value=e.detail.value;
+    document.getElementById('popProdPrice').value='';
+    document.getElementById('popProdError').style.display='none';
+    new bootstrap.Modal(document.getElementById('productModal')).show();
+});
+
+// ─── Custom Item ────────────────────────────────────────────
+function openCustomModal() {
+    document.getElementById('customName').value=''; document.getElementById('customPrice').value='0'; document.getElementById('customQty').value='1'; document.getElementById('customType').value='repair';
+    new bootstrap.Modal(document.getElementById('customItemModal')).show();
+    setTimeout(() => document.getElementById('customName').focus(), 300);
+}
+document.getElementById('saveCustomBtn')?.addEventListener('click', function () {
+    const name=document.getElementById('customName').value.trim();
+    const price=parseFloat(document.getElementById('customPrice').value)||0;
+    const qty=parseFloat(document.getElementById('customQty').value)||1;
+    const type=document.getElementById('customType').value;
+    if (!name) { showToast('Description required.', 'error'); return; }
+    addToCart({name, type, unit_price:price, quantity:qty, vat:true, service_id:null, product_id:null, discount:0});
+    bootstrap.Modal.getInstance(document.getElementById('customItemModal')).hide();
+    showToast(`${name} added.`, 'success');
+});
+
+// ─── Cart ───────────────────────────────────────────────────
+function addToCart(item) {
+    const existing=cart.find(i=>i.name===item.name&&i.type===item.type);
+    if(existing){existing.quantity+=item.quantity;}else{cart.push(item);}
+    renderCart();
+}
+function removeFromCart(idx) { cart.splice(idx,1); renderCart(); }
+function updateCartField(idx, field, value) {
+    if(field==='quantity'){const q=parseFloat(value);if(isNaN(q)||q<=0)return;cart[idx].quantity=q;}
+    else if(field==='unit_price'){const p=parseFloat(value);if(isNaN(p)||p<0)return;cart[idx].unit_price=p;}
+    else if(field==='name'){cart[idx].name=value;}
+    else if(field==='vat'){cart[idx].vat=value;}
+    renderCart();
+}
+function renderCart() {
+    const container=document.getElementById('cartContainer');
+    const clearBtn=document.getElementById('clearCartBtn');
+    if(cart.length===0){
+        container.innerHTML='<div class="cart-empty"><i class="fas fa-shopping-cart fa-2x mb-2 opacity-25"></i><div>Add services, repairs or products</div></div>';
+        clearBtn.style.display='none'; updateTotals(); return;
+    }
+    clearBtn.style.display='block';
+    let html=`<table class="cart-table"><thead><tr><th>#</th><th>Item Name</th><th class="c">Type</th><th class="r">Price</th><th class="c">Qty</th><th class="r">Total</th><th class="c">VAT</th><th></th></tr></thead><tbody>`;
+    cart.forEach((item,idx) => {
+        const lt=item.unit_price*item.quantity;
+        const tc='type-'+item.type;
+        const tl=item.type.charAt(0).toUpperCase()+item.type.slice(1);
+        html+=`<tr><td>${idx+1}</td><td><input type="text" class="cart-input cart-name-input" value="${escapeHtml(item.name)}" onchange="updateCartField(${idx},'name',this.value)"></td><td class="c"><span class="cart-type-badge ${tc}">${tl}</span></td><td class="r"><input type="number" class="cart-input cart-price-input" value="${item.unit_price}" min="0" step="0.01" onchange="updateCartField(${idx},'unit_price',this.value)"></td><td class="c"><input type="number" class="cart-input cart-qty-input" value="${item.quantity}" min="0.01" step="0.01" onchange="updateCartField(${idx},'quantity',this.value)"></td><td class="r cart-total-cell">${fmtCurrency(lt)}</td><td class="c"><input type="checkbox" class="form-check-input" ${item.vat?'checked':''} onchange="updateCartField(${idx},'vat',this.checked)"></td><td class="c"><button class="cart-remove-btn" onclick="removeFromCart(${idx})"><i class="fas fa-times"></i></button></td></tr>`;
+    });
+    html+='</tbody></table>';
+    container.innerHTML=html;
+    updateTotals();
+}
+function updateTotals() {
+    const vatEnabled=document.getElementById('vatToggle').checked;
+    const discount=parseFloat(document.getElementById('orderDiscountInput').value)||0;
+    let subtotal=0, tax=0;
+    cart.forEach(i=>{subtotal+=i.unit_price*i.quantity;});
+    const afterDisc=Math.max(0,subtotal-discount);
+    cart.forEach(i=>{
+        const ls=i.unit_price*i.quantity;
+        const ratio=subtotal>0?ls/subtotal:0;
+        const da=discount*ratio;
+        const lad=ls-da;
+        if(vatEnabled&&i.vat&&lad>0) tax+=lad*TAX_PCT/100;
+    });
+    const total=afterDisc+tax;
+    document.getElementById('subtotalDisplay').textContent=fmtCurrency(subtotal);
+    document.getElementById('taxRow').style.display=vatEnabled?'flex':'none';
+    const td=document.getElementById('taxDisplay'); if(td) td.textContent=fmtCurrency(tax);
+    document.getElementById('grandTotalDisplay').textContent=fmtCurrency(total);
+    if(payments.length===1){payments[0].amount=total;renderPayments();}
+    document.getElementById('completeSaleBtn').disabled=cart.length===0||payments.length===0;
+}
+document.getElementById('vatToggle').addEventListener('change', updateTotals);
+document.getElementById('orderDiscountInput').addEventListener('input', updateTotals);
+document.getElementById('clearCartBtn').addEventListener('click', () => { if(confirm('Clear all?')){cart=[];renderCart();} });
+
+// ─── Payment ────────────────────────────────────────────────
+document.querySelectorAll('.pay-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+        const total=getGrandTotal();
+        const remaining=total-payments.reduce((s,p)=>s+p.amount,0);
+        payments.push({method_code:btn.dataset.methodCode, method_name:btn.dataset.methodName, amount:remaining>0?remaining:0, reference:''});
+        renderPayments(); updateTotals();
+    });
+});
+function getGrandTotal() {
+    const vatEnabled=document.getElementById('vatToggle').checked;
+    const discount=parseFloat(document.getElementById('orderDiscountInput').value)||0;
+    let subtotal=cart.reduce((s,i)=>s+(i.unit_price*i.quantity),0);
+    const afterDisc=Math.max(0,subtotal-discount);
+    let tax=0;
+    if(vatEnabled){cart.forEach(i=>{const ls=i.unit_price*i.quantity;const r=subtotal>0?ls/subtotal:0;const d=discount*r;const l=ls-d;if(i.vat&&l>0)tax+=l*TAX_PCT/100;});}
+    return afterDisc+tax;
+}
+function renderPayments() {
+    const el=document.getElementById('paymentEntries');
+    const cb=document.getElementById('clearPaymentsBtn');
+    el.innerHTML=payments.map((p,i)=>`<div class="d-flex align-items-center gap-2 mb-2"><span class="badge bg-primary" style="min-width:55px;font-size:10px;">${p.method_name}</span><input type="number" class="form-control form-control-sm" value="${p.amount}" onchange="updatePaymentAmount(${i},this.value)" step="0.01" min="0"><button class="btn btn-sm btn-link text-danger p-0" onclick="removePayment(${i})"><i class="fas fa-times"></i></button></div>`).join('');
+    cb.style.display=payments.length>0?'block':'none';
+}
+function updatePaymentAmount(i,v){payments[i].amount=parseFloat(v)||0;updateTotals();}
+function removePayment(i){payments.splice(i,1);renderPayments();updateTotals();}
+document.getElementById('clearPaymentsBtn').addEventListener('click',()=>{payments=[];renderPayments();updateTotals();});
+
+// ─── Complete Sale ──────────────────────────────────────────
+document.getElementById('completeSaleBtn').addEventListener('click', function () {
+    if(cart.length===0){showToast('Cart empty.','warning');return;}
+    const cid=customerInput._smartInput.hiddenInput.value;
+    if(!cid){showToast('Select customer.','warning');return;}
+    if(payments.length===0){showToast('Select payment.','warning');return;}
+    const total=getGrandTotal();
+    const paid=payments.reduce((s,p)=>s+p.amount,0);
+    if(Math.abs(paid-total)>0.01){showToast(`Payment (${fmtCurrency(paid)}) ≠ total (${fmtCurrency(total)}).`,'error');return;}
+
+    this.disabled=true; this.innerHTML='<i class="fas fa-spinner fa-spin me-1"></i>Processing...';
+    fetch('/pos/complete-sale/', {
+        method:'POST', headers:{'Content-Type':'application/json','X-CSRFToken':CSRF_TOKEN},
+        body: JSON.stringify({
+            idempotency_key:IDEMPOTENCY_KEY, customer_id:cid,
+            vehicle_id:vehicleInput._smartInput.hiddenInput.value||null,
+            branch_id:BRANCH_ID, wash_job_id:currentWashJobId, booking_id:currentBookingId,
+            vat_enabled:document.getElementById('vatToggle').checked,
+            order_discount:parseFloat(document.getElementById('orderDiscountInput').value)||0,
+            items:cart.map(i=>({name:i.name,type:i.type,unit_price:i.unit_price,quantity:i.quantity,vat:i.vat,service_id:i.service_id||null,product_id:i.product_id||null,discount:i.discount||0})),
+            payments:payments.map(p=>({method_code:p.method_code,amount:p.amount,reference:p.reference||''})),
+            notes:'',
+        }),
+    }).then(r=>r.json()).then(data => {
+        if(data.success){showToast(`Sale complete! ${data.invoice_number}`,'success');window.open(data.receipt_url,'_blank');setTimeout(()=>location.reload(),1500);}
+        else{this.disabled=false;this.innerHTML='<i class="fas fa-check-circle me-1"></i>Complete Sale';showToast(data.error||'Failed.','error');}
+    }).catch(()=>{this.disabled=false;this.innerHTML='<i class="fas fa-check-circle me-1"></i>Complete Sale';showToast('Network error.','error');});
+});
+
+// ─── Popups ─────────────────────────────────────────────────
+document.addEventListener('aq:pending', (e) => {
+    if(e.target.id==='customerInput'){
+        currentSmartInput=e.target._smartInput;
+        document.getElementById('quickCustName').value=/^\d/.test(e.detail.value)?'':e.detail.value;
+        document.getElementById('quickCustPhone').value=/^\d/.test(e.detail.value)?e.detail.value:'';
+        document.getElementById('quickCustError').style.display='none';
+        document.getElementById('phoneMatchAlert').style.display='none';
+        new bootstrap.Modal(document.getElementById('customerModal')).show();
+        return;
+    }
+    if(e.target.id==='vehicleInput'){
+        currentSmartInput=e.target._smartInput;
+        const cs=customerInput._smartInput;
+        if(!cs.hiddenInput.value){showToast('Select customer first.','warning');e.target._smartInput.pendingHidden.value='';e.target._smartInput.pendingHint.style.display='none';e.target._smartInput.input.value='';return;}
+        openVehicleModal(e.detail.value.toUpperCase(),cs);
+        return;
+    }
+});
+
+
+// ─── Wash Popup: Customer/Vehicle create handlers ───────────
+document.addEventListener('aq:pending', (e) => {
+
+    // Wash popup customer → open customer popup
+    if (e.target.id === 'washCustInput') {
+        currentSmartInput = e.target._smartInput;
+        const q = e.detail.value;
+        document.getElementById('quickCustName').value = /^\d/.test(q) ? '' : q;
+        document.getElementById('quickCustPhone').value = /^\d/.test(q) ? q : '';
+        document.getElementById('quickCustError').style.display = 'none';
+        document.getElementById('phoneMatchAlert').style.display = 'none';
+
+        // Hide wash modal temporarily, show customer modal
+        bootstrap.Modal.getInstance(document.getElementById('newWashModal'))?.hide();
+        setTimeout(() => {
+            new bootstrap.Modal(document.getElementById('customerModal')).show();
+        }, 400);
+
+        // After customer modal closes, reopen wash modal
+        document.getElementById('customerModal').addEventListener('hidden.bs.modal', function reopenWash() {
+            document.getElementById('customerModal').removeEventListener('hidden.bs.modal', reopenWash);
+            setTimeout(() => {
+                new bootstrap.Modal(document.getElementById('newWashModal')).show();
+                // Enable vehicle if customer was set
+                const wc = document.getElementById('washCustInput')._smartInput;
+                if (wc.hiddenInput.value) {
+                    const wv = document.getElementById('washVehInput')._smartInput;
+                    wv.enable();
+                    wv.extraParams = `customer_id=${wc.hiddenInput.value}`;
+                    wv.placeholder = 'Search vehicles...';
+                    wv.input.placeholder = wv.placeholder;
+                }
+            }, 400);
+        });
+        return;
+    }
+
+    // Wash popup vehicle → open vehicle popup
+    if (e.target.id === 'washVehInput') {
+        currentSmartInput = e.target._smartInput;
+        const wcs = document.getElementById('washCustInput')._smartInput;
+        if (!wcs.hiddenInput.value) {
+            showToast('Select customer first.', 'warning');
+            e.target._smartInput.pendingHidden.value = '';
+            e.target._smartInput.pendingHint.style.display = 'none';
+            e.target._smartInput.input.value = '';
+            return;
+        }
+
+        // Hide wash modal, show vehicle modal
+        bootstrap.Modal.getInstance(document.getElementById('newWashModal'))?.hide();
+        setTimeout(() => {
+            openVehicleModalForWash(e.detail.value.trim().toUpperCase(), wcs);
+        }, 400);
+
+        // After vehicle modal closes, reopen wash modal
+        document.getElementById('vehicleModal').addEventListener('hidden.bs.modal', function reopenWash2() {
+            document.getElementById('vehicleModal').removeEventListener('hidden.bs.modal', reopenWash2);
+            setTimeout(() => {
+                new bootstrap.Modal(document.getElementById('newWashModal')).show();
+            }, 400);
+        });
+        return;
+    }
+
+}, true); // Use capture phase to run before other handlers
+
+// Special vehicle modal opener for wash popup
+function openVehicleModalForWash(reg, custSmart) {
+    document.getElementById('vehicleCustomerName').textContent = custSmart.input.value;
+    document.getElementById('vehModalReg').value = reg || '';
+
+    ['vehModalBrand', 'vehModalModel', 'vehModalType', 'vehModalColor', 'vehModalFuel'].forEach(id => {
+        const el = document.getElementById(id);
+        if (el && !el._smartInput) window.initSmartInput(el);
+        if (el && el._smartInput) {
+            el._smartInput.input.value = '';
+            el._smartInput.hiddenInput.value = '';
+            el._smartInput.pendingHidden.value = '';
+            el._smartInput.clearBtn.style.display = 'none';
+            el._smartInput.pendingHint.style.display = 'none';
+        }
+    });
+
+    document.getElementById('vehModalError').style.display = 'none';
+    const ms = document.getElementById('vehModalModel')._smartInput;
+    if (ms) ms.disable();
+
+    new bootstrap.Modal(document.getElementById('vehicleModal')).show();
+}
+
+
+// Customer phone lookup + save
+document.getElementById('quickCustPhone')?.addEventListener('input', function(){
+    const phone=this.value.trim(); const ab=document.getElementById('phoneMatchAlert');
+    if(phone.length<4){ab.style.display='none';return;}
+    fetch(`/customers/phone-lookup/?phone=${encodeURIComponent(phone)}`).then(r=>r.json()).then(data=>{
+        if(data.match){ab.style.display='block';ab.innerHTML=`<i class="fas fa-user me-1"></i>Existing: <strong>${data.match.name}</strong> <button type="button" class="btn btn-sm btn-info ms-2" id="useExistBtn">Use This</button>`;document.getElementById('useExistBtn').onclick=()=>{currentSmartInput.setSelected({id:data.match.id,label:data.match.name,name:data.match.name});bootstrap.Modal.getInstance(document.getElementById('customerModal')).hide();};}
+        else{ab.style.display='none';}
+    });
+});
+document.getElementById('saveQuickCustBtn')?.addEventListener('click', function(){
+    const n=document.getElementById('quickCustName').value.trim();const p=document.getElementById('quickCustPhone').value.trim();const e=document.getElementById('quickCustError');e.style.display='none';
+    if(!n){e.textContent='Name required.';e.style.display='block';return;}if(!p){e.textContent='Phone required.';e.style.display='block';return;}
+    this.disabled=true;const fd=new FormData();fd.append('name',n);fd.append('phone',p);
+    fetch('/vehicles/customers/quick-create/',{method:'POST',headers:{'X-CSRFToken':CSRF_TOKEN},body:fd}).then(r=>r.json()).then(data=>{this.disabled=false;if(data.success){currentSmartInput.setSelected(data.item);bootstrap.Modal.getInstance(document.getElementById('customerModal')).hide();}else{e.textContent=data.error;e.style.display='block';}});
+});
+
+// Product save
+document.getElementById('savePopProdBtn')?.addEventListener('click', function(){
+    const n=document.getElementById('popProdName').value.trim();const p=document.getElementById('popProdPrice').value.trim();const e=document.getElementById('popProdError');e.style.display='none';
+    if(!n){e.textContent='Name required.';e.style.display='block';return;}if(!p){e.textContent='Price required.';e.style.display='block';return;}
+    this.disabled=true;const fd=new FormData();fd.append('name',n);fd.append('selling_price',p);
+    fetch('/pos/products/quick-create/',{method:'POST',headers:{'X-CSRFToken':CSRF_TOKEN},body:fd}).then(r=>r.json()).then(data=>{
+        this.disabled=false;
+        if(data.success){addToCart({name:data.item.name,type:'product',unit_price:parseFloat(data.item.price),quantity:1,vat:true,service_id:null,product_id:data.item.id,discount:0});bootstrap.Modal.getInstance(document.getElementById('productModal')).hide();productInput._smartInput.input.value='';productInput._smartInput.hiddenInput.value='';productInput._smartInput.pendingHidden.value='';productInput._smartInput.pendingHint.style.display='none';}
+        else{e.textContent=data.error;e.style.display='block';}
+    });
+});
+
+// Vehicle popup
+function openVehicleModal(reg,custSmart){
+    document.getElementById('vehicleCustomerName').textContent=custSmart.input.value;
+    document.getElementById('vehModalReg').value=reg||'';
+    ['vehModalBrand','vehModalModel','vehModalType','vehModalColor','vehModalFuel'].forEach(id=>{const el=document.getElementById(id);if(el&&!el._smartInput)window.initSmartInput(el);if(el&&el._smartInput){el._smartInput.input.value='';el._smartInput.hiddenInput.value='';el._smartInput.pendingHidden.value='';el._smartInput.clearBtn.style.display='none';el._smartInput.pendingHint.style.display='none';}});
+    document.getElementById('vehModalError').style.display='none';
+    const ms=document.getElementById('vehModalModel')._smartInput;if(ms)ms.disable();
+    new bootstrap.Modal(document.getElementById('vehicleModal')).show();
+}
+setTimeout(()=>{
+    const mb=document.getElementById('vehModalBrand'),mm=document.getElementById('vehModalModel');
+    if(mb){mb.addEventListener('aq:selected',(e)=>{const s=mm._smartInput;if(s){s.enable();s.extraParams=`brand_id=${e.detail.id}`;s.input.value='';s.hiddenInput.value='';}});mb.addEventListener('aq:pending',()=>{const s=mm._smartInput;if(s)s.enable();});mb.addEventListener('aq:cleared',()=>{const s=mm._smartInput;if(s)s.disable();});}
+    const mr=document.getElementById('vehModalReg');if(mr)mr.addEventListener('input',function(){const p=this.selectionStart;this.value=this.value.toUpperCase();this.setSelectionRange(p,p);});
+},200);
+
+document.getElementById('saveVehicleBtn')?.addEventListener('click', function () {
+    const eb = document.getElementById('vehModalError');
+    eb.style.display = 'none';
+    const reg = document.getElementById('vehModalReg').value.trim().toUpperCase();
+
+    // Determine which customer ID to use
+    let customerId = '';
+
+    // Check if wash popup is the source
+    const washCustSmart = document.getElementById('washCustInput')?._smartInput;
+    const mainCustSmart = customerInput._smartInput;
+
+    if (washCustSmart && washCustSmart.hiddenInput.value) {
+        customerId = washCustSmart.hiddenInput.value;
+    } else if (mainCustSmart.hiddenInput.value) {
+        customerId = mainCustSmart.hiddenInput.value;
+    }
+
+    if (!customerId) { eb.textContent = 'Customer required.'; eb.style.display = 'block'; return; }
+    if (!reg) { eb.textContent = 'Registration required.'; eb.style.display = 'block'; return; }
+
+    const gs = (id) => {
+        const s = document.getElementById(id)?._smartInput;
+        return { id: s?.hiddenInput.value || '', new: s?.pendingHidden.value || '' };
+    };
+    const brand = gs('vehModalBrand'), model = gs('vehModalModel');
+    const type = gs('vehModalType'), color = gs('vehModalColor'), fuel = gs('vehModalFuel');
+
+    if (!brand.id && !brand.new) { eb.textContent = 'Brand required.'; eb.style.display = 'block'; return; }
+    if (!model.id && !model.new) { eb.textContent = 'Model required.'; eb.style.display = 'block'; return; }
+
+    this.disabled = true;
+    const fd = new FormData();
+    fd.append('customer_id', customerId);
+    fd.append('registration_number', reg);
+    fd.append('brand_id', brand.id); fd.append('brand_new', brand.new);
+    fd.append('model_id', model.id); fd.append('model_new', model.new);
+    fd.append('vehicle_type_id', type.id); fd.append('vehicle_type_new', type.new);
+    fd.append('color_id', color.id); fd.append('color_new', color.new);
+    fd.append('fuel_type_id', fuel.id); fd.append('fuel_type_new', fuel.new);
+    fd.append('year', '');
+
+    fetch('/bookings/vehicles/quick-create/', {
+        method: 'POST', headers: { 'X-CSRFToken': CSRF_TOKEN }, body: fd,
+    }).then(r => r.json()).then(data => {
+        this.disabled = false;
+        if (data.success) {
+            // Set on the correct smart input (wash popup or main form)
+            if (currentSmartInput) {
+                currentSmartInput.setSelected(data.item);
+            }
+
+            // Also try to set on wash popup vehicle if it exists
+            const washVehSmart = document.getElementById('washVehInput')?._smartInput;
+            if (washVehSmart && !washVehSmart.hiddenInput.value) {
+                washVehSmart.setSelected(data.item);
+            }
+
+            // Update main vehicle info
+            const v = data.vehicle_details;
+            if (v) {
+                vehicleInfoLine.innerHTML = `<i class="fas fa-info-circle me-1"></i>${v.brand} ${v.model}`;
+            }
+
+            bootstrap.Modal.getInstance(document.getElementById('vehicleModal')).hide();
+            showToast(data.message, 'success');
+        } else {
+            eb.textContent = data.error;
+            eb.style.display = 'block';
+        }
+    });
+});
+
+
+// ─── PREFILL ────────────────────────────────────────────────
+if(PREFILL_DATA){
+    window.addEventListener('load',()=>{
+        setTimeout(()=>{
+            currentWashJobId=PREFILL_DATA.wash_job_id;currentBookingId=PREFILL_DATA.booking_id;
+            customerInput._smartInput.setSelected({id:PREFILL_DATA.customer_id,label:PREFILL_DATA.customer_name,name:PREFILL_DATA.customer_name});
+            setTimeout(()=>{
+                vehicleInput._smartInput.setSelected({id:PREFILL_DATA.vehicle_id,label:PREFILL_DATA.vehicle_reg,registration_number:PREFILL_DATA.vehicle_reg});
+                setTimeout(()=>{
+                    if(PREFILL_DATA.items&&PREFILL_DATA.items.length>0){cart=[];PREFILL_DATA.items.forEach(i=>{cart.push({name:i.name,type:i.type,unit_price:i.unit_price,quantity:i.quantity,vat:i.vat!==false,service_id:i.service_id||null,product_id:i.product_id||null,discount:0});});renderCart();showToast('Items loaded — ready to invoice!','success');}
+                },400);
+            },300);
+        },500);
+    });
+}
+</script>
+{% endblock %}

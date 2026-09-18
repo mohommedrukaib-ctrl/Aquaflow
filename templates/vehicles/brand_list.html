@@ -1,0 +1,157 @@
+{% extends "base/base.html" %}
+{% load aquaflow_tags %}
+
+{% block title %}Brands — {{ AQUAFLOW_SYSTEM_NAME }}{% endblock %}
+{% block page_title %}
+<i class="fas fa-tags me-2 text-primary"></i>Vehicle Brands
+{% endblock %}
+
+{% block breadcrumbs %}
+<li class="breadcrumb-item">
+    <a href="/vehicles/">Vehicles</a>
+</li>
+<li class="breadcrumb-item active">Brands</li>
+{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-md-8">
+        <div class="card">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <h5 class="mb-0">
+                    <i class="fas fa-list me-2"></i>
+                    All Brands ({{ brands.count }})
+                </h5>
+                <button type="button"
+                        class="btn btn-primary btn-sm"
+                        onclick="openAddBrandModal()">
+                    <i class="fas fa-plus me-1"></i> Add Brand
+                </button>
+            </div>
+            <div class="card-body p-0">
+                <table class="table table-hover mb-0">
+                    <thead>
+                        <tr>
+                            <th>Brand Name</th>
+                            <th>Models</th>
+                            <th>Status</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for brand in brands %}
+                        <tr>
+                            <td class="fw-semibold">{{ brand.name }}</td>
+                            <td>
+                                <span class="badge bg-info">
+                                    {{ brand.models.count }}
+                                </span>
+                            </td>
+                            <td>
+                                {% if brand.is_active %}
+                                <span class="badge bg-success">Active</span>
+                                {% else %}
+                                <span class="badge bg-secondary">
+                                    Inactive
+                                </span>
+                                {% endif %}
+                            </td>
+                        </tr>
+                        {% empty %}
+                        <tr>
+                            <td colspan="3" class="text-center text-muted py-4">
+                                No brands added yet.
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Add Brand Modal -->
+<div class="modal fade" id="addBrandModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Add Brand</h5>
+                <button type="button"
+                        class="btn-close"
+                        data-bs-dismiss="modal">
+                </button>
+            </div>
+            <div class="modal-body">
+                <label class="form-label fw-semibold">
+                    Brand Name <span class="text-danger">*</span>
+                </label>
+                <input type="text"
+                       id="newBrandName"
+                       class="form-control"
+                       placeholder="e.g. Toyota">
+                <div id="brandError" class="text-danger small mt-1"></div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-secondary"
+                        data-bs-dismiss="modal">Cancel</button>
+                <button class="btn btn-primary" id="saveBrandBtn">
+                    <i class="fas fa-save me-1"></i> Save
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+const CSRF_TOKEN = '{{ csrf_token }}';
+
+function openAddBrandModal() {
+    document.getElementById('newBrandName').value = '';
+    document.getElementById('brandError').textContent = '';
+    new bootstrap.Modal(
+        document.getElementById('addBrandModal')
+    ).show();
+    setTimeout(
+        () => document.getElementById('newBrandName').focus(), 300
+    );
+}
+
+document.getElementById('saveBrandBtn')
+    .addEventListener('click', function () {
+        const name = document.getElementById('newBrandName').value.trim();
+        if (!name) {
+            document.getElementById('brandError').textContent =
+                'Required.';
+            return;
+        }
+        this.disabled = true;
+
+        fetch('/vehicles/brands/create/', {
+            method: 'POST',
+            headers: {
+                'X-CSRFToken': CSRF_TOKEN,
+                'Content-Type': 'application/x-www-form-urlencoded',
+            },
+            body: `name=${encodeURIComponent(name)}&is_active=true`,
+        })
+        .then(r => r.json())
+        .then(data => {
+            this.disabled = false;
+            if (data.success) {
+                showToast(data.message, 'success');
+                setTimeout(() => location.reload(), 800);
+            } else {
+                const err = data.errors?.name?.[0] || data.error || 'Failed.';
+                document.getElementById('brandError').textContent = err;
+            }
+        })
+        .catch(() => {
+            this.disabled = false;
+            document.getElementById('brandError').textContent =
+                'Network error.';
+        });
+    });
+</script>
+{% endblock %}

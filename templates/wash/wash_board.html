@@ -1,0 +1,181 @@
+{% extends "base/base.html" %}
+{% load static %}
+
+{% block title %}Wash Board — AquaFlow{% endblock %}
+{% block page_icon %}fas fa-spray-can-sparkles{% endblock %}
+{% block page_title %}Wash Board{% endblock %}
+{% block page_subtitle %}{{ today|date:"l, d M Y" }}{% endblock %}
+{% block breadcrumbs %}<span>/</span><span class="current">Wash Board</span>{% endblock %}
+
+{% block extra_css %}
+<style>
+.wb-cols {
+    display: grid;
+    grid-template-columns: repeat(6, minmax(168px, 1fr));
+    gap: 6px;
+    align-items: start;
+}
+@media (max-width: 1500px) { .wb-cols { grid-template-columns: repeat(3, minmax(168px,1fr)); } }
+@media (max-width: 800px)  { .wb-cols { grid-template-columns: repeat(2, minmax(150px,1fr)); } }
+
+.wb-col {
+    background: var(--aq-surface);
+    border: 1px solid var(--aq-border);
+    border-radius: var(--aq-radius);
+    padding: 6px;
+    min-height: 200px;
+}
+.wb-head {
+    display: flex; justify-content: space-between; align-items: center;
+    padding-bottom: 5px; margin-bottom: 6px;
+    border-bottom: 1px solid var(--aq-border);
+    font-weight: 700; font-size: 10px;
+    text-transform: uppercase; letter-spacing: .4px;
+    color: var(--aq-text-muted);
+}
+.wb-count {
+    background: var(--aq-primary); color: #fff;
+    padding: 0 5px; border-radius: 8px;
+    font-size: 9px; font-weight: 700; min-width: 16px; text-align: center;
+}
+
+.wb-card {
+    background: var(--aq-surface-2);
+    border: 1px solid var(--aq-border);
+    border-left: 2px solid var(--aq-primary);
+    border-radius: 4px;
+    padding: 6px 7px;
+    margin-bottom: 5px;
+    font-size: 11px;
+}
+.wb-card.priority-high   { border-left-color: var(--aq-warning); }
+.wb-card.priority-urgent { border-left-color: var(--aq-danger); }
+.wb-card.completed { opacity: .6; }
+
+.wb-reg {
+    font-family: Consolas, monospace;
+    font-weight: 700; font-size: 11.5px;
+    color: var(--aq-primary);
+}
+.wb-time { font-size: 9px; color: var(--aq-text-soft); }
+.wb-cust { font-size: 10.5px; font-weight: 600; margin-top: 2px; }
+.wb-svc  { font-size: 9.5px; color: var(--aq-text-muted); }
+.wb-meta { font-size: 9px; color: var(--aq-text-soft); margin-top: 2px; }
+.wb-tag {
+    display: inline-block;
+    background: var(--aq-surface-3);
+    padding: 0 4px; border-radius: 3px;
+    font-size: 9px; margin-top: 2px; margin-right: 3px;
+}
+.wb-acts { display: flex; gap: 3px; margin-top: 5px; }
+.wb-acts .btn { padding: 1px 6px !important; font-size: 9.5px !important; }
+.wb-empty { text-align: center; color: var(--aq-text-soft); font-size: 10px; padding: 12px 0; }
+
+.bk-row {
+    display: flex; justify-content: space-between; align-items: center; gap: 8px;
+    padding: 5px 9px; border-bottom: 1px solid var(--aq-border); font-size: 11px;
+}
+.bk-row:last-child { border-bottom: none; }
+</style>
+{% endblock %}
+
+{% block content %}
+
+<div class="aq-panel">
+    <div class="aq-panel-head">
+        <form method="GET" class="d-flex gap-2 align-items-center">
+            <select name="branch" class="form-select form-select-sm" style="width:150px;" onchange="this.form.submit()">
+                <option value="">All Branches</option>
+                {% for br in branches %}
+                <option value="{{ br.pk }}" {% if branch_id == br.pk|stringformat:"s" %}selected{% endif %}>{{ br.name }}</option>
+                {% endfor %}
+            </select>
+            <span class="aq-chip"><i class="fas fa-rotate aq-text-primary"></i> Auto-refresh 30s</span>
+        </form>
+        <div class="d-flex gap-1">
+            {% if can_manage %}
+            <a href="{% url 'wash_job_create' %}" class="btn btn-sm btn-primary"><i class="fas fa-plus me-1"></i>New Job</a>
+            {% endif %}
+            <a href="{% url 'wash_job_list' %}" class="btn btn-sm btn-outline-secondary"><i class="fas fa-clock-rotate-left me-1"></i>History</a>
+        </div>
+    </div>
+</div>
+
+{% if pending_bookings %}
+<div class="aq-panel">
+    <div class="aq-panel-head">
+        <strong><i class="fas fa-calendar-check aq-text-warning me-1"></i>Today's Bookings — Not Started</strong>
+        <span class="badge bg-warning">{{ pending_bookings.count }}</span>
+    </div>
+    <div class="aq-panel-body flush">
+        {% for b in pending_bookings %}
+        <div class="bk-row">
+            <div>
+                <code style="font-weight:700;">{{ b.vehicle.registration_number }}</code>
+                · <strong>{{ b.customer.name }}</strong>
+                · {{ b.service.name }}
+                <span class="text-muted d-block" style="font-size:9.5px;">
+                    {{ b.scheduled_time|time:"H:i" }} · {{ b.booking_number }}{% if b.customer.phone %} · {{ b.customer.phone }}{% endif %}
+                </span>
+            </div>
+            <div class="d-flex gap-1">
+                <a href="/bookings/{{ b.pk }}/" class="btn btn-sm btn-outline-primary btn-icon"><i class="fas fa-eye"></i></a>
+                <a href="/pos/?booking={{ b.pk }}" class="btn btn-sm btn-success"><i class="fas fa-cash-register me-1"></i>Invoice</a>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+</div>
+{% endif %}
+
+<div class="wb-cols">
+    {% for status_key, status_jobs in columns.items %}
+    <div class="wb-col">
+        <div class="wb-head">
+            <span>
+                {% if status_key == 'waiting' %}<i class="fas fa-clock me-1"></i>Waiting
+                {% elif status_key == 'assigned' %}<i class="fas fa-user-check me-1"></i>Assigned
+                {% elif status_key == 'washing' %}<i class="fas fa-spinner fa-spin aq-text-primary me-1"></i>Washing
+                {% elif status_key == 'quality_check' %}<i class="fas fa-magnifying-glass aq-text-warning me-1"></i>QC
+                {% elif status_key == 'ready' %}<i class="fas fa-circle-check aq-text-success me-1"></i>Ready
+                {% elif status_key == 'completed' %}<i class="fas fa-flag-checkered aq-text-success me-1"></i>Done
+                {% endif %}
+            </span>
+            <span class="wb-count">{{ status_jobs.count }}</span>
+        </div>
+
+        {% for j in status_jobs %}
+        <div class="wb-card priority-{{ j.priority }}{% if j.status == 'completed' %} completed{% endif %}">
+            <div class="d-flex justify-content-between align-items-start">
+                <span class="wb-reg">{{ j.vehicle.registration_number }}</span>
+                <span class="wb-time">
+                    {% if j.started_at %}<i class="far fa-clock"></i> {{ j.duration_minutes|default:0 }}m
+                    {% else %}{{ j.created_at|time:"H:i" }}{% endif %}
+                </span>
+            </div>
+            <div class="wb-cust">{{ j.customer.name|truncatechars:18 }}</div>
+            <div class="wb-svc">{{ j.service.name|default:"—"|truncatechars:20 }}</div>
+            {% if j.item_count > 0 %}
+            <div class="wb-meta"><i class="fas fa-list"></i> {{ j.item_count }} item{{ j.item_count|pluralize }} · Rs. {{ j.items_total|floatformat:0 }}</div>
+            {% endif %}
+            {% if j.assigned_employee %}<span class="wb-tag"><i class="fas fa-user"></i> {{ j.assigned_employee.username|truncatechars:10 }}</span>{% endif %}
+            {% if j.wash_bay %}<span class="wb-tag"><i class="fas fa-location-dot"></i> {{ j.wash_bay.name }}</span>{% endif %}
+            <div class="wb-acts">
+                <a href="{% url 'wash_job_detail' j.pk %}" class="btn btn-outline-primary"><i class="fas fa-eye"></i></a>
+                {% if j.status != 'completed' %}
+                <a href="/pos/?wash_job={{ j.pk }}" class="btn btn-success"><i class="fas fa-cash-register"></i> Bill</a>
+                {% endif %}
+            </div>
+        </div>
+        {% empty %}
+        <div class="wb-empty">Empty</div>
+        {% endfor %}
+    </div>
+    {% endfor %}
+</div>
+
+{% endblock %}
+
+{% block extra_js %}
+<script>setTimeout(() => location.reload(), 30000);</script>
+{% endblock %}

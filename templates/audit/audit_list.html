@@ -1,0 +1,171 @@
+{% extends "base/base.html" %}
+{% load aquaflow_tags %}
+
+{% block title %}Audit Logs — AquaFlow{% endblock %}
+{% block page_icon %}fas fa-history{% endblock %}
+{% block page_title %}Audit Log{% endblock %}
+{% block page_subtitle %}Complete activity trail{% endblock %}
+
+{% block breadcrumbs %}
+<span>/</span>
+<a href="/system/audit/">Audit</a>
+<span>/</span>
+<span class="current">Logs</span>
+{% endblock %}
+
+{% block extra_css %}
+<style>
+.action-badge {
+    display: inline-block;
+    padding: 2px 8px;
+    border-radius: 4px;
+    font-size: 10px;
+    font-weight: 600;
+    font-family: monospace;
+}
+.action-created  { background: rgba(29,233,182,0.15); color: #14b898; }
+.action-updated  { background: rgba(4,169,245,0.15); color: #0388c7; }
+.action-deleted  { background: rgba(244,66,54,0.15); color: #f44236; }
+.action-voided   { background: rgba(52,58,64,0.15); color: #343a40; }
+.action-refunded { background: rgba(244,194,43,0.15); color: #d9a41f; }
+.action-restored { background: rgba(114,102,186,0.15); color: #5949a1; }
+.action-purged   { background: rgba(244,66,54,0.15); color: #f44236; font-weight: 700; }
+.action-default  { background: rgba(108,117,125,0.15); color: #6c757d; }
+</style>
+{% endblock %}
+
+{% block content %}
+
+<div class="card">
+    <div class="card-header d-flex justify-content-between align-items-center">
+        <strong>
+            <i class="fas fa-history me-2 aq-text-primary"></i>
+            Audit Logs <span class="badge bg-secondary ms-2">{{ total_count }}</span>
+        </strong>
+        <a href="/system/audit/logs/export/?{{ request.GET.urlencode }}" class="btn btn-outline-primary btn-sm">
+            <i class="fas fa-download me-1"></i>Export CSV
+        </a>
+    </div>
+    <div class="card-body">
+
+        <form method="GET" class="row g-2 mb-3">
+            <div class="col-md-3">
+                <input type="text" name="q" class="form-control" placeholder="Search..." value="{{ search }}">
+            </div>
+            <div class="col-md-2">
+                <select name="user" class="form-select">
+                    <option value="">All Users</option>
+                    {% for u in all_users %}
+                    <option value="{{ u.pk }}" {% if user_id == u.pk|stringformat:"s" %}selected{% endif %}>{{ u.username }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="col-md-2">
+                <select name="action" class="form-select">
+                    <option value="">All Actions</option>
+                    {% for a in all_actions %}
+                    <option value="{{ a }}" {% if action == a %}selected{% endif %}>{{ a }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="col-md-1">
+                <select name="module" class="form-select">
+                    <option value="">All</option>
+                    {% for m in all_modules %}
+                    <option value="{{ m }}" {% if module == m %}selected{% endif %}>{{ m }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="col-md-2">
+                <input type="date" name="date_from" class="form-control" value="{{ date_from }}">
+            </div>
+            <div class="col-md-2">
+                <input type="date" name="date_to" class="form-control" value="{{ date_to }}">
+            </div>
+        </form>
+
+        <div class="d-flex gap-2 mb-3">
+            <button class="btn btn-primary btn-sm" onclick="document.querySelector('form').submit()">
+                <i class="fas fa-search me-1"></i>Filter
+            </button>
+            <a href="/system/audit/logs/" class="btn btn-outline-secondary btn-sm">
+                <i class="fas fa-times me-1"></i>Clear
+            </a>
+        </div>
+
+        {% if logs %}
+        <div class="table-responsive">
+            <table class="table table-hover align-middle">
+                <thead>
+                    <tr>
+                        <th>Time</th>
+                        <th>User</th>
+                        <th>Action</th>
+                        <th>Module</th>
+                        <th>Object</th>
+                        <th>IP</th>
+                        <th></th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for log in logs %}
+                    <tr>
+                        <td><small>{{ log.timestamp|date:"d M Y H:i:s" }}</small></td>
+                        <td><small>{{ log.user_name_snapshot|default:"System" }}</small></td>
+                        <td>
+                            {% if "CREATED" in log.action %}
+                                <span class="action-badge action-created">{{ log.action }}</span>
+                            {% elif "UPDATED" in log.action or "CHANGED" in log.action %}
+                                <span class="action-badge action-updated">{{ log.action }}</span>
+                            {% elif "DELETED" in log.action %}
+                                <span class="action-badge action-deleted">{{ log.action }}</span>
+                            {% elif "VOIDED" in log.action %}
+                                <span class="action-badge action-voided">{{ log.action }}</span>
+                            {% elif "REFUNDED" in log.action %}
+                                <span class="action-badge action-refunded">{{ log.action }}</span>
+                            {% elif "RESTORED" in log.action %}
+                                <span class="action-badge action-restored">{{ log.action }}</span>
+                            {% elif "PURGED" in log.action %}
+                                <span class="action-badge action-purged">{{ log.action }}</span>
+                            {% else %}
+                                <span class="action-badge action-default">{{ log.action }}</span>
+                            {% endif %}
+                        </td>
+                        <td><small>{{ log.module }}</small></td>
+                        <td><small>{{ log.object_repr|truncatechars:40 }}</small></td>
+                        <td><small class="text-muted">{{ log.ip_address|default:"—" }}</small></td>
+                        <td>
+                            <a href="/system/audit/logs/{{ log.pk }}/" class="btn btn-sm btn-outline-primary">
+                                <i class="fas fa-eye"></i>
+                            </a>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+
+        {% if page_obj.has_other_pages %}
+        <nav class="mt-3">
+            <ul class="pagination pagination-sm justify-content-center">
+                {% if page_obj.has_previous %}
+                <li class="page-item"><a class="page-link" href="?page={{ page_obj.previous_page_number }}&q={{ search }}&user={{ user_id }}&action={{ action }}&module={{ module }}&date_from={{ date_from }}&date_to={{ date_to }}">Previous</a></li>
+                {% endif %}
+                <li class="page-item disabled"><span class="page-link">Page {{ page_obj.number }} of {{ page_obj.paginator.num_pages }}</span></li>
+                {% if page_obj.has_next %}
+                <li class="page-item"><a class="page-link" href="?page={{ page_obj.next_page_number }}&q={{ search }}&user={{ user_id }}&action={{ action }}&module={{ module }}&date_from={{ date_from }}&date_to={{ date_to }}">Next</a></li>
+                {% endif %}
+            </ul>
+        </nav>
+        {% endif %}
+
+        {% else %}
+        <div class="text-center py-5">
+            <i class="fas fa-history fa-3x text-muted mb-3"></i>
+            <h5 class="text-muted">No logs found</h5>
+        </div>
+        {% endif %}
+    </div>
+</div>
+
+{% endblock %}

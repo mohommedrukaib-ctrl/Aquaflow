@@ -1,0 +1,219 @@
+{% extends "base/base.html" %}
+
+{% block title %}Edit Role — AquaFlow{% endblock %}
+{% block page_icon %}fas fa-user-shield{% endblock %}
+{% block page_title %}Edit Role: {{ role.name }}{% endblock %}
+{% block page_subtitle %}Configure permissions and details{% endblock %}
+
+{% block breadcrumbs %}
+<span>/</span>
+<a href="/accounts/roles/">Roles</a>
+<span>/</span>
+<span class="current">{{ role.name }}</span>
+{% endblock %}
+
+{% block extra_css %}
+<style>
+.perm-group {
+    background: var(--aq-surface-2);
+    border-radius: 8px;
+    padding: 12px 16px;
+    margin-bottom: 12px;
+}
+.perm-group-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 8px;
+    padding-bottom: 8px;
+    border-bottom: 1px solid var(--aq-border);
+}
+.perm-group-title {
+    font-weight: 600;
+    color: var(--aq-text);
+}
+.perm-item {
+    display: flex;
+    align-items: center;
+    padding: 4px 0;
+}
+.perm-item input[type="checkbox"] {
+    margin-right: 8px;
+}
+.perm-item label {
+    flex: 1;
+    cursor: pointer;
+    font-size: 13px;
+    color: var(--aq-text);
+}
+</style>
+{% endblock %}
+
+{% block content %}
+
+{% if is_super_admin_role %}
+<div class="alert alert-warning">
+    <i class="fas fa-shield-alt me-2"></i>
+    <strong>Super Admin</strong> always has ALL permissions. You can only edit the name and description.
+</div>
+{% endif %}
+
+<div class="row g-3">
+    <div class="col-lg-4">
+        <div class="card">
+            <div class="card-header">
+                <strong><i class="fas fa-info-circle me-2"></i>Role Details</strong>
+            </div>
+            <div class="card-body">
+                <div class="mb-3">
+                    <label class="form-label fw-semibold">Role Name</label>
+                    <input type="text" id="roleName" class="form-control" value="{{ role.name }}">
+                </div>
+                <div class="mb-3">
+                    <label class="form-label fw-semibold">Code</label>
+                    <input type="text" class="form-control" value="{{ role.code }}" disabled>
+                    <small class="text-muted">Code cannot be changed.</small>
+                </div>
+                <div class="mb-3">
+                    <label class="form-label fw-semibold">Description</label>
+                    <textarea id="roleDesc" class="form-control" rows="3">{{ role.description }}</textarea>
+                </div>
+                <div class="mb-3">
+                    <label class="form-label fw-semibold">Type</label>
+                    <div>
+                        {% if role.is_system %}
+                        <span class="badge bg-warning">System Role (protected)</span>
+                        {% else %}
+                        <span class="badge bg-primary">Custom Role</span>
+                        {% endif %}
+                    </div>
+                </div>
+                <div>
+                    <strong>Users assigned:</strong>
+                    <span class="badge bg-info ms-1">{{ role.users.count }}</span>
+                </div>
+            </div>
+        </div>
+
+        <div class="mt-3 d-grid gap-2">
+            <button class="btn btn-primary btn-lg" id="saveBtn">
+                <i class="fas fa-save me-1"></i>Save Changes
+            </button>
+            <a href="/accounts/roles/" class="btn btn-outline-secondary">
+                <i class="fas fa-arrow-left me-1"></i>Back to Roles
+            </a>
+        </div>
+    </div>
+
+    <div class="col-lg-8">
+        <div class="card">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <strong><i class="fas fa-key me-2"></i>Permissions</strong>
+                {% if not is_super_admin_role %}
+                <div>
+                    <button class="btn btn-sm btn-outline-success" onclick="selectAll()">
+                        <i class="fas fa-check-double me-1"></i>Select All
+                    </button>
+                    <button class="btn btn-sm btn-outline-secondary" onclick="selectNone()">
+                        <i class="fas fa-times me-1"></i>Deselect All
+                    </button>
+                </div>
+                {% endif %}
+            </div>
+            <div class="card-body">
+                {% if is_super_admin_role %}
+                <div class="text-center py-5">
+                    <i class="fas fa-shield-alt fa-3x aq-text-success mb-3"></i>
+                    <h5>Super Admin has all permissions</h5>
+                    <p class="text-muted">Cannot be modified for security reasons.</p>
+                </div>
+                {% else %}
+                {% for group_name, perms in permission_groups.items %}
+                <div class="perm-group">
+                    <div class="perm-group-header">
+                        <div class="perm-group-title">{{ group_name }}</div>
+                        <div>
+                            <button type="button" class="btn btn-sm btn-outline-primary" onclick="selectGroup(this)">
+                                <i class="fas fa-check"></i>
+                            </button>
+                            <button type="button" class="btn btn-sm btn-outline-secondary" onclick="deselectGroup(this)">
+                                <i class="fas fa-times"></i>
+                            </button>
+                        </div>
+                    </div>
+                    <div class="row">
+                        {% for perm_code, perm_label in perms %}
+                        <div class="col-md-6">
+                            <div class="perm-item">
+                                <input type="checkbox"
+                                       id="perm_{{ perm_code }}"
+                                       class="form-check-input perm-checkbox"
+                                       value="{{ perm_code }}"
+                                       {% if perm_code in current_perms %}checked{% endif %}>
+                                <label for="perm_{{ perm_code }}">{{ perm_label }}</label>
+                            </div>
+                        </div>
+                        {% endfor %}
+                    </div>
+                </div>
+                {% endfor %}
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+
+{% endblock %}
+
+{% block extra_js %}
+<script>
+const CSRF_TOKEN = '{{ csrf_token }}';
+const ROLE_ID = {{ role.pk }};
+
+function selectAll() {
+    document.querySelectorAll('.perm-checkbox').forEach(cb => cb.checked = true);
+}
+
+function selectNone() {
+    document.querySelectorAll('.perm-checkbox').forEach(cb => cb.checked = false);
+}
+
+function selectGroup(btn) {
+    const group = btn.closest('.perm-group');
+    group.querySelectorAll('.perm-checkbox').forEach(cb => cb.checked = true);
+}
+
+function deselectGroup(btn) {
+    const group = btn.closest('.perm-group');
+    group.querySelectorAll('.perm-checkbox').forEach(cb => cb.checked = false);
+}
+
+document.getElementById('saveBtn').addEventListener('click', function () {
+    this.disabled = true;
+
+    const fd = new FormData();
+    fd.append('name', document.getElementById('roleName').value.trim());
+    fd.append('description', document.getElementById('roleDesc').value.trim());
+
+    document.querySelectorAll('.perm-checkbox:checked').forEach(cb => {
+        fd.append('permissions', cb.value);
+    });
+
+    fetch(`/accounts/roles/${ROLE_ID}/update/`, {
+        method: 'POST',
+        headers: { 'X-CSRFToken': CSRF_TOKEN },
+        body: fd,
+    })
+    .then(r => r.json())
+    .then(data => {
+        this.disabled = false;
+        if (data.success) {
+            showToast(data.message, 'success');
+            setTimeout(() => location.reload(), 800);
+        } else {
+            showToast(data.error, 'error');
+        }
+    });
+});
+</script>
+{% endblock %}

@@ -1,0 +1,115 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <title>Job Note — {{ note.note_number }}</title>
+    <style>
+        @media print {
+            body { margin: 0; }
+            .no-print { display: none !important; }
+            @page { margin: 5mm; size: 80mm auto; }
+        }
+        body {
+            font-family: 'Courier New', monospace;
+            font-size: 12px;
+            width: 72mm;
+            margin: 10px auto;
+            padding: 5px;
+            color: #000;
+            background: #fff;
+        }
+        .center { text-align: center; }
+        .bold { font-weight: bold; }
+        .line { border-top: 1px dashed #000; margin: 6px 0; }
+        .double-line { border-top: 2px solid #000; margin: 6px 0; }
+        .format-bar {
+            background: #f0f0f0; padding: 10px; text-align: center;
+            margin: 0 auto 15px; max-width: 400px; border-radius: 6px;
+        }
+        .format-bar select { padding: 6px; border-radius: 4px; border: 1px solid #ccc; }
+        .format-bar button { padding: 8px 16px; background: #04a9f5; color: white; border: none; border-radius: 4px; cursor: pointer; margin-left: 6px; }
+    </style>
+</head>
+<body>
+
+<div class="no-print format-bar">
+    <select onchange="window.location.href='/wash/jobs/{{ job.pk }}/job-note/?format='+this.value">
+        {% for val, label in formats %}
+        <option value="{{ val }}" {% if current_format == val %}selected{% endif %}>{{ label }}</option>
+        {% endfor %}
+    </select>
+    <button onclick="window.print()">🖨 Print</button>
+    <button onclick="window.close()" style="background:#666;">Close</button>
+</div>
+
+<div class="center">
+    <div class="bold" style="font-size:14px;">{{ business.name }}</div>
+    {% if business.address_line1 %}<div>{{ business.address_line1 }}</div>{% endif %}
+    {% if business.phone %}<div>Tel: {{ business.phone }}</div>{% endif %}
+</div>
+
+<div class="double-line"></div>
+
+<div class="center bold" style="font-size:14px;">JOB NOTE</div>
+<div class="center">{{ note.note_number }}</div>
+
+<div class="line"></div>
+
+<div>Date: {{ note.received_at|date:"d M Y H:i" }}</div>
+<div>Customer: <span class="bold">{{ note.customer_name }}</span></div>
+{% if note.customer_phone %}<div>Phone: {{ note.customer_phone }}</div>{% endif %}
+
+<div class="line"></div>
+
+<div>Vehicle: <span class="bold">{{ note.vehicle_reg }}</span></div>
+{% if note.vehicle_desc %}<div>{{ note.vehicle_desc }}</div>{% endif %}
+
+<div class="line"></div>
+
+<div class="bold">Services / Repairs:</div>
+{% for item in items %}
+<div>• {{ item.name }}
+    {% if item.item_type == 'repair' %}(Repair){% endif %}
+    x{{ item.quantity|floatformat:0 }}
+</div>
+{% empty %}
+<div>{{ note.items_summary|linebreaksbr }}</div>
+{% endfor %}
+
+<div class="line"></div>
+
+{% if note.estimated_time %}
+<div>Est. Ready: <span class="bold">{{ note.estimated_time }}</span></div>
+<div class="line"></div>
+{% endif %}
+
+{% if note.special_instructions %}
+<div class="bold">Special Instructions:</div>
+<div>{{ note.special_instructions }}</div>
+<div class="line"></div>
+{% endif %}
+
+{% if job.notes %}
+<div class="bold">Notes:</div>
+<div>{{ job.notes }}</div>
+<div class="line"></div>
+{% endif %}
+
+<div class="center" style="font-size:11px;">
+    {{ business.job_note_message|default:"Please present this note when collecting your vehicle." }}
+</div>
+
+<div class="line"></div>
+
+<div class="center" style="font-size:10px;">
+    {{ business.job_note_terms|default:"We are not responsible for items left inside the vehicle." }}
+</div>
+
+<div class="line"></div>
+
+<div class="center" style="font-size:9px;">
+    Powered by AquaFlow — Quantum Axis
+</div>
+
+</body>
+</html>

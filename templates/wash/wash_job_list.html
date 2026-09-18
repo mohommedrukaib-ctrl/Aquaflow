@@ -1,0 +1,95 @@
+{% extends "base/base.html" %}
+
+{% block title %}Wash Jobs — AquaFlow{% endblock %}
+{% block page_icon %}fas fa-clock-rotate-left{% endblock %}
+{% block page_title %}Wash Job History{% endblock %}
+{% block page_subtitle %}All wash jobs{% endblock %}
+{% block breadcrumbs %}<span>/</span><a href="/wash/">Wash</a><span>/</span><span class="current">History</span>{% endblock %}
+
+{% block content %}
+
+<div class="aq-panel">
+    <div class="aq-panel-head">
+        <div class="aq-chips">
+            <span class="aq-chip pri"><i class="fas fa-spray-can-sparkles"></i> Jobs <b>{{ total_count }}</b></span>
+        </div>
+        <a href="/wash/" class="btn btn-sm btn-outline-primary"><i class="fas fa-table-columns me-1"></i>Back to Board</a>
+    </div>
+
+    <form method="GET" class="aq-toolbar">
+        <div class="input-group" style="width:290px;">
+            <span class="input-group-text"><i class="fas fa-search"></i></span>
+            <input type="text" name="q" class="form-control" value="{{ search }}" placeholder="Job#, customer, vehicle…">
+        </div>
+        <select name="status" class="form-select" style="width:140px;">
+            <option value="">All Status</option>
+            {% for val, label in status_choices %}
+            <option value="{{ val }}" {% if status == val %}selected{% endif %}>{{ label }}</option>
+            {% endfor %}
+        </select>
+        <input type="date" name="date_from" class="form-control" style="width:140px;" value="{{ date_from }}">
+        <input type="date" name="date_to" class="form-control" style="width:140px;" value="{{ date_to }}">
+        <button class="btn btn-outline-primary btn-sm"><i class="fas fa-filter me-1"></i>Filter</button>
+        <a href="/wash/jobs/" class="btn btn-outline-secondary btn-sm"><i class="fas fa-rotate"></i></a>
+    </form>
+
+    <div class="aq-panel-body flush">
+        <div class="aq-table-scroll">
+            <table class="table table-hover">
+                <thead>
+                    <tr>
+                        <th>Job #</th>
+                        <th class="nowrap">Created</th>
+                        <th>Customer</th>
+                        <th>Vehicle</th>
+                        <th>Service</th>
+                        <th>Employee</th>
+                        <th>Bay</th>
+                        <th>Status</th>
+                        <th style="width:40px;"></th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for j in jobs %}
+                    <tr>
+                        <td class="nowrap"><a href="/wash/jobs/{{ j.pk }}/"><code style="font-weight:700;">{{ j.job_number }}</code></a></td>
+                        <td class="nowrap text-muted">{{ j.created_at|date:"d M Y · H:i" }}</td>
+                        <td>{{ j.customer.name|truncatechars:20 }}</td>
+                        <td class="nowrap"><code>{{ j.vehicle.registration_number }}</code></td>
+                        <td>{{ j.service.name|default:"—"|truncatechars:20 }}</td>
+                        <td class="text-muted">{{ j.assigned_employee.username|default:"—"|truncatechars:12 }}</td>
+                        <td class="text-muted">{{ j.wash_bay.name|default:"—" }}</td>
+                        <td>
+                            {% if j.status == 'completed' %}<span class="badge bg-success">Completed</span>
+                            {% elif j.status == 'washing' %}<span class="badge bg-info">Washing</span>
+                            {% elif j.status == 'ready' %}<span class="badge bg-success">Ready</span>
+                            {% elif j.status == 'cancelled' %}<span class="badge bg-danger">Cancelled</span>
+                            {% else %}<span class="badge bg-secondary">{{ j.get_status_display }}</span>{% endif %}
+                        </td>
+                        <td class="text-end">
+                            <a href="/wash/jobs/{{ j.pk }}/" class="btn btn-sm btn-outline-primary btn-icon"><i class="fas fa-eye"></i></a>
+                        </td>
+                    </tr>
+                    {% empty %}
+                    <tr><td colspan="9"><div class="aq-empty"><i class="fas fa-spray-can-sparkles"></i><h5>No wash jobs found</h5></div></td></tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+
+        {% if jobs %}
+        <div class="aq-pagebar">
+            <span>{{ page_obj.paginator.count }} job{{ page_obj.paginator.count|pluralize }} · Page {{ page_obj.number }}/{{ page_obj.paginator.num_pages }}</span>
+            {% if page_obj.has_other_pages %}
+            <ul class="pagination pagination-sm mb-0">
+                {% if page_obj.has_previous %}<li class="page-item"><a class="page-link" href="?page={{ page_obj.previous_page_number }}&q={{ search }}">‹</a></li>{% endif %}
+                <li class="page-item disabled"><span class="page-link">{{ page_obj.number }}</span></li>
+                {% if page_obj.has_next %}<li class="page-item"><a class="page-link" href="?page={{ page_obj.next_page_number }}&q={{ search }}">›</a></li>{% endif %}
+            </ul>
+            {% endif %}
+        </div>
+        {% endif %}
+    </div>
+</div>
+
+{% endblock %}

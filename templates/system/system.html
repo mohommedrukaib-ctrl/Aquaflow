@@ -1,0 +1,99 @@
+{% extends "base/base.html" %}
+
+{% block title %}System — AquaFlow{% endblock %}
+{% block page_icon %}fas fa-cog{% endblock %}
+{% block page_title %}System Settings{% endblock %}
+{% block page_subtitle %}Manage AquaFlow configuration{% endblock %}
+
+{% block breadcrumbs %}
+<span>/</span>
+<span class="current">System</span>
+{% endblock %}
+
+{% block content %}
+
+<div class="row g-3">
+
+    <div class="col-md-4">
+        <a href="/business/" class="card text-decoration-none">
+            <div class="card-body text-center py-4">
+                <i class="fas fa-building fa-3x aq-text-primary mb-3"></i>
+                <h5>Business Settings</h5>
+                <p class="text-muted small mb-0">Company name, logo, tax, currency</p>
+            </div>
+        </a>
+    </div>
+
+    <div class="col-md-4">
+        <a href="/system/database/" class="card text-decoration-none">
+            <div class="card-body text-center py-4">
+                <i class="fas fa-server fa-3x aq-text-primary mb-3"></i>
+                <h5>Database Configuration</h5>
+                <p class="text-muted small mb-0">Change database connection (Super Admin only)</p>
+            </div>
+        </a>
+    </div>
+
+    <div class="col-md-4">
+        <a href="/system/health/" class="card text-decoration-none">
+            <div class="card-body text-center py-4">
+                <i class="fas fa-heartbeat fa-3x aq-text-success mb-3"></i>
+                <h5>System Health</h5>
+                <p class="text-muted small mb-0">Server status, disk, backups</p>
+            </div>
+        </a>
+    </div>
+
+    <div class="col-md-4">
+        <a href="/system/backups/" class="card text-decoration-none">
+            <div class="card-body text-center py-4">
+                <i class="fas fa-database fa-3x aq-text-success mb-3"></i>
+                <h5>Backups</h5>
+                <p class="text-muted small mb-0">Backup and restore your data</p>
+            </div>
+        </a>
+    </div>
+
+    <div class="col-md-4">
+        <a href="/system/audit/" class="card text-decoration-none">
+            <div class="card-body text-center py-4">
+                <i class="fas fa-shield-alt fa-3x aq-text-warning mb-3"></i>
+                <h5>Audit Logs</h5>
+                <p class="text-muted small mb-0">View system activity history</p>
+            </div>
+        </a>
+    </div>
+
+    <div class="col-md-4">
+        <a href="/system/trash/" class="card text-decoration-none">
+            <div class="card-body text-center py-4">
+                <i class="fas fa-trash fa-3x aq-text-danger mb-3"></i>
+                <h5>Trash / Recycle Bin</h5>
+                <p class="text-muted small mb-0">Restore or permanently delete items</p>
+            </div>
+        </a>
+    </div>
+
+    <div class="col-md-4">
+    <a href="/accounts/roles/" class="card text-decoration-none">
+        <div class="card-body text-center py-4">
+            <i class="fas fa-user-shield fa-3x aq-text-primary mb-3"></i>
+            <h5>Roles & Permissions</h5>
+            <p class="text-muted small mb-0">Create custom roles, assign permissions</p>
+        </div>
+    </a>
+</div>
+
+<div class="col-md-4">
+    <a href="/accounts/users/" class="card text-decoration-none">
+        <div class="card-body text-center py-4">
+            <i class="fas fa-users fa-3x aq-text-info mb-3"></i>
+            <h5>User Management</h5>
+            <p class="text-muted small mb-0">Create users, assign roles, reset passwords</p>
+        </div>
+    </a>
+</div>
+
+</div>
+
+{% endblock %}

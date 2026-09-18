@@ -1,0 +1,129 @@
+{% extends "base/base.html" %}
+{% load aquaflow_tags %}
+
+{% block title %}Sales Report — AquaFlow{% endblock %}
+{% block page_icon %}fas fa-dollar-sign{% endblock %}
+{% block page_title %}Sales Report{% endblock %}
+
+{% block breadcrumbs %}
+<span>/</span>
+<a href="/reports/">Reports</a>
+<span>/</span>
+<span class="current">Sales</span>
+{% endblock %}
+
+{% block extra_css %}
+<style>
+.trend-bar {
+    height: 24px;
+    background: linear-gradient(90deg, #04a9f5, #0388c7);
+    border-radius: 4px;
+    display: inline-block;
+    min-width: 4px;
+    transition: width 0.4s;
+}
+</style>
+{% endblock %}
+
+{% block content %}
+
+<form method="get" class="card mb-3">
+    <div class="card-body">
+        <div class="row g-2">
+            <div class="col-md-3">
+                <label class="form-label fw-semibold">From</label>
+                <input type="date" name="date_from" class="form-control" value="{{ date_from }}">
+            </div>
+            <div class="col-md-3">
+                <label class="form-label fw-semibold">To</label>
+                <input type="date" name="date_to" class="form-control" value="{{ date_to }}">
+            </div>
+            <div class="col-md-3">
+                <label class="form-label fw-semibold">Group By</label>
+                <select name="group" class="form-select">
+                    <option value="day" {% if group_by == 'day' %}selected{% endif %}>Day</option>
+                    <option value="month" {% if group_by == 'month' %}selected{% endif %}>Month</option>
+                </select>
+            </div>
+            <div class="col-md-3 d-flex align-items-end">
+                <button class="btn btn-primary me-2"><i class="fas fa-filter me-1"></i>Filter</button>
+                <a href="?date_from={{ date_from }}&date_to={{ date_to }}&group={{ group_by }}&export=csv" class="btn btn-outline-success">
+                    <i class="fas fa-download me-1"></i>CSV
+                </a>
+            </div>
+        </div>
+    </div>
+</form>
+
+<div class="row g-3 mb-3">
+    <div class="col-md-3">
+        <div class="aq-stat-card">
+            <div class="aq-stat-info">
+                <h6>Total Sales</h6>
+                <div class="aq-stat-value">{% format_currency total_sales %}</div>
+            </div>
+            <div class="aq-stat-icon success"><i class="fas fa-dollar-sign"></i></div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="aq-stat-card">
+            <div class="aq-stat-info">
+                <h6>Orders</h6>
+                <div class="aq-stat-value">{{ total_orders }}</div>
+            </div>
+            <div class="aq-stat-icon primary"><i class="fas fa-file-invoice"></i></div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="aq-stat-card">
+            <div class="aq-stat-info">
+                <h6>Avg Order</h6>
+                <div class="aq-stat-value">{% format_currency avg_order %}</div>
+            </div>
+            <div class="aq-stat-icon info"><i class="fas fa-chart-bar"></i></div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="aq-stat-card">
+            <div class="aq-stat-info">
+                <h6>Tax Collected</h6>
+                <div class="aq-stat-value">{% format_currency total_tax %}</div>
+            </div>
+            <div class="aq-stat-icon warning"><i class="fas fa-percent"></i></div>
+        </div>
+    </div>
+</div>
+
+<div class="card">
+    <div class="card-header">
+        <strong><i class="fas fa-chart-line me-2"></i>Sales Trend</strong>
+    </div>
+    <div class="card-body">
+        <table class="table table-hover">
+            <thead>
+                <tr>
+                    <th>Period</th>
+                    <th>Orders</th>
+                    <th style="width: 50%;">Chart</th>
+                    <th class="text-end">Total</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for row in trend %}
+                <tr>
+                    <td>{{ row.period|date:"d M Y" }}</td>
+                    <td>{{ row.count }}</td>
+                    <td>
+                        <span class="trend-bar" style="width: {% widthratio row.total max_val 100 %}%;"></span>
+                    </td>
+                    <td class="text-end fw-bold">{% format_currency row.total %}</td>
+                </tr>
+                {% empty %}
+                <tr><td colspan="4" class="text-center text-muted py-4">No sales in this period.</td></tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+
+{% endblock %}

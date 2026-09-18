@@ -1,0 +1,120 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <title>Job Note — {{ note.note_number }}</title>
+    <style>
+        @media print {
+            body { margin: 0; }
+            .no-print { display: none !important; }
+            @page { margin: 10mm; size: A4; }
+        }
+        body {
+            font-family: Arial, sans-serif;
+            font-size: 12px;
+            max-width: 210mm;
+            margin: 10px auto;
+            padding: 15px 25px;
+            color: #333;
+            background: #fff;
+        }
+        .header { display: flex; justify-content: space-between; border-bottom: 2px solid #333; padding-bottom: 10px; margin-bottom: 15px; }
+        .header .biz { font-size: 18px; font-weight: bold; }
+        .header .note-num { text-align: right; }
+        .header .note-num .num { font-size: 20px; font-weight: bold; }
+        table.info { width: 100%; border-collapse: collapse; margin: 10px 0; }
+        table.info td { padding: 4px 8px; }
+        table.info .label { color: #666; width: 30%; }
+        table.items { width: 100%; border-collapse: collapse; margin: 10px 0; }
+        table.items th { background: #f4f4f4; padding: 6px 8px; text-align: left; border-bottom: 2px solid #ddd; font-size: 11px; }
+        table.items td { padding: 6px 8px; border-bottom: 1px solid #eee; }
+        .footer { margin-top: 20px; padding-top: 10px; border-top: 1px solid #ddd; font-size: 10px; color: #666; }
+        .terms { margin-top: 10px; font-size: 9px; color: #999; }
+        .format-bar {
+            background: #f0f0f0; padding: 10px; text-align: center;
+            margin-bottom: 15px; border-radius: 6px;
+        }
+        .format-bar select { padding: 6px; border-radius: 4px; border: 1px solid #ccc; }
+        .format-bar button { padding: 8px 16px; background: #04a9f5; color: white; border: none; border-radius: 4px; cursor: pointer; margin-left: 6px; }
+    </style>
+</head>
+<body>
+
+<div class="no-print format-bar">
+    <select onchange="window.location.href='/wash/jobs/{{ job.pk }}/job-note/?format='+this.value">
+        {% for val, label in formats %}
+        <option value="{{ val }}" {% if current_format == val %}selected{% endif %}>{{ label }}</option>
+        {% endfor %}
+    </select>
+    <button onclick="window.print()">🖨 Print</button>
+    <button onclick="window.close()" style="background:#666;">Close</button>
+</div>
+
+<div class="header">
+    <div>
+        <div class="biz">{{ business.name }}</div>
+        {% if business.address_line1 %}<div>{{ business.address_line1 }}</div>{% endif %}
+        {% if business.phone %}<div>Tel: {{ business.phone }}</div>{% endif %}
+    </div>
+    <div class="note-num">
+        <div style="color:#666; font-size:10px;">JOB NOTE</div>
+        <div class="num">{{ note.note_number }}</div>
+        <div style="font-size:10px;">{{ note.received_at|date:"d M Y H:i" }}</div>
+    </div>
+</div>
+
+<table class="info">
+    <tr><td class="label">Customer</td><td><strong>{{ note.customer_name }}</strong></td></tr>
+    {% if note.customer_phone %}<tr><td class="label">Phone</td><td>{{ note.customer_phone }}</td></tr>{% endif %}
+    <tr><td class="label">Vehicle</td><td><strong>{{ note.vehicle_reg }}</strong> — {{ note.vehicle_desc }}</td></tr>
+    {% if note.estimated_time %}<tr><td class="label">Est. Ready</td><td><strong>{{ note.estimated_time }}</strong></td></tr>{% endif %}
+</table>
+
+<table class="items">
+    <thead>
+        <tr>
+            <th>#</th>
+            <th>Service / Repair</th>
+            <th>Type</th>
+            <th>Qty</th>
+        </tr>
+    </thead>
+    <tbody>
+        {% for item in items %}
+        <tr>
+            <td>{{ forloop.counter }}</td>
+            <td><strong>{{ item.name }}</strong></td>
+            <td>{{ item.get_item_type_display }}</td>
+            <td>{{ item.quantity|floatformat:0 }}</td>
+        </tr>
+        {% empty %}
+        <tr><td colspan="4">{{ note.items_summary }}</td></tr>
+        {% endfor %}
+    </tbody>
+</table>
+
+{% if note.special_instructions %}
+<div style="background:#f8f9fa; padding:8px; border-radius:4px; margin:10px 0;">
+    <strong>Special Instructions:</strong><br>
+    {{ note.special_instructions }}
+</div>
+{% endif %}
+
+{% if job.notes %}
+<div style="background:#fff3cd; padding:8px; border-radius:4px; margin:10px 0;">
+    <strong>Notes:</strong><br>
+    {{ job.notes }}
+</div>
+{% endif %}
+
+<div class="footer">
+    <strong>{{ business.job_note_message|default:"Please present this note when collecting your vehicle." }}</strong>
+</div>
+
+<div class="terms">
+    {{ business.job_note_terms|default:"We are not responsible for items left inside the vehicle." }}<br>
+    Powered by AquaFlow — Quantum Axis
+</div>
+
+</body>
+</html>

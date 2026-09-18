@@ -1,0 +1,417 @@
+{% extends "base/base.html" %}
+{% load aquaflow_tags %}
+
+{% block title %}Services — AquaFlow{% endblock %}
+{% block page_icon %}fas fa-concierge-bell{% endblock %}
+{% block page_title %}Services{% endblock %}
+{% block page_subtitle %}Manage services, repairs, and pricing{% endblock %}
+
+{% block breadcrumbs %}
+<span>/</span>
+<span class="current">Services</span>
+{% endblock %}
+
+{% block extra_css %}
+<style>
+.editable-cell {
+    cursor: pointer;
+    padding: 4px 8px;
+    border-radius: 4px;
+    display: inline-block;
+    min-width: 60px;
+}
+.editable-cell:hover {
+    background: var(--aq-hover-bg);
+    outline: 1px dashed var(--aq-primary);
+}
+.editable-input {
+    width: 100%;
+    padding: 4px 8px;
+    border: 2px solid var(--aq-primary);
+    border-radius: 4px;
+    font-size: 13px;
+}
+</style>
+{% endblock %}
+
+{% block content %}
+
+<div class="card">
+    <div class="card-header d-flex justify-content-between align-items-center">
+        <strong>
+            <i class="fas fa-list me-2 aq-text-primary"></i>
+            Services
+            <span class="badge bg-secondary ms-2">{{ total_count }}</span>
+        </strong>
+        <div class="d-flex gap-2">
+            <a href="{% url 'service_category_list' %}" class="btn btn-outline-secondary btn-sm">
+                <i class="fas fa-tags me-1"></i>Categories
+            </a>
+            {% if can_manage %}
+            <button class="btn btn-primary btn-sm" onclick="openAddModal()">
+                <i class="fas fa-plus me-1"></i>Add Service
+            </button>
+            {% endif %}
+        </div>
+    </div>
+
+    <div class="card-body">
+
+        <form method="GET" class="row g-2 mb-3">
+            <div class="col-md-5">
+                <input type="text" name="q" class="form-control" placeholder="Search services..." value="{{ search }}">
+            </div>
+            <div class="col-md-3">
+                <select name="category" class="form-select" onchange="this.form.submit()">
+                    <option value="">All Categories</option>
+                    {% for cat in categories %}
+                    <option value="{{ cat.pk }}" {% if category == cat.pk|stringformat:"s" %}selected{% endif %}>{{ cat.name }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="col-md-2">
+                <select name="status" class="form-select" onchange="this.form.submit()">
+                    <option value="active" {% if status == 'active' %}selected{% endif %}>Active</option>
+                    <option value="inactive" {% if status == 'inactive' %}selected{% endif %}>Inactive</option>
+                    <option value="all" {% if status == 'all' %}selected{% endif %}>All</option>
+                </select>
+            </div>
+            <div class="col-md-2">
+                <button type="submit" class="btn btn-primary w-100"><i class="fas fa-search me-1"></i>Search</button>
+            </div>
+        </form>
+
+        {% if services %}
+        <div class="table-responsive">
+            <table class="table table-hover align-middle">
+                <thead>
+                    <tr>
+                        <th>Service Name</th>
+                        <th>Category</th>
+                        <th>Duration</th>
+                        <th>Default Price</th>
+                        <th>Prices Set</th>
+                        <th>Status</th>
+                        {% if can_manage %}
+                        <th class="text-end">Actions</th>
+                        {% endif %}
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for service in services %}
+                    <tr data-id="{{ service.pk }}">
+                        <td>
+                            {% if can_manage %}
+                            <span class="editable-cell" data-field="name" data-id="{{ service.pk }}">{{ service.name }}</span>
+                            {% else %}
+                            <a href="{% url 'service_detail' service.pk %}">{{ service.name }}</a>
+                            {% endif %}
+                            {% if service.description %}
+                            <br><small class="text-muted">{{ service.description|truncatechars:50 }}</small>
+                            {% endif %}
+                        </td>
+                        <td>
+                            {% if service.category %}
+                            <span class="badge bg-light text-dark border">{{ service.category.name }}</span>
+                            {% else %}<span class="text-muted">—</span>{% endif %}
+                        </td>
+                        <td>
+                            {% if can_manage %}
+                            <span class="editable-cell" data-field="duration_minutes" data-id="{{ service.pk }}" data-type="number">{{ service.duration_minutes }}</span>
+                            <small class="text-muted">min</small>
+                            {% else %}
+                            {{ service.duration_display }}
+                            {% endif %}
+                        </td>
+                        <td>
+                            {% with price=service.get_price %}
+                            {% if price %}
+                            <strong class="aq-text-success">{% format_currency price.price %}</strong>
+                            {% else %}
+                            <span class="text-danger small"><i class="fas fa-exclamation-circle me-1"></i>No price</span>
+                            {% endif %}
+                            {% endwith %}
+                        </td>
+                        <td><span class="badge bg-info">{{ service.prices.count }}</span></td>
+                        <td>
+                            <span class="{{ service.is_active|yesno:'badge bg-success,badge bg-secondary' }}">
+                                {{ service.is_active|yesno:'Active,Inactive' }}
+                            </span>
+                        </td>
+                        {% if can_manage %}
+                        <td class="text-end">
+                            <div class="btn-group btn-group-sm">
+                                <button type="button" class="btn btn-outline-success" title="Set Price"
+                                    onclick="openPriceModal({{ service.pk }}, '{{ service.name|escapejs }}')">
+                                    <i class="fas fa-dollar-sign"></i>
+                                </button>
+                                <a href="{% url 'service_detail' service.pk %}" class="btn btn-outline-primary" title="View">
+                                    <i class="fas fa-eye"></i>
+                                </a>
+                                <a href="{% url 'service_edit' service.pk %}" class="btn btn-outline-secondary" title="Edit">
+                                    <i class="fas fa-edit"></i>
+                                </a>
+                                <button type="button" class="btn btn-outline-danger" title="Delete"
+                                    onclick="deleteService({{ service.pk }}, '{{ service.name|escapejs }}')">
+                                    <i class="fas fa-trash"></i>
+                                </button>
+                            </div>
+                        </td>
+                        {% endif %}
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+
+        {% if page_obj.has_other_pages %}
+        <nav class="mt-3">
+            <ul class="pagination pagination-sm justify-content-center">
+                {% if page_obj.has_previous %}
+                <li class="page-item"><a class="page-link" href="?page={{ page_obj.previous_page_number }}&q={{ search }}&status={{ status }}&category={{ category }}">Previous</a></li>
+                {% endif %}
+                <li class="page-item disabled"><span class="page-link">Page {{ page_obj.number }} of {{ page_obj.paginator.num_pages }}</span></li>
+                {% if page_obj.has_next %}
+                <li class="page-item"><a class="page-link" href="?page={{ page_obj.next_page_number }}&q={{ search }}&status={{ status }}&category={{ category }}">Next</a></li>
+                {% endif %}
+            </ul>
+        </nav>
+        {% endif %}
+
+        {% else %}
+        <div class="text-center py-5">
+            <i class="fas fa-concierge-bell fa-3x text-muted mb-3"></i>
+            <h5 class="text-muted">No services found</h5>
+            {% if can_manage %}
+            <button class="btn btn-primary mt-2" onclick="openAddModal()">
+                <i class="fas fa-plus me-1"></i>Add First Service
+            </button>
+            {% endif %}
+        </div>
+        {% endif %}
+    </div>
+</div>
+
+<!-- Add Service Modal -->
+<div class="modal fade" id="addModal" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title"><i class="fas fa-plus me-2"></i>Add New Service</h5>
+                <button class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <div class="row g-3">
+                    <div class="col-md-8">
+                        <label class="form-label fw-semibold">Service Name <span class="text-danger">*</span></label>
+                        <input type="text" id="newName" class="form-control" placeholder="e.g. Premium Wash, Tire Replacement">
+                    </div>
+                    <div class="col-md-4">
+                        <label class="form-label fw-semibold">Category</label>
+                        <div class="aq-smart-input" id="newCategoryInput"
+                            data-name="category"
+                            data-search-url="/services/categories/create/"
+                            data-create-url="/services/categories/create/"
+                            data-results-key="categories"
+                            data-label="Category"
+                            data-placeholder="Search or create..."></div>
+                    </div>
+                    <div class="col-md-12">
+                        <label class="form-label fw-semibold">Description</label>
+                        <textarea id="newDesc" class="form-control" rows="2" placeholder="Optional description"></textarea>
+                    </div>
+                    <div class="col-md-4">
+                        <label class="form-label fw-semibold">Duration (minutes)</label>
+                        <input type="number" id="newDuration" class="form-control" value="30" min="5" max="480">
+                    </div>
+                    <div class="col-md-4">
+                        <label class="form-label fw-semibold">Default Price ({{ CURRENCY_SYMBOL }})</label>
+                        <input type="number" id="newPrice" class="form-control" min="0" step="0.01" placeholder="0.00">
+                        <small class="text-muted">Leave blank for no default price.</small>
+                    </div>
+                </div>
+                <div id="addError" class="alert alert-danger mt-3" style="display:none;"></div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                <button class="btn btn-primary" id="saveServiceBtn"><i class="fas fa-save me-1"></i>Save Service</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Quick Price Modal -->
+<div class="modal fade" id="priceModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title"><i class="fas fa-dollar-sign me-2 aq-text-primary"></i>Set Price — <span id="priceServiceName"></span></h5>
+                <button class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <div class="alert alert-info small py-2">
+                    <i class="fas fa-info-circle me-1"></i>
+                    Leave Vehicle Type and Branch empty for a <strong>default price</strong>.
+                </div>
+                <div class="mb-3">
+                    <label class="form-label fw-semibold">Price ({{ CURRENCY_SYMBOL }}) <span class="text-danger">*</span></label>
+                    <input type="number" id="priceInput" class="form-control form-control-lg" min="0" step="0.01" placeholder="0.00">
+                </div>
+                <div class="mb-3">
+                    <label class="form-label fw-semibold">Vehicle Type (optional)</label>
+                    <select id="priceVehicleType" class="form-select">
+                        <option value="">— All Vehicle Types —</option>
+                        {% for vt in vehicle_types %}
+                        <option value="{{ vt.pk }}">{{ vt.name }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="mb-3">
+                    <label class="form-label fw-semibold">Branch (optional)</label>
+                    <select id="priceBranch" class="form-select">
+                        <option value="">— All Branches —</option>
+                        {% for br in branches %}
+                        <option value="{{ br.pk }}">{{ br.name }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div id="priceError" class="alert alert-danger" style="display:none;"></div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                <button class="btn btn-primary" id="savePriceBtn"><i class="fas fa-save me-1"></i>Save Price</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+{% endblock %}
+
+{% block extra_js %}
+<script>
+const CSRF_TOKEN = '{{ csrf_token }}';
+let currentServiceId = null;
+
+// Inline edit
+document.querySelectorAll('.editable-cell').forEach(cell => {
+    cell.addEventListener('click', function () {
+        if (this.querySelector('input')) return;
+        const val = this.textContent.trim();
+        const field = this.dataset.field;
+        const id = this.dataset.id;
+        const type = this.dataset.type || 'text';
+        this.dataset.original = val;
+        this.innerHTML = `<input type="${type === 'number' ? 'number' : 'text'}" class="editable-input" value="${val}" ${type === 'number' ? 'min="1"' : ''}>`;
+        const input = this.querySelector('input');
+        input.focus(); input.select();
+        input.addEventListener('blur', () => saveInline(this, id, field));
+        input.addEventListener('keydown', e => { if(e.key === 'Enter') input.blur(); if(e.key === 'Escape') this.textContent = this.dataset.original; });
+    });
+});
+
+function saveInline(cell, id, field) {
+    const input = cell.querySelector('input');
+    if (!input) return;
+    const value = input.value.trim();
+    const original = cell.dataset.original;
+    if (value === original) { cell.textContent = original; return; }
+
+    const fd = new FormData();
+    fd.append('field', field); fd.append('value', value);
+    fetch(`/services/${id}/edit-inline/`, {
+        method: 'POST', headers: {'X-CSRFToken': CSRF_TOKEN}, body: fd,
+    }).then(r => r.json()).then(data => {
+        if (data.success) { cell.textContent = data.value; showToast(data.message, 'success'); }
+        else { cell.textContent = original; showToast(data.error, 'error'); }
+    });
+}
+
+// Add Service
+function openAddModal() {
+    document.getElementById('newName').value = '';
+    document.getElementById('newDesc').value = '';
+    document.getElementById('newDuration').value = '30';
+    document.getElementById('newPrice').value = '';
+    document.getElementById('addError').style.display = 'none';
+    new bootstrap.Modal(document.getElementById('addModal')).show();
+    setTimeout(() => document.getElementById('newName').focus(), 300);
+}
+
+document.getElementById('saveServiceBtn').addEventListener('click', function () {
+    const name = document.getElementById('newName').value.trim();
+    const err = document.getElementById('addError');
+    err.style.display = 'none';
+    if (!name) { err.textContent = 'Name required.'; err.style.display = 'block'; return; }
+
+    this.disabled = true;
+    const fd = new FormData();
+    fd.append('name', name);
+    fd.append('description', document.getElementById('newDesc').value.trim());
+    fd.append('duration_minutes', document.getElementById('newDuration').value || '30');
+    fd.append('default_price', document.getElementById('newPrice').value || '');
+
+    const catInput = document.getElementById('newCategoryInput');
+    if (catInput && catInput._smartInput) {
+        const catId = catInput._smartInput.hiddenInput.value;
+        if (catId) fd.append('category_id', catId);
+    }
+
+    fetch('/services/add/', {
+        method: 'POST', headers: {'X-CSRFToken': CSRF_TOKEN, 'X-Requested-With': 'XMLHttpRequest'}, body: fd,
+    }).then(r => r.json()).then(data => {
+        this.disabled = false;
+        if (data.success) {
+            showToast(data.message, 'success');
+            setTimeout(() => location.reload(), 600);
+        } else { err.textContent = data.error; err.style.display = 'block'; }
+    });
+});
+
+// Quick Price
+function openPriceModal(id, name) {
+    currentServiceId = id;
+    document.getElementById('priceServiceName').textContent = name;
+    document.getElementById('priceInput').value = '';
+    document.getElementById('priceVehicleType').value = '';
+    document.getElementById('priceBranch').value = '';
+    document.getElementById('priceError').style.display = 'none';
+    new bootstrap.Modal(document.getElementById('priceModal')).show();
+    setTimeout(() => document.getElementById('priceInput').focus(), 300);
+}
+
+document.getElementById('savePriceBtn').addEventListener('click', function () {
+    const price = document.getElementById('priceInput').value.trim();
+    const err = document.getElementById('priceError');
+    err.style.display = 'none';
+    if (!price || parseFloat(price) < 0) { err.textContent = 'Valid price required.'; err.style.display = 'block'; return; }
+
+    this.disabled = true;
+    const fd = new FormData();
+    fd.append('price', price);
+    fd.append('vehicle_type_id', document.getElementById('priceVehicleType').value);
+    fd.append('branch_id', document.getElementById('priceBranch').value);
+
+    fetch(`/services/${currentServiceId}/quick-price/`, {
+        method: 'POST', headers: {'X-CSRFToken': CSRF_TOKEN}, body: fd,
+    }).then(r => r.json()).then(data => {
+        this.disabled = false;
+        if (data.success) {
+            bootstrap.Modal.getInstance(document.getElementById('priceModal')).hide();
+            showToast(data.message, 'success');
+            setTimeout(() => location.reload(), 600);
+        } else { err.textContent = data.error; err.style.display = 'block'; }
+    });
+});
+
+// Delete
+function deleteService(id, name) {
+    if (!confirm(`Delete "${name}"?`)) return;
+    fetch(`/services/${id}/delete/`, {
+        method: 'POST', headers: {'X-CSRFToken': CSRF_TOKEN},
+    }).then(r => r.json()).then(data => {
+        if (data.success) { showToast(data.message, 'success'); setTimeout(() => location.reload(), 600); }
+        else { showToast(data.error, 'error'); }
+    });
+}
+</script>
+{% endblock %}

@@ -1,0 +1,898 @@
+{% extends "base/base.html" %}
+{% load static %}
+
+{% block title %}New Car Wash — AquaFlow{% endblock %}
+{% block page_icon %}fas fa-car-wash{% endblock %}
+{% block page_title %}New Car Wash Job{% endblock %}
+{% block page_subtitle %}Create a new car wash, repair, or service job{% endblock %}
+
+{% block breadcrumbs %}
+<span>/</span>
+<a href="/wash/">Car Wash</a>
+<span>/</span>
+<span class="current">New Job</span>
+{% endblock %}
+
+{% block extra_css %}
+<style>
+.items-table { width: 100%; border-collapse: collapse; font-size: 12px; }
+.items-table th {
+    background: var(--aq-surface-2);
+    padding: 8px;
+    text-align: left;
+    font-size: 10px;
+    text-transform: uppercase;
+    color: var(--aq-text-muted);
+    border-bottom: 2px solid var(--aq-border);
+}
+.items-table td {
+    padding: 6px 8px;
+    border-bottom: 1px solid var(--aq-border);
+    vertical-align: middle;
+}
+.items-table .r { text-align: right; }
+.items-table .c { text-align: center; }
+.item-input {
+    width: 100%;
+    padding: 4px 6px;
+    border: 1px solid var(--aq-border);
+    border-radius: 4px;
+    font-size: 12px;
+    background: var(--aq-input-bg);
+    color: var(--aq-text);
+}
+.item-input:focus { border-color: var(--aq-primary); outline: none; }
+.type-badge {
+    display: inline-block;
+    padding: 2px 6px;
+    border-radius: 3px;
+    font-size: 9px;
+    font-weight: 600;
+    text-transform: uppercase;
+}
+.type-service { background: rgba(4,169,245,0.15); color: #0388c7; }
+.type-repair  { background: rgba(244,194,43,0.15); color: #d9a41f; }
+.type-product { background: rgba(29,233,182,0.15); color: #14b898; }
+.type-custom  { background: rgba(114,102,186,0.15); color: #5949a1; }
+.items-empty { text-align: center; padding: 30px; color: var(--aq-text-muted); }
+
+.add-item-section {
+    background: var(--aq-surface-2);
+    border: 1px solid var(--aq-border);
+    border-radius: 8px;
+    padding: 12px;
+    margin-bottom: 12px;
+}
+.add-item-tabs {
+    display: flex;
+    gap: 4px;
+    margin-bottom: 10px;
+}
+.add-item-tab {
+    padding: 6px 12px;
+    border: 1px solid var(--aq-border);
+    border-radius: 6px;
+    background: var(--aq-surface);
+    cursor: pointer;
+    font-size: 12px;
+    font-weight: 500;
+    color: var(--aq-text);
+    transition: all 0.15s;
+}
+.add-item-tab:hover { border-color: var(--aq-primary); }
+.add-item-tab.active {
+    background: var(--aq-primary);
+    color: white;
+    border-color: var(--aq-primary);
+}
+.add-item-panel { display: none; }
+.add-item-panel.active { display: block; }
+
+.schedule-hint {
+    background: rgba(244, 194, 43, 0.1);
+    border: 1px solid #f4c22b;
+    border-radius: 6px;
+    padding: 8px 12px;
+    margin-top: 8px;
+    font-size: 12px;
+    color: #856404;
+    display: none;
+}
+</style>
+{% endblock %}
+
+{% block content %}
+
+<div class="row g-3">
+
+    <!-- Main Form -->
+    <div class="col-lg-8">
+
+        <!-- Customer + Vehicle -->
+        <div class="card mb-3">
+            <div class="card-header">
+                <strong><i class="fas fa-user me-2 aq-text-primary"></i>Customer & Vehicle</strong>
+            </div>
+            <div class="card-body">
+
+                <div class="mb-3">
+                    <label class="form-label fw-semibold">
+                        <i class="fas fa-calendar-check me-1"></i>
+                        Load from Booking (optional)
+                    </label>
+                    <div class="aq-smart-input" id="bookingInput"
+                        data-name="booking"
+                        data-search-url="/pos/bookings/search/"
+                        data-results-key="bookings"
+                        data-label="Booking"
+                        data-placeholder="Search booking#, customer, phone, vehicle..."></div>
+                </div>
+
+                <hr>
+
+                <div class="row g-3">
+                    <div class="col-md-6">
+                        <label class="form-label fw-semibold">Customer <span class="text-danger">*</span></label>
+                        <div class="aq-smart-input" id="customerInput"
+                            data-name="customer"
+                            data-search-url="/customers/search/"
+                            data-create-url="/vehicles/customers/quick-create/"
+                            data-results-key="customers"
+                            data-label="Customer"
+                            data-placeholder="Search customer..."
+                            data-required="true"></div>
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label fw-semibold">Vehicle <span class="text-danger">*</span></label>
+                        <div class="aq-smart-input" id="vehicleInput"
+                            data-name="vehicle"
+                            data-search-url="/vehicles/search/"
+                            data-create-url="/bookings/vehicles/quick-create/"
+                            data-results-key="vehicles"
+                            data-label="Vehicle"
+                            data-placeholder="Select customer first..."
+                            data-uppercase="true"
+                            data-disabled="true"
+                            data-required="true"></div>
+                        <small class="text-muted d-block mt-1" id="vehicleInfoLine"></small>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Schedule -->
+        <div class="card mb-3">
+            <div class="card-header">
+                <strong><i class="fas fa-calendar me-2 aq-text-primary"></i>Schedule</strong>
+            </div>
+            <div class="card-body">
+                <div class="row g-3">
+                    <div class="col-md-4">
+                        <label class="form-label fw-semibold">Date</label>
+                        <input type="date" id="schedDate" class="form-control" value="{{ today|date:'Y-m-d' }}">
+                        <small class="text-muted">Leave as today for walk-in.</small>
+                    </div>
+                    <div class="col-md-4">
+                        <label class="form-label fw-semibold">Time</label>
+                        <input type="time" id="schedTime" class="form-control">
+                    </div>
+                    <div class="col-md-4">
+                        <label class="form-label fw-semibold">Estimated Completion</label>
+                        <input type="text" id="estimatedTime" class="form-control" placeholder="e.g. 2-3 hours">
+                    </div>
+                </div>
+                <div class="schedule-hint" id="bookingHint">
+                    <i class="fas fa-info-circle me-1"></i>
+                    <strong>Future date detected.</strong> A booking will also be created automatically.
+                </div>
+            </div>
+        </div>
+
+        <!-- Add Items Section -->
+        <div class="card mb-3">
+            <div class="card-header">
+                <strong><i class="fas fa-list me-2 aq-text-primary"></i>Services, Repairs & Items</strong>
+            </div>
+            <div class="card-body">
+
+                <!-- Add Item Tabs -->
+                <div class="add-item-section">
+                    <div class="add-item-tabs">
+                        <div class="add-item-tab active" data-tab="service" onclick="switchTab('service')">
+                            <i class="fas fa-concierge-bell me-1"></i>Service
+                        </div>
+                        <div class="add-item-tab" data-tab="repair" onclick="switchTab('repair')">
+                            <i class="fas fa-tools me-1"></i>Repair
+                        </div>
+                        <div class="add-item-tab" data-tab="product" onclick="switchTab('product')">
+                            <i class="fas fa-box me-1"></i>Product
+                        </div>
+                        <div class="add-item-tab" data-tab="custom" onclick="switchTab('custom')">
+                            <i class="fas fa-plus me-1"></i>Custom
+                        </div>
+                    </div>
+
+                    <!-- Service Panel -->
+                    <div class="add-item-panel active" id="panel-service">
+                        <div class="row g-2 align-items-end">
+                            <div class="col">
+                                <label class="form-label fw-semibold small">Search Service</label>
+                                <div class="aq-smart-input" id="addServiceInput"
+                                    data-name="add_service"
+                                    data-search-url="/bookings/services/search/"
+                                    data-create-url="/bookings/services/create/"
+                                    data-results-key="services"
+                                    data-label="Service"
+                                    data-placeholder="Search or type new service..."></div>
+                            </div>
+                            <div class="col-auto">
+                                <button type="button" class="btn btn-primary btn-sm" id="addServiceBtn" style="height:38px;">
+                                    <i class="fas fa-plus"></i>
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Repair Panel -->
+                    <div class="add-item-panel" id="panel-repair">
+                        <div class="row g-2 align-items-end">
+                            <div class="col">
+                                <label class="form-label fw-semibold small">Repair Description</label>
+                                <input type="text" id="repairName" class="form-control form-control-sm" placeholder="e.g. Tire Replacement, AC Fix">
+                            </div>
+                            <div class="col-auto" style="width:100px;">
+                                <label class="form-label fw-semibold small">Price</label>
+                                <input type="number" id="repairPrice" class="form-control form-control-sm" min="0" step="0.01" value="0">
+                            </div>
+                            <div class="col-auto" style="width:60px;">
+                                <label class="form-label fw-semibold small">Qty</label>
+                                <input type="number" id="repairQty" class="form-control form-control-sm" min="1" value="1">
+                            </div>
+                            <div class="col-auto">
+                                <button type="button" class="btn btn-warning btn-sm" onclick="addRepairItem()" style="height:38px;">
+                                    <i class="fas fa-plus"></i>
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Product Panel -->
+                    <div class="add-item-panel" id="panel-product">
+                        <div class="row g-2 align-items-end">
+                            <div class="col">
+                                <label class="form-label fw-semibold small">Search Product</label>
+                                <div class="aq-smart-input" id="addProductInput"
+                                    data-name="add_product"
+                                    data-search-url="/pos/products/search/"
+                                    data-create-url="/pos/products/quick-create/"
+                                    data-results-key="products"
+                                    data-label="Product"
+                                    data-placeholder="Search or type new product..."></div>
+                            </div>
+                            <div class="col-auto">
+                                <button type="button" class="btn btn-success btn-sm" id="addProductBtn" style="height:38px;">
+                                    <i class="fas fa-plus"></i>
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Custom Panel -->
+                    <div class="add-item-panel" id="panel-custom">
+                        <div class="row g-2 align-items-end">
+                            <div class="col">
+                                <label class="form-label fw-semibold small">Item Name</label>
+                                <input type="text" id="customName" class="form-control form-control-sm" placeholder="e.g. Special cleaning, Extra charge">
+                            </div>
+                            <div class="col-auto" style="width:100px;">
+                                <label class="form-label fw-semibold small">Price</label>
+                                <input type="number" id="customPrice" class="form-control form-control-sm" min="0" step="0.01" value="0">
+                            </div>
+                            <div class="col-auto" style="width:60px;">
+                                <label class="form-label fw-semibold small">Qty</label>
+                                <input type="number" id="customQty" class="form-control form-control-sm" min="1" value="1">
+                            </div>
+                            <div class="col-auto">
+                                <button type="button" class="btn btn-secondary btn-sm" onclick="addCustomItem()" style="height:38px;">
+                                    <i class="fas fa-plus"></i>
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Items Table -->
+                <div id="itemsContainer">
+                    <div class="items-empty" id="itemsEmpty">
+                        <i class="fas fa-list fa-2x mb-2 opacity-25"></i>
+                        <div>Use the tabs above to add services, repairs, or products</div>
+                    </div>
+                </div>
+
+            </div>
+        </div>
+
+        <!-- Notes -->
+        <div class="card mb-3">
+            <div class="card-header">
+                <strong><i class="fas fa-sticky-note me-2"></i>Job Notes</strong>
+            </div>
+            <div class="card-body">
+                <textarea id="jobNotes" class="form-control" rows="3" placeholder="Special instructions, customer requests..."></textarea>
+            </div>
+        </div>
+
+    </div>
+
+    <!-- Right Side -->
+    <div class="col-lg-4">
+
+        <div class="card mb-3">
+            <div class="card-header">
+                <strong><i class="fas fa-cog me-2"></i>Job Settings</strong>
+            </div>
+            <div class="card-body">
+                <div class="mb-3">
+                    <label class="form-label fw-semibold">Branch</label>
+                    <select id="branchSelect" class="form-select">
+                        {% for br in branches %}
+                        <option value="{{ br.pk }}" {% if br.is_default %}selected{% endif %}>{{ br.name }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="mb-3">
+                    <label class="form-label fw-semibold">Priority</label>
+                    <select id="prioritySelect" class="form-select">
+                        <option value="normal">Normal</option>
+                        <option value="high">High</option>
+                        <option value="urgent">Urgent</option>
+                    </select>
+                </div>
+            </div>
+        </div>
+
+        <div class="card mb-3">
+            <div class="card-header">
+                <strong><i class="fas fa-calculator me-2"></i>Summary</strong>
+            </div>
+            <div class="card-body">
+                <div class="d-flex justify-content-between mb-2">
+                    <span class="text-muted">Items</span>
+                    <span id="summaryItemCount">0</span>
+                </div>
+                <div class="d-flex justify-content-between">
+                    <span class="text-muted">Estimated Total</span>
+                    <strong id="summaryTotal" class="aq-text-success">Rs. 0.00</strong>
+                </div>
+            </div>
+        </div>
+
+        <div class="d-grid gap-2">
+            <button class="btn btn-primary btn-lg" id="createJobBtn">
+                <i class="fas fa-save me-1"></i>Create Car Wash Job
+            </button>
+            <a href="/wash/" class="btn btn-outline-secondary">
+                <i class="fas fa-arrow-left me-1"></i>Back
+            </a>
+        </div>
+    </div>
+</div>
+
+<!-- Customer Popup -->
+<div class="modal fade" id="customerModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title"><i class="fas fa-user-plus me-2"></i>Add Customer</h5>
+                <button class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <div class="mb-3">
+                    <label class="form-label fw-semibold">Name <span class="text-danger">*</span></label>
+                    <input type="text" id="quickCustName" class="form-control">
+                </div>
+                <div class="mb-3">
+                    <label class="form-label fw-semibold">Phone <span class="text-danger">*</span></label>
+                    <input type="text" id="quickCustPhone" class="form-control">
+                </div>
+                <div id="quickCustError" class="alert alert-danger" style="display:none;"></div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                <button class="btn btn-primary" id="saveQuickCustBtn">Save</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Vehicle Popup -->
+<div class="modal fade" id="vehicleModal" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title"><i class="fas fa-car me-2"></i>Add Vehicle</h5>
+                <button class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <div class="alert alert-info small py-2"><i class="fas fa-user me-1"></i>For: <strong id="vehicleCustomerName"></strong></div>
+                <div class="row g-3">
+                    <div class="col-md-12">
+                        <label class="form-label fw-semibold">Registration <span class="text-danger">*</span></label>
+                        <input type="text" id="vehModalReg" class="form-control text-uppercase fw-bold">
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label fw-semibold">Brand <span class="text-danger">*</span></label>
+                        <div class="aq-smart-input" id="vehModalBrand" data-name="brand" data-search-url="/vehicles/brands/search/" data-create-url="/vehicles/brands/create/" data-results-key="brands" data-label="Brand" data-uppercase="true" data-required="true"></div>
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label fw-semibold">Model <span class="text-danger">*</span></label>
+                        <div class="aq-smart-input" id="vehModalModel" data-name="model" data-search-url="/vehicles/models/search/" data-create-url="/vehicles/models/create/" data-results-key="models" data-label="Model" data-uppercase="true" data-disabled="true" data-required="true"></div>
+                    </div>
+                    <div class="col-md-4">
+                        <label class="form-label fw-semibold">Type</label>
+                        <div class="aq-smart-input" id="vehModalType" data-name="vehicle_type" data-search-url="/vehicles/types/search/" data-create-url="/vehicles/types/create/" data-results-key="types" data-label="Type" data-uppercase="true"></div>
+                    </div>
+                    <div class="col-md-4">
+                        <label class="form-label fw-semibold">Color</label>
+                        <div class="aq-smart-input" id="vehModalColor" data-name="color" data-search-url="/vehicles/colors/search/" data-create-url="/vehicles/colors/create/" data-results-key="colors" data-label="Color" data-uppercase="true"></div>
+                    </div>
+                    <div class="col-md-4">
+                        <label class="form-label fw-semibold">Fuel</label>
+                        <div class="aq-smart-input" id="vehModalFuel" data-name="fuel_type" data-search-url="/vehicles/fuels/search/" data-create-url="/vehicles/fuels/create/" data-results-key="fuels" data-label="Fuel" data-uppercase="true"></div>
+                    </div>
+                </div>
+                <div id="vehModalError" class="alert alert-danger mt-3" style="display:none;"></div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                <button class="btn btn-primary" id="saveVehicleBtn"><i class="fas fa-save me-1"></i>Save</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Product Popup -->
+<div class="modal fade" id="productModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title"><i class="fas fa-box me-2"></i>Add Product</h5>
+                <button class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <div class="mb-3">
+                    <label class="form-label fw-semibold">Name <span class="text-danger">*</span></label>
+                    <input type="text" id="popProdName" class="form-control">
+                </div>
+                <div class="mb-3">
+                    <label class="form-label fw-semibold">Price <span class="text-danger">*</span></label>
+                    <input type="number" id="popProdPrice" class="form-control" min="0" step="0.01">
+                </div>
+                <div id="popProdError" class="alert alert-danger" style="display:none;"></div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                <button class="btn btn-primary" id="savePopProdBtn">Save & Add</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+{% endblock %}
+
+{% block extra_js %}
+<script>
+const CSRF_TOKEN = '{{ csrf_token }}';
+const TODAY = '{{ today|date:"Y-m-d" }}';
+const BRANCH_ID = document.getElementById('branchSelect').value;
+let currentSmartInput = null;
+let jobItems = [];
+
+function fmtCurrency(v) {
+    return 'Rs. ' + Number(v).toLocaleString('en-LK', {minimumFractionDigits:2, maximumFractionDigits:2});
+}
+function escapeHtml(str) {
+    return String(str).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+}
+
+const customerInput  = document.getElementById('customerInput');
+const vehicleInput   = document.getElementById('vehicleInput');
+const bookingInput   = document.getElementById('bookingInput');
+const addServiceInput = document.getElementById('addServiceInput');
+const addProductInput = document.getElementById('addProductInput');
+const vehicleInfoLine = document.getElementById('vehicleInfoLine');
+
+// ─── Tab Switching ──────────────────────────────────────────
+function switchTab(tab) {
+    document.querySelectorAll('.add-item-tab').forEach(t => t.classList.remove('active'));
+    document.querySelectorAll('.add-item-panel').forEach(p => p.classList.remove('active'));
+    document.querySelector(`.add-item-tab[data-tab="${tab}"]`).classList.add('active');
+    document.getElementById(`panel-${tab}`).classList.add('active');
+}
+
+// ─── Load from Booking ──────────────────────────────────────
+bookingInput?.addEventListener('aq:selected', (e) => {
+    const b = e.detail;
+    customerInput._smartInput.setSelected({id: b.customer_id, label: b.customer_name, name: b.customer_name});
+    setTimeout(() => {
+        vehicleInput._smartInput.setSelected({id: b.vehicle_id, label: b.vehicle_reg, registration_number: b.vehicle_reg});
+        if (b.service_id && b.service_name) {
+            fetch(`/pos/service-price/?service_id=${b.service_id}&branch_id=${BRANCH_ID}`)
+                .then(r => r.json())
+                .then(data => {
+                    if (data.success) {
+                        addItem({name: b.service_name, type: 'service', unit_price: parseFloat(data.price) || 0, quantity: 1, service_id: b.service_id});
+                    } else {
+                        addItem({name: b.service_name, type: 'service', unit_price: 0, quantity: 1, service_id: b.service_id});
+                    }
+                });
+        }
+    }, 300);
+    bookingInput._smartInput.input.value = '';
+    bookingInput._smartInput.hiddenInput.value = '';
+    showToast('Booking loaded!', 'success');
+});
+
+// ─── Customer → Vehicle ─────────────────────────────────────
+customerInput?.addEventListener('aq:selected', (e) => {
+    const vs = vehicleInput._smartInput;
+    vs.input.value=''; vs.hiddenInput.value=''; vs.enable();
+    vs.extraParams = `customer_id=${e.detail.id}`;
+    vs.placeholder = 'Search vehicles...';
+    vs.input.placeholder = vs.placeholder;
+    vehicleInfoLine.textContent = '';
+});
+customerInput?.addEventListener('aq:cleared', () => {
+    vehicleInput._smartInput.disable();
+    vehicleInfoLine.textContent = '';
+});
+vehicleInput?.addEventListener('aq:selected', (e) => {
+    fetch(`/bookings/vehicle-details/${e.detail.id}/`)
+        .then(r => r.json())
+        .then(data => {
+            if (!data.success) return;
+            const v = data.vehicle;
+            let info = `${v.brand} ${v.model}`;
+            if (v.vehicle_type) info += ` · ${v.vehicle_type}`;
+            if (v.color) info += ` · ${v.color}`;
+            vehicleInfoLine.innerHTML = `<i class="fas fa-info-circle me-1"></i>${info}`;
+            if (!customerInput._smartInput.hiddenInput.value) {
+                customerInput._smartInput.setSelected({id: v.customer_id, label: v.customer_name, name: v.customer_name});
+            }
+        });
+});
+
+// ─── Schedule hint ──────────────────────────────────────────
+document.getElementById('schedDate').addEventListener('change', function () {
+    document.getElementById('bookingHint').style.display = this.value > TODAY ? 'block' : 'none';
+});
+
+// ─── ADD SERVICE ────────────────────────────────────────────
+addServiceInput?.addEventListener('aq:selected', (e) => {
+    const s = e.detail;
+    const vehicleId = vehicleInput._smartInput.hiddenInput.value;
+    let url = `/pos/service-price/?service_id=${s.id}&branch_id=${BRANCH_ID}`;
+    if (vehicleId) url += `&vehicle_id=${vehicleId}`;
+
+    fetch(url).then(r => r.json()).then(data => {
+        addItem({
+            name: s.label, type: 'service',
+            unit_price: data.success ? (parseFloat(data.price) || 0) : 0,
+            quantity: 1, service_id: s.id,
+        });
+        addServiceInput._smartInput.input.value = '';
+        addServiceInput._smartInput.hiddenInput.value = '';
+        addServiceInput._smartInput.clearBtn.style.display = 'none';
+    });
+});
+
+document.getElementById('addServiceBtn')?.addEventListener('click', () => {
+    const si = addServiceInput._smartInput;
+    if (si.hiddenInput.value) {
+        // Already selected — trigger add
+        si.container.dispatchEvent(new CustomEvent('aq:selected', {
+            detail: {id: si.hiddenInput.value, label: si.input.value},
+            bubbles: true,
+        }));
+    }
+});
+
+// ─── ADD PRODUCT ────────────────────────────────────────────
+addProductInput?.addEventListener('aq:selected', (e) => {
+    const p = e.detail;
+    addItem({
+        name: p.label, type: 'product',
+        unit_price: parseFloat(p.price) || 0,
+        quantity: 1, product_id: p.id,
+    });
+    addProductInput._smartInput.input.value = '';
+    addProductInput._smartInput.hiddenInput.value = '';
+    addProductInput._smartInput.clearBtn.style.display = 'none';
+});
+
+document.getElementById('addProductBtn')?.addEventListener('click', () => {
+    const pi = addProductInput._smartInput;
+    if (pi.hiddenInput.value) {
+        pi.container.dispatchEvent(new CustomEvent('aq:selected', {
+            detail: {id: pi.hiddenInput.value, label: pi.input.value, price: '0'},
+            bubbles: true,
+        }));
+    }
+});
+
+// ─── ADD REPAIR ─────────────────────────────────────────────
+function addRepairItem() {
+    const name = document.getElementById('repairName').value.trim();
+    const price = parseFloat(document.getElementById('repairPrice').value) || 0;
+    const qty = parseFloat(document.getElementById('repairQty').value) || 1;
+    if (!name) { showToast('Repair name required.', 'error'); return; }
+    addItem({name, type: 'repair', unit_price: price, quantity: qty});
+    document.getElementById('repairName').value = '';
+    document.getElementById('repairPrice').value = '0';
+    document.getElementById('repairQty').value = '1';
+}
+
+// ─── ADD CUSTOM ─────────────────────────────────────────────
+function addCustomItem() {
+    const name = document.getElementById('customName').value.trim();
+    const price = parseFloat(document.getElementById('customPrice').value) || 0;
+    const qty = parseFloat(document.getElementById('customQty').value) || 1;
+    if (!name) { showToast('Item name required.', 'error'); return; }
+    addItem({name, type: 'custom', unit_price: price, quantity: qty});
+    document.getElementById('customName').value = '';
+    document.getElementById('customPrice').value = '0';
+    document.getElementById('customQty').value = '1';
+}
+
+// ─── Items Management ───────────────────────────────────────
+function addItem(item) {
+    if (!item.name) return;
+    const existing = jobItems.find(i => i.name === item.name && i.type === item.type);
+    if (existing) {
+        existing.quantity += (item.quantity || 1);
+    } else {
+        jobItems.push({
+            name: item.name, type: item.type || 'service',
+            unit_price: item.unit_price || 0, quantity: item.quantity || 1,
+            vat: true, service_id: item.service_id || null, product_id: item.product_id || null,
+        });
+    }
+    renderItems();
+    showToast(`${item.name} added.`, 'success');
+}
+
+function removeItem(idx) { jobItems.splice(idx, 1); renderItems(); }
+
+function updateItemField(idx, field, value) {
+    if (field === 'quantity') jobItems[idx].quantity = parseFloat(value) || 1;
+    else if (field === 'unit_price') jobItems[idx].unit_price = parseFloat(value) || 0;
+    else if (field === 'name') jobItems[idx].name = value;
+    renderItems();
+}
+
+function renderItems() {
+    const container = document.getElementById('itemsContainer');
+    const empty = document.getElementById('itemsEmpty');
+
+    if (jobItems.length === 0) {
+        container.innerHTML = '';
+        if (empty) { container.appendChild(empty); empty.style.display = 'block'; }
+        updateSummary();
+        return;
+    }
+
+    if (empty) empty.style.display = 'none';
+
+    let html = `<table class="items-table">
+        <thead><tr>
+            <th>#</th><th>Name</th><th class="c">Type</th>
+            <th class="r">Price</th><th class="c">Qty</th>
+            <th class="r">Total</th><th></th>
+        </tr></thead><tbody>`;
+
+    jobItems.forEach((item, idx) => {
+        const total = item.unit_price * item.quantity;
+        const tc = 'type-' + item.type;
+        const tl = item.type.charAt(0).toUpperCase() + item.type.slice(1);
+
+        html += `<tr>
+            <td>${idx + 1}</td>
+            <td><input type="text" class="item-input" value="${escapeHtml(item.name)}" onchange="updateItemField(${idx},'name',this.value)"></td>
+            <td class="c"><span class="type-badge ${tc}">${tl}</span></td>
+            <td class="r"><input type="number" class="item-input" style="width:80px;text-align:right;" value="${item.unit_price}" min="0" step="0.01" onchange="updateItemField(${idx},'unit_price',this.value)"></td>
+            <td class="c"><input type="number" class="item-input" style="width:50px;text-align:center;" value="${item.quantity}" min="0.01" step="0.01" onchange="updateItemField(${idx},'quantity',this.value)"></td>
+            <td class="r fw-bold">${fmtCurrency(total)}</td>
+            <td class="c"><button class="btn btn-sm btn-link text-danger p-0" onclick="removeItem(${idx})"><i class="fas fa-times"></i></button></td>
+        </tr>`;
+    });
+
+    html += '</tbody></table>';
+    container.innerHTML = html;
+    updateSummary();
+}
+
+function updateSummary() {
+    const total = jobItems.reduce((s, i) => s + (i.unit_price * i.quantity), 0);
+    document.getElementById('summaryItemCount').textContent = jobItems.length;
+    document.getElementById('summaryTotal').textContent = fmtCurrency(total);
+}
+
+// ─── Create Job ─────────────────────────────────────────────
+document.getElementById('createJobBtn').addEventListener('click', function () {
+    const customerId = customerInput._smartInput.hiddenInput.value;
+    const vehicleId = vehicleInput._smartInput.hiddenInput.value;
+    const branchId = document.getElementById('branchSelect').value;
+
+    if (!customerId) { showToast('Customer required.', 'error'); return; }
+    if (!vehicleId) { showToast('Vehicle required.', 'error'); return; }
+
+    this.disabled = true;
+    this.innerHTML = '<i class="fas fa-spinner fa-spin me-1"></i>Creating...';
+
+    fetch('/wash/jobs/create/', {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json', 'X-CSRFToken': CSRF_TOKEN},
+        body: JSON.stringify({
+            customer_id: customerId, vehicle_id: vehicleId, branch_id: branchId,
+            scheduled_date: document.getElementById('schedDate').value,
+            scheduled_time: document.getElementById('schedTime').value,
+            priority: document.getElementById('prioritySelect').value,
+            notes: document.getElementById('jobNotes').value.trim(),
+            estimated_time: document.getElementById('estimatedTime').value.trim(),
+            items: jobItems,
+        }),
+    })
+    .then(r => r.json())
+    .then(data => {
+        this.disabled = false;
+        this.innerHTML = '<i class="fas fa-save me-1"></i>Create Car Wash Job';
+        if (data.success) {
+            showToast(data.message, 'success');
+            setTimeout(() => window.location.href = `/wash/jobs/${data.job_id}/`, 800);
+        } else { showToast(data.error, 'error'); }
+    })
+    .catch(() => {
+        this.disabled = false;
+        this.innerHTML = '<i class="fas fa-save me-1"></i>Create Car Wash Job';
+        showToast('Network error.', 'error');
+    });
+});
+
+// ─── Popups ─────────────────────────────────────────────────
+document.addEventListener('aq:pending', (e) => {
+    if (e.target.id === 'customerInput') {
+        currentSmartInput = e.target._smartInput;
+        document.getElementById('quickCustName').value = /^\d/.test(e.detail.value) ? '' : e.detail.value;
+        document.getElementById('quickCustPhone').value = /^\d/.test(e.detail.value) ? e.detail.value : '';
+        document.getElementById('quickCustError').style.display = 'none';
+        new bootstrap.Modal(document.getElementById('customerModal')).show();
+        return;
+    }
+    if (e.target.id === 'vehicleInput') {
+        currentSmartInput = e.target._smartInput;
+        const cs = customerInput._smartInput;
+        if (!cs.hiddenInput.value) {
+            showToast('Select customer first.', 'warning');
+            e.target._smartInput.pendingHidden.value = '';
+            e.target._smartInput.pendingHint.style.display = 'none';
+            e.target._smartInput.input.value = '';
+            return;
+        }
+        openVehicleModal(e.detail.value.toUpperCase(), cs);
+        return;
+    }
+    if (e.target.id === 'addProductInput') {
+        currentSmartInput = e.target._smartInput;
+        document.getElementById('popProdName').value = e.detail.value;
+        document.getElementById('popProdPrice').value = '';
+        document.getElementById('popProdError').style.display = 'none';
+        new bootstrap.Modal(document.getElementById('productModal')).show();
+        return;
+    }
+});
+
+document.getElementById('saveQuickCustBtn')?.addEventListener('click', function () {
+    const name = document.getElementById('quickCustName').value.trim();
+    const phone = document.getElementById('quickCustPhone').value.trim();
+    const err = document.getElementById('quickCustError');
+    err.style.display = 'none';
+    if (!name) { err.textContent = 'Name required.'; err.style.display = 'block'; return; }
+    if (!phone) { err.textContent = 'Phone required.'; err.style.display = 'block'; return; }
+    this.disabled = true;
+    const fd = new FormData(); fd.append('name', name); fd.append('phone', phone);
+    fetch('/vehicles/customers/quick-create/', {
+        method: 'POST', headers: {'X-CSRFToken': CSRF_TOKEN}, body: fd,
+    }).then(r => r.json()).then(data => {
+        this.disabled = false;
+        if (data.success) {
+            currentSmartInput.setSelected(data.item);
+            bootstrap.Modal.getInstance(document.getElementById('customerModal')).hide();
+        } else { err.textContent = data.error; err.style.display = 'block'; }
+    });
+});
+
+document.getElementById('savePopProdBtn')?.addEventListener('click', function () {
+    const name = document.getElementById('popProdName').value.trim();
+    const price = document.getElementById('popProdPrice').value.trim();
+    const err = document.getElementById('popProdError');
+    err.style.display = 'none';
+    if (!name) { err.textContent = 'Name required.'; err.style.display = 'block'; return; }
+    if (!price) { err.textContent = 'Price required.'; err.style.display = 'block'; return; }
+    this.disabled = true;
+    const fd = new FormData(); fd.append('name', name); fd.append('selling_price', price);
+    fetch('/pos/products/quick-create/', {
+        method: 'POST', headers: {'X-CSRFToken': CSRF_TOKEN}, body: fd,
+    }).then(r => r.json()).then(data => {
+        this.disabled = false;
+        if (data.success) {
+            addItem({name: data.item.name, type: 'product', unit_price: parseFloat(data.item.price), quantity: 1, product_id: data.item.id});
+            bootstrap.Modal.getInstance(document.getElementById('productModal')).hide();
+            addProductInput._smartInput.input.value = '';
+            addProductInput._smartInput.hiddenInput.value = '';
+            addProductInput._smartInput.pendingHidden.value = '';
+            addProductInput._smartInput.pendingHint.style.display = 'none';
+        } else { err.textContent = data.error; err.style.display = 'block'; }
+    });
+});
+
+function openVehicleModal(reg, custSmart) {
+    document.getElementById('vehicleCustomerName').textContent = custSmart.input.value;
+    document.getElementById('vehModalReg').value = reg || '';
+    ['vehModalBrand','vehModalModel','vehModalType','vehModalColor','vehModalFuel'].forEach(id => {
+        const el = document.getElementById(id);
+        if (el && !el._smartInput) window.initSmartInput(el);
+        if (el && el._smartInput) { el._smartInput.input.value=''; el._smartInput.hiddenInput.value=''; el._smartInput.pendingHidden.value=''; el._smartInput.clearBtn.style.display='none'; el._smartInput.pendingHint.style.display='none'; }
+    });
+    document.getElementById('vehModalError').style.display = 'none';
+    const ms = document.getElementById('vehModalModel')._smartInput; if(ms) ms.disable();
+    new bootstrap.Modal(document.getElementById('vehicleModal')).show();
+}
+
+setTimeout(() => {
+    const mb = document.getElementById('vehModalBrand'), mm = document.getElementById('vehModalModel');
+    if(mb){
+        mb.addEventListener('aq:selected',(e)=>{const s=mm._smartInput;if(s){s.enable();s.extraParams=`brand_id=${e.detail.id}`;s.input.value='';s.hiddenInput.value='';}});
+        mb.addEventListener('aq:pending',()=>{const s=mm._smartInput;if(s)s.enable();});
+        mb.addEventListener('aq:cleared',()=>{const s=mm._smartInput;if(s)s.disable();});
+    }
+    const mr = document.getElementById('vehModalReg');
+    if(mr) mr.addEventListener('input',function(){const p=this.selectionStart;this.value=this.value.toUpperCase();this.setSelectionRange(p,p);});
+}, 200);
+
+document.getElementById('saveVehicleBtn')?.addEventListener('click', function () {
+    const errBox = document.getElementById('vehModalError'); errBox.style.display='none';
+    const reg = document.getElementById('vehModalReg').value.trim().toUpperCase();
+    const custSmart = customerInput._smartInput;
+    const customerId = custSmart.hiddenInput.value;
+    if(!customerId){errBox.textContent='Customer required.';errBox.style.display='block';return;}
+    if(!reg){errBox.textContent='Registration required.';errBox.style.display='block';return;}
+    const gs=(id)=>{const s=document.getElementById(id)?._smartInput;return{id:s?.hiddenInput.value||'',new:s?.pendingHidden.value||''};};
+    const brand=gs('vehModalBrand'),model=gs('vehModalModel'),type=gs('vehModalType'),color=gs('vehModalColor'),fuel=gs('vehModalFuel');
+    if(!brand.id&&!brand.new){errBox.textContent='Brand required.';errBox.style.display='block';return;}
+    if(!model.id&&!model.new){errBox.textContent='Model required.';errBox.style.display='block';return;}
+    this.disabled=true;
+    const fd=new FormData();
+    fd.append('customer_id',customerId);fd.append('registration_number',reg);
+    fd.append('brand_id',brand.id);fd.append('brand_new',brand.new);
+    fd.append('model_id',model.id);fd.append('model_new',model.new);
+    fd.append('vehicle_type_id',type.id);fd.append('vehicle_type_new',type.new);
+    fd.append('color_id',color.id);fd.append('color_new',color.new);
+    fd.append('fuel_type_id',fuel.id);fd.append('fuel_type_new',fuel.new);
+    fd.append('year',document.getElementById('vehModalYear')?.value||'');
+    fetch('/bookings/vehicles/quick-create/',{
+        method:'POST',headers:{'X-CSRFToken':CSRF_TOKEN},body:fd,
+    }).then(r=>r.json()).then(data=>{
+        this.disabled=false;
+        if(data.success){
+            currentSmartInput.setSelected(data.item);
+            const v=data.vehicle_details;
+            vehicleInfoLine.innerHTML=`<i class="fas fa-info-circle me-1"></i>${v.brand} ${v.model}`;
+            bootstrap.Modal.getInstance(document.getElementById('vehicleModal')).hide();
+        }else{errBox.textContent=data.error;errBox.style.display='block';}
+    });
+});
+
+// Set current time
+(function(){const t=document.getElementById('schedTime');if(t&&!t.value){const n=new Date();t.value=`${String(n.getHours()).padStart(2,'0')}:${String(n.getMinutes()).padStart(2,'0')}`;}})();
+</script>
+{% endblock %}
