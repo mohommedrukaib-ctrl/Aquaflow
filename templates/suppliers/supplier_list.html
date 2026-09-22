@@ -4,87 +4,77 @@
 {% block title %}Suppliers — AquaFlow{% endblock %}
 {% block page_icon %}fas fa-truck{% endblock %}
 {% block page_title %}Suppliers{% endblock %}
-{% block page_subtitle %}Manage your suppliers{% endblock %}
-
-{% block breadcrumbs %}
-<span>/</span>
-<span class="current">Suppliers</span>
-{% endblock %}
+{% block page_subtitle %}Supplier directory & balances{% endblock %}
+{% block breadcrumbs %}<span>/</span><span class="current">Suppliers</span>{% endblock %}
 
 {% block extra_css %}
 <style>
-.editable-cell {
-    cursor: pointer;
-    padding: 4px 8px;
-    border-radius: 4px;
-    display: inline-block;
-    min-width: 60px;
-}
-.editable-cell:hover {
-    background: var(--aq-hover-bg);
-    outline: 1px dashed var(--aq-primary);
-}
+.editable-cell { cursor: pointer; padding: 1px 5px; border-radius: 3px; }
+.editable-cell:hover { background: var(--aq-hover-bg); outline: 1px dashed var(--aq-primary); }
 .editable-input {
-    width: 100%;
-    padding: 4px 8px;
-    border: 2px solid var(--aq-primary);
-    border-radius: 4px;
-    font-size: 13px;
+    width: 100%; padding: 1px 5px; height: 22px;
+    border: 1px solid var(--aq-primary); border-radius: 3px;
+    font-size: 11.5px; background: var(--aq-input-bg); color: var(--aq-text);
 }
 </style>
 {% endblock %}
 
 {% block content %}
-<div class="card">
-    <div class="card-header d-flex justify-content-between align-items-center">
-        <strong>
-            <i class="fas fa-truck me-2 aq-text-primary"></i>
-            Suppliers <span class="badge bg-secondary ms-2">{{ total_count }}</span>
-        </strong>
-        <div class="d-flex gap-2">
-            <a href="/suppliers/purchases/" class="btn btn-outline-secondary btn-sm">
-                <i class="fas fa-shopping-cart me-1"></i>Purchases
+
+<div class="aq-panel">
+    <div class="aq-panel-head">
+        <div class="aq-chips">
+            <span class="aq-chip pri"><i class="fas fa-truck"></i> Suppliers <b>{{ total_count }}</b></span>
+        </div>
+        <div class="d-flex gap-1">
+            {% if features.purchase_orders %}
+            <a href="/suppliers/purchases/" class="btn btn-sm btn-outline-secondary">
+                <i class="fas fa-cart-flatbed me-1"></i>Purchases
             </a>
+            {% endif %}
             {% if can_manage %}
-            <button class="btn btn-primary btn-sm" onclick="openAddModal()">
+            <button class="btn btn-sm btn-primary" onclick="openAddModal()">
                 <i class="fas fa-plus me-1"></i>Add Supplier
             </button>
             {% endif %}
         </div>
     </div>
 
-    <div class="card-body">
-        <form method="GET" class="row g-2 mb-3">
-            <div class="col-md-10">
-                <input type="text" name="q" class="form-control" placeholder="Search name, phone, contact..." value="{{ search }}">
-            </div>
-            <div class="col-md-2">
-                <button class="btn btn-primary w-100"><i class="fas fa-search me-1"></i>Search</button>
-            </div>
-        </form>
+    <form method="GET" class="aq-toolbar" id="searchForm">
+        <div class="input-group" style="width:320px;">
+            <span class="input-group-text"><i class="fas fa-search"></i></span>
+            <input type="text" name="q" class="form-control" id="searchInput"
+                   placeholder="Name, phone, contact, email…" value="{{ search }}">
+            {% if search %}<a href="/suppliers/" class="btn btn-outline-secondary btn-sm"><i class="fas fa-times"></i></a>{% endif %}
+        </div>
+        <button class="btn btn-outline-primary btn-sm"><i class="fas fa-filter me-1"></i>Filter</button>
+    </form>
 
+    <div class="aq-panel-body flush">
         {% if suppliers %}
-        <div class="table-responsive">
-            <table class="table table-hover align-middle">
+        <div class="aq-table-scroll">
+            <table class="table table-hover">
                 <thead>
                     <tr>
-                        <th>Name</th>
+                        <th>Supplier</th>
                         <th>Contact Person</th>
                         <th>Phone</th>
                         <th>Email</th>
-                        <th>Total Purchases</th>
-                        <th>Outstanding</th>
-                        <th class="text-end">Actions</th>
+                        {% if features.purchase_orders %}
+                        <th class="num">Purchases</th>
+                        <th class="num">Balance</th>
+                        {% endif %}
+                        {% if can_manage %}<th style="width:80px;"></th>{% endif %}
                     </tr>
                 </thead>
                 <tbody>
                     {% for s in suppliers %}
-                    <tr data-id="{{ s.pk }}">
+                    <tr>
                         <td>
                             {% if can_manage %}
-                            <span class="editable-cell" data-field="name" data-id="{{ s.pk }}">{{ s.name }}</span>
+                            <span class="editable-cell fw-semibold" data-field="name" data-id="{{ s.pk }}">{{ s.name }}</span>
                             {% else %}
-                            <a href="/suppliers/{{ s.pk }}/">{{ s.name }}</a>
+                            <a href="{% url 'supplier_detail' s.pk %}" class="fw-semibold">{{ s.name }}</a>
                             {% endif %}
                         </td>
                         <td>
@@ -92,68 +82,70 @@
                             <span class="editable-cell" data-field="contact_person" data-id="{{ s.pk }}">{{ s.contact_person|default:"—" }}</span>
                             {% else %}{{ s.contact_person|default:"—" }}{% endif %}
                         </td>
-                        <td>
+                        <td class="nowrap">
                             {% if can_manage %}
                             <span class="editable-cell" data-field="phone" data-id="{{ s.pk }}">{{ s.phone|default:"—" }}</span>
-                            {% else %}{{ s.phone|default:"—" }}{% endif %}
+                            {% else %}
+                            {% if s.phone %}<a href="tel:{{ s.phone }}">{{ s.phone }}</a>{% else %}—{% endif %}
+                            {% endif %}
                         </td>
                         <td>
                             {% if can_manage %}
                             <span class="editable-cell" data-field="email" data-id="{{ s.pk }}">{{ s.email|default:"—" }}</span>
-                            {% else %}{{ s.email|default:"—" }}{% endif %}
+                            {% else %}{{ s.email|default:"—"|truncatechars:22 }}{% endif %}
                         </td>
-                        <td class="fw-semibold">{% format_currency s.total_purchases %}</td>
-                        <td class="fw-bold {% if s.outstanding_balance > 0 %}text-danger{% endif %}">
-                            {% format_currency s.outstanding_balance %}
+                        {% if features.purchase_orders %}
+                        <td class="num text-muted">{% format_currency s.total_purchases %}</td>
+                        <td class="num">
+                            {% if s.outstanding_balance > 0 %}
+                            <strong class="aq-text-danger">{% format_currency s.outstanding_balance %}</strong>
+                            {% else %}
+                            <span class="aq-text-success">Settled</span>
+                            {% endif %}
                         </td>
-                        <td class="text-end">
-                            <div class="btn-group btn-group-sm">
-                                <a href="/suppliers/{{ s.pk }}/" class="btn btn-outline-primary" title="View">
-                                    <i class="fas fa-eye"></i>
-                                </a>
-                                {% if can_manage %}
-                                <button class="btn btn-outline-danger" title="Delete"
-                                    onclick="deleteSupplier({{ s.pk }}, '{{ s.name|escapejs }}')">
-                                    <i class="fas fa-trash"></i>
-                                </button>
-                                {% endif %}
-                            </div>
+                        {% endif %}
+                        {% if can_manage %}
+                        <td class="nowrap text-end">
+                            <a href="{% url 'supplier_detail' s.pk %}" class="btn btn-sm btn-outline-primary btn-icon" title="View"><i class="fas fa-eye"></i></a>
+                            <button class="btn btn-sm btn-outline-danger btn-icon" title="Delete"
+                                    onclick="confirmSupDelete({{ s.pk }}, '{{ s.name|escapejs }}')">
+                                <i class="fas fa-trash"></i>
+                            </button>
                         </td>
+                        {% endif %}
                     </tr>
                     {% endfor %}
                 </tbody>
             </table>
         </div>
 
-        {% if page_obj.has_other_pages %}
-        <nav class="mt-3">
-            <ul class="pagination pagination-sm justify-content-center">
-                {% if page_obj.has_previous %}
-                <li class="page-item"><a class="page-link" href="?page={{ page_obj.previous_page_number }}&q={{ search }}">Previous</a></li>
-                {% endif %}
-                <li class="page-item disabled"><span class="page-link">Page {{ page_obj.number }} of {{ page_obj.paginator.num_pages }}</span></li>
-                {% if page_obj.has_next %}
-                <li class="page-item"><a class="page-link" href="?page={{ page_obj.next_page_number }}&q={{ search }}">Next</a></li>
-                {% endif %}
+        <div class="aq-pagebar">
+            <span>{{ page_obj.paginator.count }} supplier{{ page_obj.paginator.count|pluralize }} · Page {{ page_obj.number }}/{{ page_obj.paginator.num_pages }}</span>
+            {% if page_obj.has_other_pages %}
+            <ul class="pagination pagination-sm mb-0">
+                {% if page_obj.has_previous %}<li class="page-item"><a class="page-link" href="?page={{ page_obj.previous_page_number }}&q={{ search }}">‹</a></li>{% endif %}
+                <li class="page-item disabled"><span class="page-link">{{ page_obj.number }}</span></li>
+                {% if page_obj.has_next %}<li class="page-item"><a class="page-link" href="?page={{ page_obj.next_page_number }}&q={{ search }}">›</a></li>{% endif %}
             </ul>
-        </nav>
-        {% endif %}
+            {% endif %}
+        </div>
 
         {% else %}
-        <div class="text-center py-5">
-            <i class="fas fa-truck fa-3x text-muted mb-3"></i>
-            <h5 class="text-muted">No suppliers yet</h5>
-            {% if can_manage %}
-            <button class="btn btn-primary mt-2" onclick="openAddModal()">
-                <i class="fas fa-plus me-1"></i>Add First Supplier
-            </button>
+        <div class="aq-empty">
+            <i class="fas fa-truck"></i>
+            <h5>No suppliers found</h5>
+            {% if search %}<p>No results for "<strong>{{ search }}</strong>"</p>
+            <a href="/suppliers/" class="btn btn-sm btn-outline-secondary">Clear Search</a>
+            {% elif can_manage %}
+            <button class="btn btn-sm btn-primary" onclick="openAddModal()"><i class="fas fa-plus me-1"></i>Add First Supplier</button>
             {% endif %}
         </div>
         {% endif %}
     </div>
 </div>
 
-<!-- Add Modal -->
+{% if can_manage %}
+<!-- Add Supplier Modal -->
 <div class="modal fade" id="addModal" tabindex="-1">
     <div class="modal-dialog">
         <div class="modal-content">
@@ -162,37 +154,58 @@
                 <button class="btn-close" data-bs-dismiss="modal"></button>
             </div>
             <div class="modal-body">
-                <div class="mb-3">
-                    <label class="form-label fw-semibold">Supplier Name <span class="text-danger">*</span></label>
+                <div class="mb-2">
+                    <label class="form-label">Name <span class="text-danger">*</span></label>
                     <input type="text" id="supName" class="form-control">
                 </div>
-                <div class="row g-2 mb-3">
-                    <div class="col-md-6">
-                        <label class="form-label fw-semibold">Contact Person</label>
-                        <input type="text" id="supContact" class="form-control">
-                    </div>
-                    <div class="col-md-6">
-                        <label class="form-label fw-semibold">Phone</label>
+                <div class="row g-2 mb-2">
+                    <div class="col-6">
+                        <label class="form-label">Phone</label>
                         <input type="text" id="supPhone" class="form-control">
                     </div>
+                    <div class="col-6">
+                        <label class="form-label">Contact Person</label>
+                        <input type="text" id="supContact" class="form-control">
+                    </div>
                 </div>
-                <div class="mb-3">
-                    <label class="form-label fw-semibold">Email</label>
+                <div class="mb-2">
+                    <label class="form-label">Email</label>
                     <input type="email" id="supEmail" class="form-control">
                 </div>
-                <div class="mb-3">
-                    <label class="form-label fw-semibold">Address</label>
+                <div class="mb-2">
+                    <label class="form-label">Address</label>
                     <textarea id="supAddress" class="form-control" rows="2"></textarea>
                 </div>
-                <div id="supError" class="alert alert-danger" style="display:none;"></div>
+                <div id="supError" class="alert alert-danger mb-0" style="display:none;"></div>
             </div>
             <div class="modal-footer">
-                <button class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
-                <button class="btn btn-primary" id="saveSupBtn"><i class="fas fa-save me-1"></i>Save</button>
+                <button class="btn btn-sm btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                <button class="btn btn-sm btn-primary" id="saveSupBtn"><i class="fas fa-save me-1"></i>Save</button>
             </div>
         </div>
     </div>
 </div>
+
+<!-- Delete Modal -->
+<div class="modal fade" id="deleteSupModal" tabindex="-1">
+    <div class="modal-dialog modal-sm">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title text-danger"><i class="fas fa-triangle-exclamation me-2"></i>Confirm Delete</h5>
+                <button class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <p class="mb-1">Delete supplier <strong id="deleteSupName"></strong>?</p>
+                <p class="text-muted mb-0" style="font-size:10.5px;">Moved to Trash. Blocked if purchases exist.</p>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-sm btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                <button class="btn btn-sm btn-danger" id="confirmSupDeleteBtn"><i class="fas fa-trash me-1"></i>Delete</button>
+            </div>
+        </div>
+    </div>
+</div>
+{% endif %}
 
 {% endblock %}
 
@@ -200,56 +213,42 @@
 <script>
 const CSRF_TOKEN = '{{ csrf_token }}';
 
+{% if can_manage %}
+// ─── Inline edit ────────────────────────────────────────────
 document.querySelectorAll('.editable-cell').forEach(cell => {
     cell.addEventListener('click', function () {
         if (this.querySelector('input')) return;
         const val = this.textContent.trim();
         const field = this.dataset.field;
         const id = this.dataset.id;
-
         this.dataset.original = val;
         this.innerHTML = `<input type="text" class="editable-input" value="${val === '—' ? '' : val}">`;
         const input = this.querySelector('input');
-        input.focus();
-        input.select();
-
-        input.addEventListener('blur', () => saveInlineEdit(this, id, field));
+        input.focus(); input.select();
+        input.addEventListener('blur', () => saveInline(this, id, field, input.value.trim(), val));
         input.addEventListener('keydown', e => {
             if (e.key === 'Enter') input.blur();
-            if (e.key === 'Escape') this.textContent = this.dataset.original;
+            if (e.key === 'Escape') this.textContent = val;
         });
     });
 });
 
-function saveInlineEdit(cell, id, field) {
-    const input = cell.querySelector('input');
-    if (!input) return;
-    const value = input.value.trim();
-    const original = cell.dataset.original;
-
+function saveInline(cell, id, field, value, original) {
+    if (value === original) { cell.textContent = original; return; }
     const fd = new FormData();
     fd.append('field', field);
     fd.append('value', value);
-
     fetch(`/suppliers/${id}/edit-inline/`, {
-        method: 'POST',
-        headers: { 'X-CSRFToken': CSRF_TOKEN },
-        body: fd,
-    })
-    .then(r => r.json())
-    .then(data => {
-        if (data.success) {
-            cell.textContent = value || '—';
-            showToast(data.message, 'success');
-        } else {
-            cell.textContent = original;
-            showToast(data.error, 'error');
-        }
-    });
+        method: 'POST', headers: { 'X-CSRFToken': CSRF_TOKEN }, body: fd,
+    }).then(r => r.json()).then(data => {
+        if (data.success) { cell.textContent = data.value || '—'; showToast('Updated.', 'success'); }
+        else { cell.textContent = original; showToast(data.error, 'error'); }
+    }).catch(() => { cell.textContent = original; showToast('Network error.', 'error'); });
 }
 
+// ─── Add ────────────────────────────────────────────────────
 function openAddModal() {
-    ['supName', 'supContact', 'supPhone', 'supEmail', 'supAddress'].forEach(id => document.getElementById(id).value = '');
+    ['supName','supPhone','supContact','supEmail','supAddress'].forEach(id => document.getElementById(id).value = '');
     document.getElementById('supError').style.display = 'none';
     new bootstrap.Modal(document.getElementById('addModal')).show();
     setTimeout(() => document.getElementById('supName').focus(), 300);
@@ -264,45 +263,56 @@ document.getElementById('saveSupBtn').addEventListener('click', function () {
     this.disabled = true;
     const fd = new FormData();
     fd.append('name', name);
-    fd.append('contact_person', document.getElementById('supContact').value.trim());
     fd.append('phone', document.getElementById('supPhone').value.trim());
+    fd.append('contact_person', document.getElementById('supContact').value.trim());
     fd.append('email', document.getElementById('supEmail').value.trim());
     fd.append('address', document.getElementById('supAddress').value.trim());
 
     fetch('/suppliers/create/', {
-        method: 'POST',
-        headers: { 'X-CSRFToken': CSRF_TOKEN },
-        body: fd,
-    })
-    .then(r => r.json())
-    .then(data => {
+        method: 'POST', headers: { 'X-CSRFToken': CSRF_TOKEN }, body: fd,
+    }).then(r => r.json()).then(data => {
         this.disabled = false;
         if (data.success) {
             bootstrap.Modal.getInstance(document.getElementById('addModal')).hide();
             showToast(data.message, 'success');
-            setTimeout(() => location.reload(), 800);
-        } else {
-            err.textContent = data.error;
-            err.style.display = 'block';
-        }
+            setTimeout(() => location.reload(), 700);
+        } else { err.textContent = data.error; err.style.display = 'block'; }
     });
 });
 
-function deleteSupplier(id, name) {
-    if (!confirm(`Delete "${name}"?`)) return;
-    fetch(`/suppliers/${id}/delete/`, {
-        method: 'POST',
-        headers: { 'X-CSRFToken': CSRF_TOKEN },
-    })
-    .then(r => r.json())
-    .then(data => {
+// ─── Delete ─────────────────────────────────────────────────
+let deleteSupId = null;
+function confirmSupDelete(id, name) {
+    deleteSupId = id;
+    document.getElementById('deleteSupName').textContent = name;
+    new bootstrap.Modal(document.getElementById('deleteSupModal')).show();
+}
+
+document.getElementById('confirmSupDeleteBtn').addEventListener('click', function () {
+    if (!deleteSupId) return;
+    this.disabled = true;
+    this.innerHTML = '<i class="fas fa-spinner fa-spin"></i>';
+    fetch(`/suppliers/${deleteSupId}/delete/`, {
+        method: 'POST', headers: { 'X-CSRFToken': CSRF_TOKEN },
+    }).then(r => r.json()).then(data => {
         if (data.success) {
-            document.querySelector(`tr[data-id="${id}"]`)?.remove();
+            bootstrap.Modal.getInstance(document.getElementById('deleteSupModal')).hide();
             showToast(data.message, 'success');
+            setTimeout(() => location.reload(), 700);
         } else {
             showToast(data.error, 'error');
+            this.disabled = false;
+            this.innerHTML = '<i class="fas fa-trash me-1"></i>Delete';
         }
     });
-}
+});
+{% endif %}
+
+// ─── Live search ────────────────────────────────────────────
+let searchTimer = null;
+document.getElementById('searchInput').addEventListener('input', function () {
+    clearTimeout(searchTimer);
+    searchTimer = setTimeout(() => document.getElementById('searchForm').submit(), 450);
+});
 </script>
 {% endblock %}

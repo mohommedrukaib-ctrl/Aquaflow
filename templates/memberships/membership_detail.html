@@ -1,60 +1,130 @@
 {% extends "base/base.html" %}
 {% load aquaflow_tags %}
 
-{% block title %}{{ membership.membership_number }} — AquaFlow{% endblock %}
+{% block title %}{{ membership.membership_number }} — Memberships{% endblock %}
 {% block page_icon %}fas fa-star{% endblock %}
 {% block page_title %}{{ membership.membership_number }}{% endblock %}
-
+{% block page_subtitle %}{{ membership.plan.name }} · {{ membership.customer.name }}{% endblock %}
 {% block breadcrumbs %}
-<span>/</span>
-<a href="/memberships/">Memberships</a>
-<span>/</span>
-<span class="current">{{ membership.membership_number }}</span>
+<span>/</span><a href="/memberships/">Memberships</a>
+<span>/</span><span class="current">{{ membership.membership_number }}</span>
+{% endblock %}
+
+{% block extra_css %}
+<style>
+.usage-bar { height: 8px; background: var(--aq-surface-3); border-radius: 4px; overflow: hidden; }
+.usage-fill { height: 100%; border-radius: 4px; transition: width .3s; }
+</style>
 {% endblock %}
 
 {% block content %}
-<div class="row g-3">
-    <div class="col-lg-8">
-        <div class="card">
-            <div class="card-header d-flex justify-content-between align-items-center">
-                <strong><i class="fas fa-star me-2 aq-text-primary"></i>Membership Details</strong>
-                {% if membership.status == 'active' %}
-                <span class="badge bg-success fs-6">ACTIVE</span>
-                {% elif membership.status == 'expired' %}
-                <span class="badge bg-danger fs-6">EXPIRED</span>
-                {% endif %}
+
+<div class="aq-kpi-grid">
+    <div class="aq-kpi {% if membership.status == 'active' %}suc{% elif membership.status == 'expired' %}dgr{% else %}warn{% endif %}">
+        <div class="aq-kpi-ico"><i class="fas fa-circle-check"></i></div>
+        <div class="aq-kpi-body">
+            <div class="aq-kpi-label">Status</div>
+            <div class="aq-kpi-value">{{ membership.get_status_display }}</div>
+            <div class="aq-kpi-sub">{% if membership.is_valid %}{{ membership.days_remaining }} days left{% else %}not valid{% endif %}</div>
+        </div>
+    </div>
+    <div class="aq-kpi">
+        <div class="aq-kpi-ico"><i class="fas fa-spray-can-sparkles"></i></div>
+        <div class="aq-kpi-body">
+            <div class="aq-kpi-label">Washes Remaining</div>
+            <div class="aq-kpi-value">
+                {% if membership.wash_count_total == 0 %}∞{% else %}{{ membership.wash_count_remaining }}{% endif %}
             </div>
-            <div class="card-body">
-                <table class="table table-borderless mb-0">
-                    <tr><td class="text-muted" style="width:30%;">Number</td><td><strong>{{ membership.membership_number }}</strong></td></tr>
-                    <tr><td class="text-muted">Customer</td><td>{{ membership.customer.name }} — {{ membership.customer.phone }}</td></tr>
-                    <tr><td class="text-muted">Plan</td><td>
-                        <span class="badge" style="background:{{ membership.plan.color }}; color:white;">
-                            {{ membership.plan.name }}
-                        </span>
-                    </td></tr>
-                    <tr><td class="text-muted">Start Date</td><td>{{ membership.start_date|date:"d M Y" }}</td></tr>
-                    <tr><td class="text-muted">Expiry Date</td><td>{{ membership.expiry_date|date:"d M Y" }} ({{ membership.days_remaining }} days left)</td></tr>
-                    <tr><td class="text-muted">Washes Used</td><td>{{ membership.wash_count_used }} / {% if membership.wash_count_total == 0 %}Unlimited{% else %}{{ membership.wash_count_total }}{% endif %}</td></tr>
-                    <tr><td class="text-muted">Washes Remaining</td><td><strong style="font-size:20px;">{% if membership.wash_count_total == 0 %}∞{% else %}{{ membership.wash_count_remaining }}{% endif %}</strong></td></tr>
-                    <tr><td class="text-muted">Amount Paid</td><td>{% format_currency membership.amount_paid %}</td></tr>
-                    <tr><td class="text-muted">Discount</td><td>{{ membership.plan.discount_percentage }}%</td></tr>
+            <div class="aq-kpi-sub">{% if membership.wash_count_total == 0 %}unlimited{% else %}of {{ membership.wash_count_total }} total{% endif %}</div>
+        </div>
+    </div>
+    <div class="aq-kpi pur">
+        <div class="aq-kpi-ico"><i class="fas fa-rotate"></i></div>
+        <div class="aq-kpi-body">
+            <div class="aq-kpi-label">Washes Used</div>
+            <div class="aq-kpi-value">{{ membership.wash_count_used }}</div>
+            <div class="aq-kpi-sub">since {{ membership.start_date|date:"d M Y" }}</div>
+        </div>
+    </div>
+    <div class="aq-kpi suc">
+        <div class="aq-kpi-ico"><i class="fas fa-sack-dollar"></i></div>
+        <div class="aq-kpi-body">
+            <div class="aq-kpi-label">Amount Paid</div>
+            <div class="aq-kpi-value">{% format_currency membership.amount_paid %}</div>
+            <div class="aq-kpi-sub">plan price {% format_currency membership.plan.price %}</div>
+        </div>
+    </div>
+</div>
+
+<div class="row g-2">
+    <div class="col-lg-6">
+        <div class="aq-panel">
+            <div class="aq-panel-head"><strong><i class="fas fa-user aq-text-primary me-1"></i>Customer</strong></div>
+            <div class="aq-panel-body flush">
+                <table class="table">
+                    <tbody>
+                        <tr><td class="text-muted" style="width:110px;">Name</td><td><a href="/customers/{{ membership.customer.pk }}/" class="fw-semibold">{{ membership.customer.name }}</a></td></tr>
+                        <tr><td class="text-muted">Code</td><td><code>{{ membership.customer.customer_code }}</code></td></tr>
+                        <tr><td class="text-muted">Phone</td><td>{{ membership.customer.phone|default:"—" }}</td></tr>
+                        <tr><td class="text-muted">Email</td><td>{{ membership.customer.email|default:"—" }}</td></tr>
+                    </tbody>
                 </table>
             </div>
         </div>
     </div>
-    <div class="col-lg-4">
-        <div class="card">
-            <div class="card-header"><strong>Actions</strong></div>
-            <div class="card-body d-grid gap-2">
-                <a href="/customers/{{ membership.customer.pk }}/" class="btn btn-outline-primary">
-                    <i class="fas fa-user me-1"></i>View Customer
-                </a>
-                <a href="/memberships/" class="btn btn-outline-secondary">
-                    <i class="fas fa-arrow-left me-1"></i>Back
-                </a>
+
+    <div class="col-lg-6">
+        <div class="aq-panel">
+            <div class="aq-panel-head">
+                <strong><i class="fas fa-layer-group aq-text-primary me-1"></i>Plan & Validity</strong>
+                <span class="badge" style="background:{{ membership.plan.color }}22;color:{{ membership.plan.color }};border:1px solid {{ membership.plan.color }}55;">{{ membership.plan.name }}</span>
+            </div>
+            <div class="aq-panel-body flush">
+                <table class="table">
+                    <tbody>
+                        <tr><td class="text-muted" style="width:110px;">Start</td><td>{{ membership.start_date|date:"d M Y" }}</td></tr>
+                        <tr><td class="text-muted">Expires</td><td class="fw-semibold">{{ membership.expiry_date|date:"d M Y" }}</td></tr>
+                        <tr><td class="text-muted">Duration</td><td>{{ membership.plan.duration_days }} days</td></tr>
+                        <tr><td class="text-muted">Discount</td><td>{{ membership.plan.discount_percentage }}% on other services</td></tr>
+                        <tr><td class="text-muted">Sold by</td><td>{{ membership.created_by.username|default:"—" }} · {{ membership.created_at|date:"d M Y" }}</td></tr>
+                    </tbody>
+                </table>
             </div>
         </div>
     </div>
+
+    {% if membership.wash_count_total > 0 %}
+    <div class="col-12">
+        <div class="aq-panel">
+            <div class="aq-panel-head"><strong><i class="fas fa-chart-simple aq-text-primary me-1"></i>Usage</strong></div>
+            <div class="aq-panel-body">
+                {% widthratio membership.wash_count_used membership.wash_count_total 100 as pct %}
+                <div class="d-flex justify-content-between mb-1" style="font-size:10.5px;">
+                    <span>{{ membership.wash_count_used }} used</span>
+                    <span class="text-muted">{{ pct }}%</span>
+                    <span>{{ membership.wash_count_remaining }} remaining</span>
+                </div>
+                <div class="usage-bar">
+                    <div class="usage-fill" style="width:{{ pct }}%;background:{{ membership.plan.color }};"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+
+    {% if membership.notes %}
+    <div class="col-12">
+        <div class="aq-panel">
+            <div class="aq-panel-head"><strong><i class="fas fa-note-sticky aq-text-primary me-1"></i>Notes</strong></div>
+            <div class="aq-panel-body"><p class="mb-0" style="font-size:11.5px;">{{ membership.notes|linebreaksbr }}</p></div>
+        </div>
+    </div>
+    {% endif %}
 </div>
+
+<div class="d-flex gap-1 mt-1">
+    <a href="/memberships/" class="btn btn-sm btn-outline-secondary"><i class="fas fa-arrow-left me-1"></i>Back</a>
+    <a href="/pos/" class="btn btn-sm btn-primary"><i class="fas fa-cash-register me-1"></i>Open POS</a>
+</div>
+
 {% endblock %}

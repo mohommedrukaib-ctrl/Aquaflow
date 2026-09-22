@@ -1,112 +1,81 @@
 {% extends "base/base.html" %}
 {% load aquaflow_tags %}
 
-{% block title %}Categories — {{ AQUAFLOW_SYSTEM_NAME }}{% endblock %}
-{% block page_title %}
-<i class="fas fa-tags me-2 text-primary"></i>
-Service Categories
-{% endblock %}
-
+{% block title %}Service Categories — AquaFlow{% endblock %}
+{% block page_icon %}fas fa-tags{% endblock %}
+{% block page_title %}Service Categories{% endblock %}
+{% block page_subtitle %}Organize your service catalog{% endblock %}
 {% block breadcrumbs %}
-<li class="breadcrumb-item">
-    <a href="/services/">Services</a>
-</li>
-<li class="breadcrumb-item active">Categories</li>
+<span>/</span><a href="/services/">Services</a>
+<span>/</span><span class="current">Categories</span>
 {% endblock %}
 
 {% block content %}
 <div class="row">
-    <div class="col-md-7">
-        <div class="card">
-            <div class="card-header d-flex justify-content-between
-                        align-items-center">
-                <h5 class="mb-0">
-                    All Categories ({{ categories.count }})
-                </h5>
-                <button type="button"
-                        class="btn btn-primary btn-sm"
-                        onclick="openAddModal()">
-                    <i class="fas fa-plus me-1"></i> Add Category
+    <div class="col-lg-8">
+        <div class="aq-panel">
+            <div class="aq-panel-head">
+                <div class="aq-chips">
+                    <span class="aq-chip pri"><i class="fas fa-tags"></i> Categories <b>{{ categories.count }}</b></span>
+                </div>
+                <button class="btn btn-sm btn-primary" onclick="openAddModal()">
+                    <i class="fas fa-plus me-1"></i>Add Category
                 </button>
             </div>
-            <div class="card-body p-0">
-                <table class="table table-hover mb-0">
+            <div class="aq-panel-body flush">
+                {% if categories %}
+                <table class="table table-hover">
                     <thead>
                         <tr>
-                            <th>Order</th>
+                            <th class="num" style="width:60px;">Order</th>
                             <th>Category Name</th>
-                            <th>Services</th>
+                            <th class="num">Services</th>
                             <th>Status</th>
                         </tr>
                     </thead>
                     <tbody>
                         {% for cat in categories %}
                         <tr>
-                            <td class="text-muted">
-                                {{ cat.sort_order }}
-                            </td>
+                            <td class="num text-muted">{{ cat.sort_order }}</td>
                             <td class="fw-semibold">{{ cat.name }}</td>
+                            <td class="num"><span class="badge bg-info">{{ cat.services.count }}</span></td>
                             <td>
-                                <span class="badge bg-info">
-                                    {{ cat.services.count }}
-                                </span>
-                            </td>
-                            <td>
-                                {% if cat.is_active %}
-                                <span class="badge bg-success">
-                                    Active
-                                </span>
-                                {% else %}
-                                <span class="badge bg-secondary">
-                                    Inactive
-                                </span>
-                                {% endif %}
-                            </td>
-                        </tr>
-                        {% empty %}
-                        <tr>
-                            <td colspan="4"
-                                class="text-center text-muted py-4">
-                                No categories yet.
+                                {% if cat.is_active %}<span class="badge bg-success">Active</span>
+                                {% else %}<span class="badge bg-secondary">Inactive</span>{% endif %}
                             </td>
                         </tr>
                         {% endfor %}
                     </tbody>
                 </table>
+                {% else %}
+                <div class="aq-empty">
+                    <i class="fas fa-tags"></i>
+                    <h5>No categories yet</h5>
+                    <button class="btn btn-sm btn-primary" onclick="openAddModal()">
+                        <i class="fas fa-plus me-1"></i>Add First Category
+                    </button>
+                </div>
+                {% endif %}
             </div>
         </div>
     </div>
 </div>
 
-<!-- Add Category Modal -->
 <div class="modal fade" id="addModal" tabindex="-1">
-    <div class="modal-dialog">
+    <div class="modal-dialog modal-sm">
         <div class="modal-content">
             <div class="modal-header">
-                <h5 class="modal-title">Add Category</h5>
-                <button type="button"
-                        class="btn-close"
-                        data-bs-dismiss="modal">
-                </button>
+                <h5 class="modal-title"><i class="fas fa-tags me-2"></i>Add Category</h5>
+                <button class="btn-close" data-bs-dismiss="modal"></button>
             </div>
             <div class="modal-body">
-                <div class="mb-3">
-                    <label class="form-label fw-semibold">
-                        Name <span class="text-danger">*</span>
-                    </label>
-                    <input type="text"
-                           id="catName"
-                           class="form-control"
-                           placeholder="e.g. Exterior Wash">
-                    <div id="catError" class="text-danger small mt-1"></div>
-                </div>
+                <label class="form-label">Name <span class="text-danger">*</span></label>
+                <input type="text" id="catName" class="form-control" placeholder="e.g. Exterior Wash">
+                <div id="catError" class="text-danger mt-1" style="font-size:10.5px;"></div>
             </div>
             <div class="modal-footer">
-                <button class="btn btn-secondary"
-                        data-bs-dismiss="modal">Cancel</button>
-                <button class="btn btn-primary" id="saveCatBtn">
-                    <i class="fas fa-save me-1"></i> Save
-                </button>
+                <button class="btn btn-sm btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                <button class="btn btn-sm btn-primary" id="saveCatBtn"><i class="fas fa-save me-1"></i>Save</button>
             </div>
         </div>
     </div>
@@ -124,38 +93,45 @@ function openAddModal() {
     setTimeout(() => document.getElementById('catName').focus(), 300);
 }
 
-document.getElementById('saveCatBtn')
-    .addEventListener('click', function () {
-        const name = document.getElementById('catName').value.trim();
-        if (!name) {
-            document.getElementById('catError').textContent = 'Required.';
-            return;
-        }
-        this.disabled = true;
+document.getElementById('saveCatBtn').addEventListener('click', function () {
+    const name = document.getElementById('catName').value.trim();
+    if (!name) {
+        document.getElementById('catError').textContent = 'Required.';
+        return;
+    }
 
-        fetch('/services/categories/create/', {
-            method: 'POST',
-            headers: {
-                'X-CSRFToken': CSRF_TOKEN,
-                'Content-Type': 'application/x-www-form-urlencoded',
-            },
-            body: (
-                `name=${encodeURIComponent(name)}`
-                + `&is_active=true&sort_order=0`
-            ),
-        })
-        .then(r => r.json())
-        .then(data => {
-            this.disabled = false;
-            if (data.success) {
-                showToast(data.message, 'success');
-                setTimeout(() => location.reload(), 800);
-            } else {
-                const err = data.errors?.name?.[0]
-                    || data.error || 'Failed.';
-                document.getElementById('catError').textContent = err;
-            }
-        });
+    this.disabled = true;
+    this.innerHTML = '<i class="fas fa-spinner fa-spin"></i>';
+
+    fetch('/services/categories/create/', {
+        method: 'POST',
+        headers: {
+            'X-CSRFToken': CSRF_TOKEN,
+            'Content-Type': 'application/x-www-form-urlencoded',
+        },
+        body: `name=${encodeURIComponent(name)}&is_active=true&sort_order=0`,
+    })
+    .then(r => r.json())
+    .then(data => {
+        this.disabled = false;
+        this.innerHTML = '<i class="fas fa-save me-1"></i>Save';
+        if (data.success) {
+            showToast(data.message, 'success');
+            setTimeout(() => location.reload(), 700);
+        } else {
+            document.getElementById('catError').textContent =
+                data.errors?.name?.[0] || data.error || 'Failed.';
+        }
+    })
+    .catch(() => {
+        this.disabled = false;
+        this.innerHTML = '<i class="fas fa-save me-1"></i>Save';
+        showToast('Network error.', 'error');
     });
+});
+
+document.getElementById('catName').addEventListener('keydown', e => {
+    if (e.key === 'Enter') document.getElementById('saveCatBtn').click();
+});
 </script>
 {% endblock %}

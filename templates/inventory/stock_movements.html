@@ -2,112 +2,118 @@
 {% load aquaflow_tags %}
 
 {% block title %}Stock Movements — AquaFlow{% endblock %}
-{% block page_icon %}fas fa-exchange-alt{% endblock %}
+{% block page_icon %}fas fa-arrows-rotate{% endblock %}
 {% block page_title %}Stock Movements{% endblock %}
-{% block page_subtitle %}All inventory transactions{% endblock %}
-
+{% block page_subtitle %}Full inventory audit trail{% endblock %}
 {% block breadcrumbs %}
-<span>/</span>
-<a href="/inventory/">Inventory</a>
-<span>/</span>
-<span class="current">Movements</span>
+<span>/</span><a href="/inventory/">Inventory</a>
+<span>/</span><span class="current">Movements</span>
+{% endblock %}
+
+{% block extra_css %}
+<style>
+.tx-in  { color: var(--aq-success); font-weight: 700; }
+.tx-out { color: var(--aq-danger);  font-weight: 700; }
+</style>
 {% endblock %}
 
 {% block content %}
-<div class="card">
-    <div class="card-header">
-        <strong><i class="fas fa-exchange-alt me-2 aq-text-primary"></i>Stock Transactions ({{ total_count }})</strong>
+
+<div class="aq-panel">
+    <div class="aq-panel-head">
+        <div class="aq-chips">
+            <span class="aq-chip pri"><i class="fas fa-arrows-rotate"></i> Transactions <b>{{ total_count }}</b></span>
+        </div>
+        <a href="/inventory/" class="btn btn-sm btn-outline-secondary">
+            <i class="fas fa-boxes-stacked me-1"></i>Products
+        </a>
     </div>
-    <div class="card-body">
 
-        <form method="GET" class="row g-2 mb-3">
-            <div class="col-md-4">
-                <input type="text" name="q" class="form-control" placeholder="Product name, SKU, notes..." value="{{ search }}">
-            </div>
-            <div class="col-md-2">
-                <select name="type" class="form-select">
-                    <option value="">All Types</option>
-                    {% for val, label in type_choices %}
-                    <option value="{{ val }}" {% if tx_type == val %}selected{% endif %}>{{ label }}</option>
-                    {% endfor %}
-                </select>
-            </div>
-            <div class="col-md-2">
-                <input type="date" name="date_from" class="form-control" value="{{ date_from }}">
-            </div>
-            <div class="col-md-2">
-                <input type="date" name="date_to" class="form-control" value="{{ date_to }}">
-            </div>
-            <div class="col-md-2">
-                <button class="btn btn-primary w-100"><i class="fas fa-search me-1"></i>Filter</button>
-            </div>
-        </form>
+    <form method="GET" class="aq-toolbar">
+        <div class="input-group" style="width:280px;">
+            <span class="input-group-text"><i class="fas fa-search"></i></span>
+            <input type="text" name="q" class="form-control" value="{{ search }}"
+                   placeholder="Product, SKU, notes…">
+        </div>
+        <select name="type" class="form-select" style="width:140px;">
+            <option value="">All Types</option>
+            {% for val, label in type_choices %}
+            <option value="{{ val }}" {% if tx_type == val %}selected{% endif %}>{{ label }}</option>
+            {% endfor %}
+        </select>
+        <input type="date" name="date_from" class="form-control" style="width:140px;" value="{{ date_from }}">
+        <input type="date" name="date_to" class="form-control" style="width:140px;" value="{{ date_to }}">
+        <button class="btn btn-outline-primary btn-sm"><i class="fas fa-filter me-1"></i>Filter</button>
+        <a href="/inventory/movements/" class="btn btn-outline-secondary btn-sm"><i class="fas fa-rotate"></i></a>
+    </form>
 
-        <div class="table-responsive">
-            <table class="table table-hover align-middle">
+    <div class="aq-panel-body flush">
+        {% if transactions %}
+        <div class="aq-table-scroll">
+            <table class="table table-hover">
                 <thead>
                     <tr>
-                        <th>Date</th>
+                        <th class="nowrap">Date</th>
                         <th>Product</th>
-                        <th>Branch</th>
                         <th>Type</th>
-                        <th class="text-end">Change</th>
-                        <th class="text-end">After</th>
-                        <th>User</th>
+                        <th>Branch</th>
+                        <th class="num">Before</th>
+                        <th class="num">Change</th>
+                        <th class="num">After</th>
+                        <th class="num">Unit Cost</th>
                         <th>Notes</th>
+                        <th>By</th>
                     </tr>
                 </thead>
                 <tbody>
                     {% for tx in transactions %}
                     <tr>
-                        <td><small>{{ tx.created_at|date:"d M Y H:i" }}</small></td>
+                        <td class="nowrap text-muted">{{ tx.created_at|date:"d M Y · H:i" }}</td>
                         <td>
-                            <a href="/inventory/products/{{ tx.product.pk }}/">
-                                {{ tx.product.name }}
-                            </a>
-                            <br><small class="text-muted">{{ tx.product.sku }}</small>
+                            <a href="{% url 'product_detail' tx.product.pk %}" class="fw-semibold">{{ tx.product.name|truncatechars:24 }}</a>
+                            <span class="text-muted d-block" style="font-size:9px;">{{ tx.product.sku }}</span>
                         </td>
-                        <td>{{ tx.branch.name }}</td>
                         <td>
-                            {% if tx.transaction_type == 'purchase' %}
-                            <span class="badge bg-success">Purchase</span>
-                            {% elif tx.transaction_type == 'sale' %}
-                            <span class="badge bg-danger">Sale</span>
-                            {% elif tx.transaction_type == 'adjustment' %}
-                            <span class="badge bg-warning">Adjustment</span>
-                            {% elif tx.transaction_type == 'initial' %}
-                            <span class="badge bg-info">Initial</span>
+                            {% if tx.quantity > 0 %}
+                            <span class="tx-in"><i class="fas fa-arrow-down"></i> {{ tx.get_transaction_type_display }}</span>
                             {% else %}
-                            <span class="badge bg-secondary">{{ tx.get_transaction_type_display }}</span>
+                            <span class="tx-out"><i class="fas fa-arrow-up"></i> {{ tx.get_transaction_type_display }}</span>
                             {% endif %}
                         </td>
-                        <td class="text-end fw-bold {% if tx.quantity < 0 %}text-danger{% else %}text-success{% endif %}">
-                            {% if tx.quantity > 0 %}+{% endif %}{{ tx.quantity|floatformat:2 }}
+                        <td>{{ tx.branch.name|truncatechars:12 }}</td>
+                        <td class="num text-muted">{{ tx.quantity_before|floatformat:0 }}</td>
+                        <td class="num">
+                            {% if tx.quantity > 0 %}<span class="tx-in">+{{ tx.quantity|floatformat:0 }}</span>
+                            {% else %}<span class="tx-out">{{ tx.quantity|floatformat:0 }}</span>{% endif %}
                         </td>
-                        <td class="text-end">{{ tx.quantity_after|floatformat:2 }}</td>
-                        <td><small>{{ tx.created_by.username|default:"—" }}</small></td>
-                        <td><small>{{ tx.notes|truncatechars:50 }}</small></td>
+                        <td class="num"><strong>{{ tx.quantity_after|floatformat:0 }}</strong></td>
+                        <td class="num text-muted">{% format_currency tx.unit_cost %}</td>
+                        <td class="text-muted" style="font-size:10px;">{{ tx.notes|truncatechars:24|default:"—" }}</td>
+                        <td class="text-muted">{{ tx.created_by.username|default:"—"|truncatechars:10 }}</td>
                     </tr>
-                    {% empty %}
-                    <tr><td colspan="8" class="text-center text-muted py-4">No transactions found.</td></tr>
                     {% endfor %}
                 </tbody>
             </table>
         </div>
 
-        {% if page_obj.has_other_pages %}
-        <nav class="mt-3">
-            <ul class="pagination pagination-sm justify-content-center">
-                {% if page_obj.has_previous %}
-                <li class="page-item"><a class="page-link" href="?page={{ page_obj.previous_page_number }}">Previous</a></li>
-                {% endif %}
-                <li class="page-item disabled"><span class="page-link">Page {{ page_obj.number }} of {{ page_obj.paginator.num_pages }}</span></li>
-                {% if page_obj.has_next %}
-                <li class="page-item"><a class="page-link" href="?page={{ page_obj.next_page_number }}">Next</a></li>
-                {% endif %}
+        <div class="aq-pagebar">
+            <span>{{ page_obj.paginator.count }} transaction{{ page_obj.paginator.count|pluralize }} · Page {{ page_obj.number }}/{{ page_obj.paginator.num_pages }}</span>
+            {% if page_obj.has_other_pages %}
+            <ul class="pagination pagination-sm mb-0">
+                {% if page_obj.has_previous %}<li class="page-item"><a class="page-link" href="?page={{ page_obj.previous_page_number }}&q={{ search }}&type={{ tx_type }}">‹</a></li>{% endif %}
+                <li class="page-item disabled"><span class="page-link">{{ page_obj.number }}</span></li>
+                {% if page_obj.has_next %}<li class="page-item"><a class="page-link" href="?page={{ page_obj.next_page_number }}&q={{ search }}&type={{ tx_type }}">›</a></li>{% endif %}
             </ul>
-        </nav>
+            {% endif %}
+        </div>
+
+        {% else %}
+        <div class="aq-empty">
+            <i class="fas fa-arrows-rotate"></i>
+            <h5>No movements found</h5>
+        </div>
         {% endif %}
     </div>
 </div>
+
 {% endblock %}

@@ -1,0 +1,268 @@
+{% extends "base/base.html" %}
+
+{% block title %}Features — {{ AQUAFLOW_SYSTEM_NAME }}{% endblock %}
+{% block page_icon %}fas fa-toggle-on{% endblock %}
+{% block page_title %}Feature Flags{% endblock %}
+{% block page_subtitle %}Super Admin only — enable/disable modules per client{% endblock %}
+{% block breadcrumbs %}
+<span>/</span><a href="/system/">System</a>
+<span>/</span><span class="current">Features</span>
+{% endblock %}
+
+{% block extra_css %}
+<style>
+.feat-group {
+    background: var(--aq-surface);
+    border: 1px solid var(--aq-border);
+    border-radius: var(--aq-radius);
+    margin-bottom: 10px;
+    box-shadow: var(--aq-shadow);
+}
+.feat-group-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 7px 12px;
+    background: var(--aq-surface-2);
+    border-bottom: 1px solid var(--aq-border);
+    border-radius: var(--aq-radius) var(--aq-radius) 0 0;
+}
+.feat-group-title {
+    font-size: 11.5px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: .5px;
+    color: var(--aq-text-muted);
+}
+.feat-group-count {
+    font-size: 9.5px;
+    color: var(--aq-text-soft);
+}
+.feat-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+    gap: 6px;
+    padding: 8px;
+}
+.feat-card {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+    padding: 7px 10px;
+    border: 1px solid var(--aq-border);
+    border-radius: 4px;
+    transition: border-color .15s, opacity .15s;
+}
+.feat-card:hover { border-color: var(--aq-border-strong); }
+.feat-card.disabled { opacity: .55; background: var(--aq-surface-2); }
+.feat-info { min-width: 0; flex: 1; }
+.feat-title {
+    font-weight: 650;
+    font-size: 11.5px;
+    line-height: 1.3;
+    display: flex;
+    align-items: center;
+    gap: 5px;
+}
+.feat-desc {
+    font-size: 9px;
+    color: var(--aq-text-soft);
+    margin-top: 1px;
+}
+.feat-desc code {
+    font-size: 8.5px;
+    background: var(--aq-surface-3);
+    padding: 0 3px;
+    border-radius: 2px;
+    color: var(--aq-text-muted);
+}
+
+.aq-switch {
+    position: relative;
+    display: inline-block;
+    width: 34px;
+    height: 18px;
+    flex-shrink: 0;
+}
+.aq-switch input { opacity: 0; width: 0; height: 0; }
+.aq-slider {
+    position: absolute;
+    cursor: pointer;
+    inset: 0;
+    background-color: var(--aq-border-strong);
+    transition: .2s;
+    border-radius: 9px;
+}
+.aq-slider:before {
+    position: absolute;
+    content: "";
+    height: 14px;
+    width: 14px;
+    left: 2px;
+    bottom: 2px;
+    background-color: white;
+    transition: .2s;
+    border-radius: 50%;
+}
+input:checked + .aq-slider { background-color: var(--aq-success); }
+input:checked + .aq-slider:before { transform: translateX(16px); }
+input:disabled + .aq-slider { opacity: .5; cursor: not-allowed; }
+
+.bulk-bar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 6px 12px;
+    background: var(--aq-surface-2);
+    border: 1px solid var(--aq-border);
+    border-radius: var(--aq-radius);
+    margin-bottom: 10px;
+    font-size: 11px;
+}
+</style>
+{% endblock %}
+
+{% block content %}
+
+<!-- Summary Bar -->
+<div class="bulk-bar">
+    <div class="aq-chips">
+        <span class="aq-chip pri"><i class="fas fa-toggle-on"></i> Total <b>{{ total_features }}</b></span>
+        <span class="aq-chip suc"><i class="fas fa-circle-check"></i> Active <b>{{ enabled_count }}</b></span>
+        <span class="aq-chip dgr"><i class="fas fa-circle-xmark"></i> Disabled <b>{{ disabled_count }}</b></span>
+    </div>
+    <div class="d-flex gap-1">
+        <button class="btn btn-sm btn-success" id="bulkOnBtn">
+            <i class="fas fa-toggle-on me-1"></i>All ON
+        </button>
+        <button class="btn btn-sm btn-danger" id="bulkOffBtn">
+            <i class="fas fa-toggle-off me-1"></i>All OFF
+        </button>
+    </div>
+</div>
+
+<!-- Developer Notice -->
+<div class="alert alert-warning py-1 mb-2" style="font-size:10.5px;">
+    <i class="fas fa-triangle-exclamation me-1"></i>
+    <strong>Developer Notice:</strong>
+    Toggling off hides menus, blocks routes (redirect with alert), and skips backend processing.
+    Existing data is always preserved. Smart-input inline creation follows each toggle.
+</div>
+
+<!-- Feature Groups -->
+{% for group in feature_groups %}
+<div class="feat-group">
+    <div class="feat-group-head">
+        <span class="feat-group-title">
+            <i class="fas fa-folder me-1"></i>{{ group.group }}
+        </span>
+        <span class="feat-group-count">
+            {% with group.items|length as gc %}
+            {{ gc }} feature{{ gc|pluralize }}
+            {% endwith %}
+        </span>
+    </div>
+    <div class="feat-grid">
+        {% for f in group.items %}
+        <div class="feat-card {% if not f.enabled %}disabled{% endif %}" id="card_{{ f.key }}">
+            <div class="feat-info">
+                <div class="feat-title">
+                    {% if f.enabled %}
+                    <i class="fas fa-circle-check" style="color:var(--aq-success);font-size:9px;"></i>
+                    {% else %}
+                    <i class="fas fa-circle-xmark" style="color:var(--aq-danger);font-size:9px;"></i>
+                    {% endif %}
+                    {{ f.name }}
+                </div>
+                <div class="feat-desc">
+                    <code>feature.{{ f.key }}</code>
+                    · {% if f.enabled %}Active{% else %}Disabled{% endif %}
+                </div>
+            </div>
+            <label class="aq-switch">
+                <input type="checkbox" class="feat-toggle-cb" data-key="{{ f.key }}" {% if f.enabled %}checked{% endif %}>
+                <span class="aq-slider"></span>
+            </label>
+        </div>
+        {% endfor %}
+    </div>
+</div>
+{% endfor %}
+
+{% endblock %}
+
+{% block extra_js %}
+<script>
+const CSRF_TOKEN = '{{ csrf_token }}';
+
+// ─── Individual toggle ──────────────────────────────────────
+document.querySelectorAll('.feat-toggle-cb').forEach(cb => {
+    cb.addEventListener('change', function () {
+        const key     = this.dataset.key;
+        const enabled = this.checked;
+        const card    = document.getElementById('card_' + key);
+
+        this.disabled = true;
+
+        const fd = new FormData();
+        fd.append('feature_key', key);
+        fd.append('enabled', enabled);
+
+        fetch('{% url "toggle_feature_ajax" %}', {
+            method: 'POST',
+            headers: { 'X-CSRFToken': CSRF_TOKEN },
+            body: fd,
+        })
+        .then(r => r.json())
+        .then(data => {
+            this.disabled = false;
+            if (data.success) {
+                showToast(data.message, enabled ? 'success' : 'warning');
+                if (card) card.classList.toggle('disabled', !enabled);
+                const desc = card ? card.querySelector('.feat-desc') : null;
+                if (desc) {
+                    const label = enabled ? 'Active' : 'Disabled';
+                    desc.innerHTML = '<code>feature.' + key + '</code> · ' + label;
+                }
+            } else {
+                showToast(data.error || 'Toggle failed.', 'error');
+                this.checked = !enabled;
+            }
+        })
+        .catch(() => {
+            this.disabled = false;
+            this.checked = !enabled;
+            showToast('Network error.', 'error');
+        });
+    });
+});
+
+// ─── Bulk toggle ────────────────────────────────────────────
+function bulkToggle(action, label) {
+    if (!confirm('Turn ALL features ' + label + '?')) return;
+
+    const fd = new FormData();
+    fd.append('action', action);
+
+    fetch('{% url "bulk_toggle_features" %}', {
+        method: 'POST',
+        headers: { 'X-CSRFToken': CSRF_TOKEN },
+        body: fd,
+    })
+    .then(r => r.json())
+    .then(data => {
+        if (data.success) {
+            showToast(data.message, 'success');
+            setTimeout(() => location.reload(), 800);
+        } else {
+            showToast(data.error || 'Failed.', 'error');
+        }
+    })
+    .catch(() => showToast('Network error.', 'error'));
+}
+
+document.getElementById('bulkOnBtn').addEventListener('click', () => bulkToggle('all_on', 'ON'));
+document.getElementById('bulkOffBtn').addEventListener('click', () => bulkToggle('all_off', 'OFF'));
+</script>
+{% endblock %}

@@ -1,134 +1,94 @@
 {% extends "base/base.html" %}
 {% load aquaflow_tags %}
 
-{% block title %}{{ invoice.invoice_number }} — AquaFlow{% endblock %}
+{% block title %}{{ invoice.invoice_number }} — Invoices{% endblock %}
 {% block page_icon %}fas fa-file-invoice-dollar{% endblock %}
 {% block page_title %}{{ invoice.invoice_number }}{% endblock %}
-{% block page_subtitle %}Invoice details{% endblock %}
-
+{% block page_subtitle %}Issued {{ invoice.issue_date|date:"d M Y" }} · Order {{ order.order_number }}{% endblock %}
 {% block breadcrumbs %}
-<span>/</span>
-<a href="/invoices/">Invoices</a>
-<span>/</span>
-<span class="current">{{ invoice.invoice_number }}</span>
+<span>/</span><a href="/invoices/">Invoices</a>
+<span>/</span><span class="current">{{ invoice.invoice_number }}</span>
 {% endblock %}
 
 {% block content %}
-<div class="row g-3">
 
-    <div class="col-lg-8">
-        <div class="card mb-3">
-            <div class="card-header d-flex justify-content-between align-items-center">
-                <strong><i class="fas fa-file-invoice-dollar me-2 aq-text-primary"></i>Invoice</strong>
-                {% if invoice.status == 'paid' %}
-                <span class="badge bg-success fs-6">PAID</span>
-                {% elif invoice.status == 'void' %}
-                <span class="badge bg-dark fs-6">VOID</span>
-                {% endif %}
-            </div>
-            <div class="card-body">
-                <div class="row mb-3">
-                    <div class="col-md-6">
-                        <h5 class="aq-text-primary">{{ invoice.invoice_number }}</h5>
-                        <p class="text-muted mb-0">
-                            Order: <a href="/orders/{{ order.pk }}/">{{ order.order_number }}</a>
-                        </p>
-                        <p class="text-muted mb-0">Issued: {{ invoice.issue_date|date:"d M Y" }}</p>
-                    </div>
-                    <div class="col-md-6 text-md-end">
-                        <strong>Bill To:</strong><br>
-                        {{ order.customer.name }}<br>
-                        <small class="text-muted">
-                            {{ order.customer.customer_code }}<br>
-                            {{ order.customer.phone }}
-                        </small>
-                    </div>
-                </div>
-
-                {% if order.vehicle %}
-                <div class="alert alert-light">
-                    <strong>Vehicle:</strong> <code>{{ order.vehicle.registration_number }}</code>
-                    — {{ order.vehicle.brand.name }} {{ order.vehicle.model.name }}
-                </div>
-                {% endif %}
+<div class="aq-panel">
+    <div class="aq-panel-head">
+        <div class="aq-chips">
+            {% if invoice.status == 'paid' %}<span class="aq-chip suc"><i class="fas fa-circle-check"></i> Paid</span>
+            {% elif invoice.status == 'void' %}<span class="aq-chip dgr"><i class="fas fa-ban"></i> VOID</span>
+            {% elif invoice.status == 'partial' %}<span class="aq-chip warn"><i class="fas fa-clock"></i> Partial</span>
+            {% else %}<span class="aq-chip"><i class="fas fa-circle"></i> {{ invoice.get_status_display }}</span>{% endif %}
+            <span class="aq-chip pri"><i class="fas fa-receipt"></i> <a href="/orders/{{ order.pk }}/">{{ order.order_number }}</a></span>
+            <span class="aq-chip"><i class="fas fa-sack-dollar"></i> Total <b>{% format_currency invoice.total %}</b></span>
+        </div>
+        <div class="dropdown">
+            <button class="btn btn-sm btn-primary dropdown-toggle" data-bs-toggle="dropdown">
+                <i class="fas fa-print me-1"></i>Print
+            </button>
+            <div class="dropdown-menu dropdown-menu-end">
+                <a class="dropdown-item" target="_blank" href="/pos/receipt/{{ invoice.pk }}/?format=thermal_80mm">Thermal (80mm)</a>
+                <a class="dropdown-item" target="_blank" href="/pos/receipt/{{ invoice.pk }}/?format=dot_matrix">Dot Matrix</a>
+                <a class="dropdown-item" target="_blank" href="/pos/receipt/{{ invoice.pk }}/?format=half_a4">Half A4</a>
+                <a class="dropdown-item" target="_blank" href="/pos/receipt/{{ invoice.pk }}/?format=a4">Full A4</a>
             </div>
         </div>
+    </div>
+</div>
 
-        <div class="card mb-3">
-            <div class="card-header">
-                <strong><i class="fas fa-list me-2"></i>Items</strong>
-            </div>
-            <div class="card-body p-0">
-                <table class="table mb-0">
+<div class="row g-2">
+    <div class="col-lg-8">
+        <div class="aq-panel">
+            <div class="aq-panel-head"><strong><i class="fas fa-list aq-text-primary me-1"></i>Line Items</strong></div>
+            <div class="aq-panel-body flush">
+                <table class="table">
                     <thead>
-                        <tr>
-                            <th>Description</th>
-                            <th class="text-end">Qty</th>
-                            <th class="text-end">Price</th>
-                            <th class="text-end">Total</th>
-                        </tr>
+                        <tr><th>#</th><th>Description</th><th>Type</th><th class="num">Unit</th><th class="num">Qty</th><th class="num">Disc</th><th class="num">Tax</th><th class="num">Line Total</th></tr>
                     </thead>
                     <tbody>
-                        {% for item in items %}
+                        {% for it in items %}
                         <tr>
-                            <td>
-                                {{ item.description_snapshot }}
-                                <br><small class="text-muted">{{ item.get_item_type_display }}</small>
-                            </td>
-                            <td class="text-end">{{ item.quantity|floatformat:2 }}</td>
-                            <td class="text-end">{% format_currency item.unit_price_snapshot %}</td>
-                            <td class="text-end fw-bold">{% format_currency item.line_total %}</td>
+                            <td class="text-muted">{{ forloop.counter }}</td>
+                            <td class="fw-semibold">{{ it.description_snapshot }}</td>
+                            <td><span class="badge {% if it.item_type == 'service' %}bg-info{% else %}bg-success{% endif %}">{{ it.get_item_type_display }}</span></td>
+                            <td class="num">{% format_currency it.unit_price_snapshot %}</td>
+                            <td class="num">{{ it.quantity|floatformat:"-2" }}</td>
+                            <td class="num text-muted">{% format_currency it.discount %}</td>
+                            <td class="num text-muted">{% format_currency it.tax %}</td>
+                            <td class="num"><strong>{% format_currency it.line_total %}</strong></td>
                         </tr>
                         {% endfor %}
                     </tbody>
-                    <tfoot>
-                        <tr>
-                            <th colspan="3" class="text-end">Subtotal</th>
-                            <th class="text-end">{% format_currency invoice.subtotal %}</th>
-                        </tr>
-                        {% if invoice.discount_amount > 0 %}
-                        <tr>
-                            <th colspan="3" class="text-end">Discount</th>
-                            <th class="text-end text-danger">- {% format_currency invoice.discount_amount %}</th>
-                        </tr>
-                        {% endif %}
-                        {% if invoice.tax_amount > 0 %}
-                        <tr>
-                            <th colspan="3" class="text-end">Tax</th>
-                            <th class="text-end">{% format_currency invoice.tax_amount %}</th>
-                        </tr>
-                        {% endif %}
-                        <tr class="table-primary">
-                            <th colspan="3" class="text-end fs-5">TOTAL</th>
-                            <th class="text-end fs-5 aq-text-primary">{% format_currency invoice.total %}</th>
-                        </tr>
+                    <tfoot style="background:var(--aq-surface-2);">
+                        <tr><td colspan="7" class="text-end text-muted">Subtotal</td><td class="num">{% format_currency invoice.subtotal %}</td></tr>
+                        {% if invoice.discount_amount %}<tr><td colspan="7" class="text-end text-muted">Discount</td><td class="num aq-text-danger">−{% format_currency invoice.discount_amount %}</td></tr>{% endif %}
+                        {% if invoice.tax_amount %}<tr><td colspan="7" class="text-end text-muted">{{ TAX_NAME }}</td><td class="num">{% format_currency invoice.tax_amount %}</td></tr>{% endif %}
+                        <tr><th colspan="7" class="text-end" style="font-size:12px;">TOTAL</th><th class="num aq-text-primary" style="font-size:13px;">{% format_currency invoice.total %}</th></tr>
                     </tfoot>
                 </table>
             </div>
         </div>
 
-        <div class="card">
-            <div class="card-header">
-                <strong><i class="fas fa-money-bill-wave me-2"></i>Payments</strong>
-            </div>
-            <div class="card-body p-0">
-                <table class="table mb-0">
-                    <thead>
-                        <tr>
-                            <th>Method</th>
-                            <th>Reference</th>
-                            <th>Date</th>
-                            <th class="text-end">Amount</th>
-                        </tr>
-                    </thead>
+        <div class="aq-panel">
+            <div class="aq-panel-head"><strong><i class="fas fa-money-bill-wave aq-text-primary me-1"></i>Payments</strong></div>
+            <div class="aq-panel-body flush">
+                <table class="table">
+                    <thead><tr><th class="nowrap">Date</th><th>Method</th><th>Reference</th><th>Status</th><th class="num">Amount</th></tr></thead>
                     <tbody>
-                        {% for pmt in payments %}
+                        {% for p in payments %}
                         <tr>
-                            <td><strong>{{ pmt.payment_method.name }}</strong></td>
-                            <td>{{ pmt.reference|default:"—" }}</td>
-                            <td><small>{{ pmt.processed_at|date:"d M Y H:i" }}</small></td>
-                            <td class="text-end fw-bold">{% format_currency pmt.amount %}</td>
+                            <td class="nowrap text-muted">{{ p.processed_at|date:"d M Y · H:i" }}</td>
+                            <td><span class="badge bg-primary">{{ p.payment_method.name }}</span></td>
+                            <td class="text-muted" style="font-size:10px;">{{ p.reference|default:"—"|truncatechars:30 }}</td>
+                            <td>
+                                {% if p.status == 'completed' %}<span class="badge bg-success">Completed</span>
+                                {% elif p.status == 'refunded' %}<span class="badge bg-warning">Refund</span>
+                                {% else %}<span class="badge bg-secondary">{{ p.get_status_display }}</span>{% endif %}
+                            </td>
+                            <td class="num"><strong {% if p.amount < 0 %}class="aq-text-danger"{% endif %}>{% format_currency p.amount %}</strong></td>
                         </tr>
+                        {% empty %}
+                        <tr><td colspan="5" class="text-center text-muted py-3">No payments recorded.</td></tr>
                         {% endfor %}
                     </tbody>
                 </table>
@@ -137,23 +97,45 @@
     </div>
 
     <div class="col-lg-4">
-        <div class="card">
-            <div class="card-header">
-                <strong><i class="fas fa-bolt me-2 aq-text-warning"></i>Actions</strong>
-            </div>
-            <div class="card-body d-grid gap-2">
-                <a href="/pos/receipt/{{ invoice.pk }}/" target="_blank" class="btn btn-primary">
-                    <i class="fas fa-print me-1"></i>Print / Reprint
-                </a>
-                <a href="/orders/{{ order.pk }}/" class="btn btn-outline-primary">
-                    <i class="fas fa-file-invoice me-1"></i>View Order
-                </a>
-                <hr class="my-2">
-                <a href="/invoices/" class="btn btn-outline-secondary">
-                    <i class="fas fa-arrow-left me-1"></i>Back
-                </a>
+        <div class="aq-panel">
+            <div class="aq-panel-head"><strong><i class="fas fa-building aq-text-primary me-1"></i>Bill From</strong></div>
+            <div class="aq-panel-body" style="font-size:11px;">
+                <div class="fw-bold" style="font-size:12px;">{{ BUSINESS_NAME }}</div>
+                {% if BUSINESS_ADDRESS %}<div class="text-muted">{{ BUSINESS_ADDRESS }}</div>{% endif %}
+                {% if BUSINESS_PHONE %}<div class="text-muted"><i class="fas fa-phone me-1"></i>{{ BUSINESS_PHONE }}</div>{% endif %}
+                {% if BUSINESS_EMAIL %}<div class="text-muted"><i class="fas fa-envelope me-1"></i>{{ BUSINESS_EMAIL }}</div>{% endif %}
             </div>
         </div>
+
+        <div class="aq-panel">
+            <div class="aq-panel-head"><strong><i class="fas fa-user aq-text-primary me-1"></i>Bill To</strong></div>
+            <div class="aq-panel-body flush">
+                <table class="table"><tbody>
+                    <tr><td class="text-muted" style="width:90px;">Customer</td><td><a href="/customers/{{ order.customer.pk }}/" class="fw-semibold">{{ order.customer.name }}</a></td></tr>
+                    <tr><td class="text-muted">Code</td><td><code>{{ order.customer.customer_code }}</code></td></tr>
+                    <tr><td class="text-muted">Phone</td><td>{{ order.customer.phone|default:"—" }}</td></tr>
+                    {% if order.vehicle %}
+                    <tr><td class="text-muted">Vehicle</td><td><code style="font-weight:700;">{{ order.vehicle.registration_number }}</code><span class="text-muted d-block" style="font-size:10px;">{{ order.vehicle.brand.name }} {{ order.vehicle.model.name }}</span></td></tr>
+                    {% endif %}
+                </tbody></table>
+            </div>
+        </div>
+
+        <div class="aq-panel">
+            <div class="aq-panel-head"><strong><i class="fas fa-circle-info aq-text-primary me-1"></i>Invoice Info</strong></div>
+            <div class="aq-panel-body flush">
+                <table class="table"><tbody>
+                    <tr><td class="text-muted" style="width:90px;">Issued</td><td>{{ invoice.issue_date|date:"d M Y" }}</td></tr>
+                    <tr><td class="text-muted">Due</td><td>{{ invoice.due_date|date:"d M Y"|default:"On receipt" }}</td></tr>
+                    <tr><td class="text-muted">Branch</td><td>{{ order.branch.name }}</td></tr>
+                    <tr><td class="text-muted">Cashier</td><td>{{ order.created_by.username|default:"—" }}</td></tr>
+                    {% if invoice.notes %}<tr><td class="text-muted">Notes</td><td style="font-size:10.5px;">{{ invoice.notes|linebreaksbr }}</td></tr>{% endif %}
+                </tbody></table>
+            </div>
+        </div>
+
+        <a href="/invoices/" class="btn btn-sm btn-outline-secondary w-100"><i class="fas fa-arrow-left me-1"></i>Back to Invoices</a>
     </div>
 </div>
+
 {% endblock %}

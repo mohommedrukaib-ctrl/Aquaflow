@@ -3,133 +3,102 @@
 
 {% block title %}Memberships — AquaFlow{% endblock %}
 {% block page_icon %}fas fa-star{% endblock %}
-{% block page_title %}Customer Memberships{% endblock %}
-{% block page_subtitle %}Active membership subscriptions{% endblock %}
-
-{% block breadcrumbs %}
-<span>/</span>
-<span class="current">Memberships</span>
-{% endblock %}
+{% block page_title %}Memberships{% endblock %}
+{% block page_subtitle %}Prepaid wash packages{% endblock %}
+{% block breadcrumbs %}<span>/</span><span class="current">Memberships</span>{% endblock %}
 
 {% block content %}
 
-<div class="row g-3 mb-3">
-    <div class="col-md-4">
-        <div class="aq-stat-card">
-            <div class="aq-stat-info">
-                <h6>Active Members</h6>
-                <div class="aq-stat-value">{{ active_count }}</div>
-            </div>
-            <div class="aq-stat-icon success"><i class="fas fa-star"></i></div>
+<div class="aq-panel">
+    <div class="aq-panel-head">
+        <div class="aq-chips">
+            <span class="aq-chip pri"><i class="fas fa-star"></i> Total <b>{{ total_count }}</b></span>
+            <span class="aq-chip suc"><i class="fas fa-circle-check"></i> Active <b>{{ active_count }}</b></span>
+            <span class="aq-chip dgr"><i class="fas fa-clock"></i> Expired <b>{{ expired_count }}</b></span>
         </div>
-    </div>
-    <div class="col-md-4">
-        <div class="aq-stat-card">
-            <div class="aq-stat-info">
-                <h6>Total Memberships</h6>
-                <div class="aq-stat-value">{{ total_count }}</div>
-            </div>
-            <div class="aq-stat-icon primary"><i class="fas fa-users"></i></div>
-        </div>
-    </div>
-    <div class="col-md-4">
-        <div class="aq-stat-card">
-            <div class="aq-stat-info">
-                <h6>Expired</h6>
-                <div class="aq-stat-value">{{ expired_count }}</div>
-            </div>
-            <div class="aq-stat-icon danger"><i class="fas fa-calendar-times"></i></div>
-        </div>
-    </div>
-</div>
-
-<div class="card">
-    <div class="card-header d-flex justify-content-between align-items-center">
-        <strong><i class="fas fa-list me-2"></i>Memberships</strong>
-        <div class="d-flex gap-2">
-            <a href="/memberships/plans/" class="btn btn-outline-secondary btn-sm">
-                <i class="fas fa-award me-1"></i>Manage Plans
+        <div class="d-flex gap-1">
+            <a href="{% url 'plan_list' %}" class="btn btn-sm btn-outline-secondary">
+                <i class="fas fa-layer-group me-1"></i>Plans
             </a>
             {% if can_manage %}
-            <button class="btn btn-primary btn-sm" onclick="openAddModal()">
+            <button class="btn btn-sm btn-primary" onclick="openAddModal()">
                 <i class="fas fa-plus me-1"></i>Sell Membership
             </button>
             {% endif %}
         </div>
     </div>
-    <div class="card-body">
-        <form method="GET" class="row g-2 mb-3">
-            <div class="col-md-8">
-                <input type="text" name="q" class="form-control" placeholder="Search membership#, customer..." value="{{ search }}">
-            </div>
-            <div class="col-md-2">
-                <select name="status" class="form-select" onchange="this.form.submit()">
-                    <option value="">All Status</option>
-                    {% for v, label in status_choices %}
-                    <option value="{{ v }}" {% if status == v %}selected{% endif %}>{{ label }}</option>
-                    {% endfor %}
-                </select>
-            </div>
-            <div class="col-md-2">
-                <button class="btn btn-primary w-100"><i class="fas fa-search"></i></button>
-            </div>
-        </form>
 
+    <form method="GET" class="aq-toolbar">
+        <div class="input-group" style="width:300px;">
+            <span class="input-group-text"><i class="fas fa-search"></i></span>
+            <input type="text" name="q" class="form-control" value="{{ search }}"
+                   placeholder="Member#, customer, phone…">
+        </div>
+        <select name="status" class="form-select" style="width:130px;" onchange="this.form.submit()">
+            <option value="">All Status</option>
+            {% for val, label in status_choices %}
+            <option value="{{ val }}" {% if status == val %}selected{% endif %}>{{ label }}</option>
+            {% endfor %}
+        </select>
+        <button class="btn btn-outline-primary btn-sm"><i class="fas fa-filter me-1"></i>Filter</button>
+        <a href="/memberships/" class="btn btn-outline-secondary btn-sm"><i class="fas fa-rotate"></i></a>
+    </form>
+
+    <div class="aq-panel-body flush">
         {% if memberships %}
-        <div class="table-responsive">
-            <table class="table table-hover align-middle">
+        <div class="aq-table-scroll">
+            <table class="table table-hover">
                 <thead>
                     <tr>
-                        <th>Member #</th>
+                        <th>Membership #</th>
                         <th>Customer</th>
                         <th>Plan</th>
-                        <th>Start</th>
-                        <th>Expires</th>
-                        <th>Washes</th>
+                        <th class="nowrap">Expires</th>
+                        <th class="num">Washes Left</th>
+                        <th class="num">Paid</th>
                         <th>Status</th>
-                        <th></th>
+                        <th style="width:40px;"></th>
                     </tr>
                 </thead>
                 <tbody>
                     {% for m in memberships %}
                     <tr>
-                        <td><a href="/memberships/{{ m.pk }}/"><strong>{{ m.membership_number }}</strong></a></td>
-                        <td>
-                            {{ m.customer.name }}<br>
-                            <small class="text-muted">{{ m.customer.phone }}</small>
+                        <td class="nowrap">
+                            <a href="{% url 'membership_detail' m.pk %}"><code style="font-weight:700;">{{ m.membership_number }}</code></a>
                         </td>
                         <td>
-                            <span class="badge" style="background:{{ m.plan.color }}; color:white;">
+                            {{ m.customer.name|truncatechars:20 }}
+                            <span class="text-muted d-block" style="font-size:10px;">{{ m.customer.phone }}</span>
+                        </td>
+                        <td>
+                            <span class="badge" style="background:{{ m.plan.color }}22;color:{{ m.plan.color }};border:1px solid {{ m.plan.color }}55;">
                                 {{ m.plan.name }}
                             </span>
                         </td>
-                        <td><small>{{ m.start_date|date:"d M Y" }}</small></td>
-                        <td>
-                            <small>{{ m.expiry_date|date:"d M Y" }}</small>
+                        <td class="nowrap">
+                            {{ m.expiry_date|date:"d M Y" }}
                             {% if m.status == 'active' %}
-                            <br><small class="text-muted">{{ m.days_remaining }} days left</small>
+                            <span class="text-muted d-block" style="font-size:9px;">{{ m.days_remaining }} days left</span>
                             {% endif %}
                         </td>
-                        <td>
+                        <td class="num">
                             {% if m.wash_count_total == 0 %}
                             <span class="badge bg-info">Unlimited</span>
                             {% else %}
-                            <strong>{{ m.wash_count_remaining }}</strong> / {{ m.wash_count_total }}
+                            <strong {% if m.wash_count_remaining <= 2 %}class="aq-text-warning"{% endif %}>
+                                {{ m.wash_count_remaining }}/{{ m.wash_count_total }}
+                            </strong>
                             {% endif %}
                         </td>
+                        <td class="num text-muted">{% format_currency m.amount_paid %}</td>
                         <td>
-                            {% if m.status == 'active' %}
-                            <span class="badge bg-success">Active</span>
-                            {% elif m.status == 'expired' %}
-                            <span class="badge bg-danger">Expired</span>
-                            {% else %}
-                            <span class="badge bg-secondary">{{ m.get_status_display }}</span>
-                            {% endif %}
+                            {% if m.status == 'active' %}<span class="badge bg-success">Active</span>
+                            {% elif m.status == 'expired' %}<span class="badge bg-danger">Expired</span>
+                            {% elif m.status == 'cancelled' %}<span class="badge bg-dark">Cancelled</span>
+                            {% else %}<span class="badge bg-warning">{{ m.get_status_display }}</span>{% endif %}
                         </td>
-                        <td>
-                            <a href="/memberships/{{ m.pk }}/" class="btn btn-sm btn-outline-primary">
-                                <i class="fas fa-eye"></i>
-                            </a>
+                        <td class="text-end">
+                            <a href="{% url 'membership_detail' m.pk %}" class="btn btn-sm btn-outline-primary btn-icon"><i class="fas fa-eye"></i></a>
                         </td>
                     </tr>
                     {% endfor %}
@@ -137,34 +106,30 @@
             </table>
         </div>
 
-        {% if page_obj.has_other_pages %}
-        <nav class="mt-3">
-            <ul class="pagination pagination-sm justify-content-center">
-                {% if page_obj.has_previous %}
-                <li class="page-item"><a class="page-link" href="?page={{ page_obj.previous_page_number }}">Previous</a></li>
-                {% endif %}
-                <li class="page-item disabled"><span class="page-link">Page {{ page_obj.number }}</span></li>
-                {% if page_obj.has_next %}
-                <li class="page-item"><a class="page-link" href="?page={{ page_obj.next_page_number }}">Next</a></li>
-                {% endif %}
+        <div class="aq-pagebar">
+            <span>{{ page_obj.paginator.count }} membership{{ page_obj.paginator.count|pluralize }} · Page {{ page_obj.number }}/{{ page_obj.paginator.num_pages }}</span>
+            {% if page_obj.has_other_pages %}
+            <ul class="pagination pagination-sm mb-0">
+                {% if page_obj.has_previous %}<li class="page-item"><a class="page-link" href="?page={{ page_obj.previous_page_number }}&q={{ search }}&status={{ status }}">‹</a></li>{% endif %}
+                <li class="page-item disabled"><span class="page-link">{{ page_obj.number }}</span></li>
+                {% if page_obj.has_next %}<li class="page-item"><a class="page-link" href="?page={{ page_obj.next_page_number }}&q={{ search }}&status={{ status }}">›</a></li>{% endif %}
             </ul>
-        </nav>
-        {% endif %}
+            {% endif %}
+        </div>
 
         {% else %}
-        <div class="text-center py-5">
-            <i class="fas fa-star fa-3x text-muted mb-3"></i>
-            <h5 class="text-muted">No memberships yet</h5>
+        <div class="aq-empty">
+            <i class="fas fa-star"></i>
+            <h5>No memberships found</h5>
             {% if can_manage %}
-            <button class="btn btn-primary mt-2" onclick="openAddModal()">
-                <i class="fas fa-plus me-1"></i>Sell First Membership
-            </button>
+            <button class="btn btn-sm btn-primary" onclick="openAddModal()"><i class="fas fa-plus me-1"></i>Sell First Membership</button>
             {% endif %}
         </div>
         {% endif %}
     </div>
 </div>
 
+{% if can_manage %}
 <!-- Sell Membership Modal -->
 <div class="modal fade" id="addModal" tabindex="-1">
     <div class="modal-dialog">
@@ -174,114 +139,128 @@
                 <button class="btn-close" data-bs-dismiss="modal"></button>
             </div>
             <div class="modal-body">
-                <div class="mb-3">
-                    <label class="form-label fw-semibold">Customer <span class="text-danger">*</span></label>
-                    <div class="aq-smart-input" id="memCustomer"
-                        data-name="customer"
-                        data-search-url="/customers/search/"
-                        data-create-url="/vehicles/customers/quick-create/"
-                        data-results-key="customers"
-                        data-label="Customer"
-                        data-placeholder="Search customer..."
-                        data-required="true"></div>
+                <div class="mb-2">
+                    <label class="form-label">Customer <span class="text-danger">*</span></label>
+                    <div class="aq-smart-input" id="memCustomerInput"
+                         data-name="customer"
+                         data-search-url="/customers/search/"
+                         data-create-url="/vehicles/customers/quick-create/"
+                         data-results-key="customers"
+                         data-label="Customer"
+                         data-placeholder="Search or type to add…"
+                         data-required="true"></div>
                 </div>
-                <div class="mb-3">
-                    <label class="form-label fw-semibold">Plan <span class="text-danger">*</span></label>
-                    <select id="memPlan" class="form-select">
+                <div class="mb-2">
+                    <label class="form-label">Plan <span class="text-danger">*</span></label>
+                    <select id="memPlan" class="form-select" onchange="planChanged()">
                         <option value="">— Select Plan —</option>
                         {% for p in plans %}
-                        <option value="{{ p.pk }}" data-price="{{ p.price }}">
-                            {{ p.name }} — Rs. {{ p.price }} ({{ p.wash_count }} washes)
+                        <option value="{{ p.pk }}" data-price="{{ p.price }}" data-washes="{{ p.wash_count }}" data-days="{{ p.duration_days }}">
+                            {{ p.name }} — {% format_currency p.price %}
+                            {% if p.wash_count > 0 %}({{ p.wash_count }} washes){% else %}(Unlimited){% endif %}
                         </option>
                         {% endfor %}
                     </select>
                 </div>
-                <div class="row g-2 mb-3">
-                    <div class="col-md-6">
-                        <label class="form-label fw-semibold">Start Date</label>
+                <div id="planInfo" class="alert alert-info py-1 mb-2" style="display:none;font-size:10.5px;"></div>
+                <div class="row g-2 mb-2">
+                    <div class="col-6">
+                        <label class="form-label">Start Date</label>
                         <input type="date" id="memStart" class="form-control" value="{% now 'Y-m-d' %}">
                     </div>
-                    <div class="col-md-6">
-                        <label class="form-label fw-semibold">Amount Paid</label>
-                        <input type="number" id="memAmount" class="form-control" min="0" step="0.01">
+                    <div class="col-6">
+                        <label class="form-label">Amount Paid ({{ CURRENCY_SYMBOL }})</label>
+                        <input type="number" id="memPaid" class="form-control" min="0" step="0.01" placeholder="0.00">
                     </div>
                 </div>
-                <div class="mb-3">
-                    <label class="form-label fw-semibold">Notes</label>
+                <div class="mb-2">
+                    <label class="form-label">Notes</label>
                     <textarea id="memNotes" class="form-control" rows="2"></textarea>
                 </div>
-                <div id="memError" class="alert alert-danger" style="display:none;"></div>
+                <div id="memError" class="alert alert-danger mb-0" style="display:none;"></div>
             </div>
             <div class="modal-footer">
-                <button class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
-                <button class="btn btn-primary" id="saveMemBtn"><i class="fas fa-save me-1"></i>Save</button>
+                <button class="btn btn-sm btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                <button class="btn btn-sm btn-primary" id="saveMemBtn"><i class="fas fa-save me-1"></i>Create Membership</button>
             </div>
         </div>
     </div>
 </div>
+{% endif %}
+
 {% endblock %}
 
 {% block extra_js %}
 <script>
 const CSRF_TOKEN = '{{ csrf_token }}';
 
+{% if can_manage %}
 function openAddModal() {
     document.getElementById('memPlan').value = '';
     document.getElementById('memStart').value = '{% now "Y-m-d" %}';
-    document.getElementById('memAmount').value = '';
+    document.getElementById('memPaid').value = '';
     document.getElementById('memNotes').value = '';
     document.getElementById('memError').style.display = 'none';
+    document.getElementById('planInfo').style.display = 'none';
 
-    const cust = document.getElementById('memCustomer')._smartInput;
-    if (cust) {
-        cust.input.value = '';
-        cust.hiddenInput.value = '';
-        cust.clearBtn.style.display = 'none';
+    const ci = document.getElementById('memCustomerInput');
+    if (ci && ci._smartInput) {
+        const si = ci._smartInput;
+        si.input.value = '';
+        si.hiddenInput.value = '';
+        si.pendingHidden.value = '';
+        si.clearBtn.style.display = 'none';
+        si.pendingHint.style.display = 'none';
     }
 
     new bootstrap.Modal(document.getElementById('addModal')).show();
 }
 
-// Auto-fill amount when plan selected
-document.getElementById('memPlan').addEventListener('change', function () {
-    const price = this.options[this.selectedIndex].dataset.price;
-    if (price) document.getElementById('memAmount').value = price;
-});
+function planChanged() {
+    const sel = document.getElementById('memPlan');
+    const opt = sel.options[sel.selectedIndex];
+    const info = document.getElementById('planInfo');
+
+    if (opt && opt.dataset.price) {
+        document.getElementById('memPaid').value = opt.dataset.price;
+        const washes = opt.dataset.washes === '0' ? 'Unlimited washes' : opt.dataset.washes + ' washes';
+        info.innerHTML = `<i class="fas fa-circle-info me-1"></i>${washes} · Valid ${opt.dataset.days} days`;
+        info.style.display = 'block';
+    } else {
+        info.style.display = 'none';
+    }
+}
 
 document.getElementById('saveMemBtn').addEventListener('click', function () {
-    const cust = document.getElementById('memCustomer')._smartInput;
-    const customerId = cust.hiddenInput.value;
-    const planId = document.getElementById('memPlan').value;
     const err = document.getElementById('memError');
     err.style.display = 'none';
 
-    if (!customerId) { err.textContent = 'Customer required.'; err.style.display = 'block'; return; }
+    const custSmart = document.getElementById('memCustomerInput')._smartInput;
+    const custId = custSmart ? custSmart.hiddenInput.value : '';
+    const planId = document.getElementById('memPlan').value;
+
+    if (!custId) { err.textContent = 'Customer required. Select or create one.'; err.style.display = 'block'; return; }
     if (!planId) { err.textContent = 'Plan required.'; err.style.display = 'block'; return; }
 
     this.disabled = true;
     const fd = new FormData();
-    fd.append('customer_id', customerId);
+    fd.append('customer_id', custId);
     fd.append('plan_id', planId);
     fd.append('start_date', document.getElementById('memStart').value);
-    fd.append('amount_paid', document.getElementById('memAmount').value || '0');
-    fd.append('notes', document.getElementById('memNotes').value);
+    fd.append('amount_paid', document.getElementById('memPaid').value || '0');
+    fd.append('notes', document.getElementById('memNotes').value.trim());
 
     fetch('/memberships/create/', {
-        method: 'POST',
-        headers: { 'X-CSRFToken': CSRF_TOKEN },
-        body: fd,
-    })
-    .then(r => r.json())
-    .then(data => {
+        method: 'POST', headers: { 'X-CSRFToken': CSRF_TOKEN }, body: fd,
+    }).then(r => r.json()).then(data => {
         this.disabled = false;
         if (data.success) {
+            bootstrap.Modal.getInstance(document.getElementById('addModal')).hide();
             showToast(data.message, 'success');
-            setTimeout(() => location.reload(), 600);
-        } else {
-            err.textContent = data.error;
-            err.style.display = 'block';
-        }
+            setTimeout(() => location.reload(), 800);
+        } else { err.textContent = data.error; err.style.display = 'block'; }
     });
 });
+{% endif %}
 </script>
 {% endblock %}

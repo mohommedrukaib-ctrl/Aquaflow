@@ -1,9 +1,6 @@
 """
 AquaFlow Global Context Processor
 Powered by Quantum Axis
-
-Loads business settings from database.
-Available in ALL templates automatically.
 """
 
 from django.conf import settings
@@ -14,8 +11,8 @@ logger = logging.getLogger('apps')
 
 def aquaflow_context(request):
     """
-    Injects business info, currency and system info
-    into every template. DB-first with settings fallback.
+    Injects business info, currency, system parameters, and Feature Flags
+    directly into every template automatically.
     """
 
     # ─── Defaults from settings ───────────────────────────────
@@ -50,8 +47,16 @@ def aquaflow_context(request):
             tax_name         = business.tax_name
             tax_percentage   = business.tax_percentage
     except Exception as e:
-        # DB may not be ready during migrations
         logger.debug(f'Context processor DB load skipped: {e}')
+
+    # ─── NEW: Load Dynamically Tuned Feature Toggles ─────────
+    features_dict = {}
+    try:
+        from apps.system.features import FEATURES as FEATURE_KEYS, is_feature_enabled
+        for key in FEATURE_KEYS.keys():
+            features_dict[key] = is_feature_enabled(key)
+    except Exception as e:
+        logger.debug(f'Failed to load feature flags: {e}')
 
     return {
         # ─── Developer / System ───────────────────────────────
@@ -78,4 +83,7 @@ def aquaflow_context(request):
         'TAX_ENABLED':      tax_enabled,
         'TAX_NAME':         tax_name,
         'TAX_PERCENTAGE':   tax_percentage,
+        
+        # ─── Dynamic Feature Flags ────────────────────────────
+        'features':         features_dict,
     }

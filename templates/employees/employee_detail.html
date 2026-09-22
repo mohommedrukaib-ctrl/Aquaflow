@@ -1,123 +1,308 @@
 {% extends "base/base.html" %}
 {% load aquaflow_tags %}
 
-{% block title %}{{ employee.full_name }} — AquaFlow{% endblock %}
+{% block title %}{{ employee.full_name }} — Employees{% endblock %}
 {% block page_icon %}fas fa-id-badge{% endblock %}
 {% block page_title %}{{ employee.full_name }}{% endblock %}
-{% block page_subtitle %}Employee details{% endblock %}
-
+{% block page_subtitle %}{{ employee.employee_code }} · {{ employee.position.name|default:"No position" }}{% endblock %}
 {% block breadcrumbs %}
-<span>/</span>
-<a href="/employees/">Employees</a>
-<span>/</span>
-<span class="current">{{ employee.full_name }}</span>
+<span>/</span><a href="/employees/">Employees</a>
+<span>/</span><span class="current">{{ employee.full_name|truncatechars:20 }}</span>
+{% endblock %}
+
+{% block extra_css %}
+<style>
+.editable-cell {
+    cursor: pointer;
+    padding: 1px 5px;
+    border-radius: 3px;
+}
+.editable-cell:hover {
+    background: var(--aq-hover-bg);
+    outline: 1px dashed var(--aq-primary);
+}
+.editable-input {
+    width: 100%; padding: 1px 5px; height: 22px;
+    border: 1px solid var(--aq-primary); border-radius: 3px;
+    font-size: 11.5px; background: var(--aq-input-bg); color: var(--aq-text);
+}
+.emp-photo {
+    width: 64px; height: 64px; border-radius: 8px;
+    background: var(--aq-primary-soft); color: var(--aq-primary);
+    display: flex; align-items: center; justify-content: center;
+    font-size: 22px; font-weight: 700; flex-shrink: 0;
+    object-fit: cover;
+}
+</style>
 {% endblock %}
 
 {% block content %}
-<div class="row g-3">
 
+<div class="row g-2">
+
+    <!-- ══ LEFT: Profile ═══════════════════════════════════ -->
     <div class="col-lg-4">
-        <div class="card mb-3">
-            <div class="card-body text-center py-4">
-                {% if employee.photo %}
-                <img src="{{ employee.photo.url }}" alt="Photo" style="width:80px; height:80px; border-radius:50%; object-fit:cover;" class="mb-3">
-                {% else %}
-                <div style="width:80px; height:80px; border-radius:50%; background:var(--aq-primary); display:flex; align-items:center; justify-content:center; margin:0 auto 12px; color:white; font-size:28px; font-weight:700;">
-                    {{ employee.first_name|first|upper }}
-                </div>
-                {% endif %}
-                <h5 class="fw-bold mb-1">{{ employee.full_name }}</h5>
-                <code class="text-muted">{{ employee.employee_code }}</code>
-                <div class="mt-2">
-                    {% if employee.status == 'active' %}
-                    <span class="badge bg-success">Active</span>
-                    {% elif employee.status == 'on_leave' %}
-                    <span class="badge bg-warning">On Leave</span>
+        <div class="aq-panel">
+            <div class="aq-panel-head">
+                <strong><i class="fas fa-id-badge aq-text-primary me-1"></i>Profile</strong>
+                {% if employee.status == 'active' %}<span class="badge bg-success">Active</span>
+                {% elif employee.status == 'on_leave' %}<span class="badge bg-warning">On Leave</span>
+                {% else %}<span class="badge bg-secondary">Inactive</span>{% endif %}
+            </div>
+            <div class="aq-panel-body">
+                <div class="d-flex align-items-center gap-2 mb-2">
+                    {% if employee.photo %}
+                    <img src="{{ employee.photo.url }}" class="emp-photo" alt="">
                     {% else %}
-                    <span class="badge bg-secondary">Inactive</span>
+                    <div class="emp-photo">{{ employee.first_name|slice:":1"|upper }}{{ employee.last_name|slice:":1"|upper }}</div>
                     {% endif %}
+                    <div>
+                        <div class="fw-bold" style="font-size:13px;">{{ employee.full_name }}</div>
+                        <code style="font-size:10px;">{{ employee.employee_code }}</code>
+                    </div>
+                </div>
+
+                <table class="table">
+                    <tbody>
+                        <tr>
+                            <td class="text-muted nowrap" style="width:100px;">First Name</td>
+                            <td>
+                                {% if can_manage %}<span class="editable-cell" data-field="first_name">{{ employee.first_name }}</span>
+                                {% else %}{{ employee.first_name }}{% endif %}
+                            </td>
+                        </tr>
+                        <tr>
+                            <td class="text-muted nowrap">Last Name</td>
+                            <td>
+                                {% if can_manage %}<span class="editable-cell" data-field="last_name">{{ employee.last_name|default:"—" }}</span>
+                                {% else %}{{ employee.last_name|default:"—" }}{% endif %}
+                            </td>
+                        </tr>
+                        <tr>
+                            <td class="text-muted nowrap">Phone</td>
+                            <td>
+                                {% if can_manage %}<span class="editable-cell" data-field="phone">{{ employee.phone|default:"—" }}</span>
+                                {% else %}{{ employee.phone|default:"—" }}{% endif %}
+                            </td>
+                        </tr>
+                        <tr>
+                            <td class="text-muted nowrap">Email</td>
+                            <td>
+                                {% if can_manage %}<span class="editable-cell" data-field="email">{{ employee.email|default:"—" }}</span>
+                                {% else %}{{ employee.email|default:"—" }}{% endif %}
+                            </td>
+                        </tr>
+                        <tr>
+                            <td class="text-muted nowrap">NIC / ID</td>
+                            <td>
+                                {% if can_manage %}<span class="editable-cell" data-field="nic_number">{{ employee.nic_number|default:"—" }}</span>
+                                {% else %}{{ employee.nic_number|default:"—" }}{% endif %}
+                            </td>
+                        </tr>
+                        <tr>
+                            <td class="text-muted nowrap">Salary</td>
+                            <td>
+                                {% if can_manage %}<span class="editable-cell" data-field="salary" data-type="number">{{ employee.salary }}</span>
+                                {% else %}{% format_currency employee.salary %}{% endif %}
+                            </td>
+                        </tr>
+                        <tr>
+                            <td class="text-muted nowrap">Commission</td>
+                            <td>
+                                {% if can_manage %}<span class="editable-cell" data-field="commission_rate" data-type="number">{{ employee.commission_rate }}</span> %
+                                {% else %}{{ employee.commission_rate }}%{% endif %}
+                            </td>
+                        </tr>
+                        <tr>
+                            <td class="text-muted nowrap">Branch</td>
+                            <td>{{ employee.branch.name }}</td>
+                        </tr>
+                        <tr>
+                            <td class="text-muted nowrap">Hired</td>
+                            <td>{{ employee.hire_date|date:"d M Y"|default:"—" }}</td>
+                        </tr>
+                        <tr>
+                            <td class="text-muted nowrap">Status</td>
+                            <td>
+                                {% if can_manage %}
+                                <select id="statusSelect" class="form-select form-select-sm" style="width:120px;" data-field="status">
+                                    <option value="active" {% if employee.status == 'active' %}selected{% endif %}>Active</option>
+                                    <option value="on_leave" {% if employee.status == 'on_leave' %}selected{% endif %}>On Leave</option>
+                                    <option value="inactive" {% if employee.status == 'inactive' %}selected{% endif %}>Inactive</option>
+                                </select>
+                                {% else %}{{ employee.get_status_display }}{% endif %}
+                            </td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        {% if can_manage %}
+        <div class="aq-panel">
+            <div class="aq-panel-body">
+                <div class="d-grid gap-1">
+                    <button class="btn btn-sm btn-outline-danger"
+                            onclick="confirmEmpDelete()">
+                        <i class="fas fa-trash me-1"></i>Move to Trash
+                    </button>
+                    <a href="/employees/" class="btn btn-sm btn-outline-secondary">
+                        <i class="fas fa-arrow-left me-1"></i>Back to List
+                    </a>
                 </div>
             </div>
         </div>
-
-        <div class="card mb-3">
-            <div class="card-header"><strong>Contact</strong></div>
-            <div class="card-body">
-                <table class="table table-borderless table-sm mb-0">
-                    <tr><td class="text-muted">Phone</td><td>{{ employee.phone|default:"—" }}</td></tr>
-                    <tr><td class="text-muted">Email</td><td>{{ employee.email|default:"—" }}</td></tr>
-                    <tr><td class="text-muted">NIC</td><td>{{ employee.nic_number|default:"—" }}</td></tr>
-                    <tr><td class="text-muted">Address</td><td>{{ employee.address|default:"—" }}</td></tr>
-                </table>
-            </div>
-        </div>
-
-        <div class="card">
-            <div class="card-header"><strong>Employment</strong></div>
-            <div class="card-body">
-                <table class="table table-borderless table-sm mb-0">
-                    <tr><td class="text-muted">Position</td><td>{{ employee.position.name|default:"—" }}</td></tr>
-                    <tr><td class="text-muted">Branch</td><td>{{ employee.branch.name }}</td></tr>
-                    <tr><td class="text-muted">Hire Date</td><td>{{ employee.hire_date|date:"d M Y"|default:"—" }}</td></tr>
-                    <tr><td class="text-muted">Salary</td><td>{% format_currency employee.salary %}</td></tr>
-                    <tr><td class="text-muted">Commission</td><td>{{ employee.commission_rate }}%</td></tr>
-                    <tr><td class="text-muted">Login Account</td><td>
-                        {% if employee.user %}
-                        <span class="badge bg-info">{{ employee.user.username }}</span>
-                        {% else %}
-                        <span class="text-muted">Not linked</span>
-                        {% endif %}
-                    </td></tr>
-                </table>
-            </div>
-        </div>
+        {% endif %}
     </div>
 
+    <!-- ══ RIGHT: Performance ══════════════════════════════ -->
     <div class="col-lg-8">
-        <!-- Performance Stats (Last 30 Days) -->
-        <div class="row g-3 mb-3">
-            <div class="col-md-4">
-                <div class="aq-stat-card">
-                    <div class="aq-stat-info">
-                        <h6>Washes (30d)</h6>
-                        <div class="aq-stat-value">{{ wash_count }}</div>
-                    </div>
-                    <div class="aq-stat-icon primary"><i class="fas fa-car-wash"></i></div>
+        <div class="aq-kpi-grid">
+            <div class="aq-kpi">
+                <div class="aq-kpi-ico"><i class="fas fa-spray-can-sparkles"></i></div>
+                <div class="aq-kpi-body">
+                    <div class="aq-kpi-label">Washes (30 days)</div>
+                    <div class="aq-kpi-value">{{ wash_count }}</div>
+                    <div class="aq-kpi-sub">completed jobs</div>
                 </div>
             </div>
-            <div class="col-md-4">
-                <div class="aq-stat-card">
-                    <div class="aq-stat-info">
-                        <h6>Sales (30d)</h6>
-                        <div class="aq-stat-value">{{ sales.count|default:0 }}</div>
-                    </div>
-                    <div class="aq-stat-icon info"><i class="fas fa-cash-register"></i></div>
+            <div class="aq-kpi suc">
+                <div class="aq-kpi-ico"><i class="fas fa-receipt"></i></div>
+                <div class="aq-kpi-body">
+                    <div class="aq-kpi-label">Sales (30 days)</div>
+                    <div class="aq-kpi-value">{{ sales.count }}</div>
+                    <div class="aq-kpi-sub">orders created</div>
                 </div>
             </div>
-            <div class="col-md-4">
-                <div class="aq-stat-card">
-                    <div class="aq-stat-info">
-                        <h6>Revenue (30d)</h6>
-                        <div class="aq-stat-value">{% format_currency sales.total %}</div>
-                    </div>
-                    <div class="aq-stat-icon success"><i class="fas fa-dollar-sign"></i></div>
+            <div class="aq-kpi pur">
+                <div class="aq-kpi-ico"><i class="fas fa-sack-dollar"></i></div>
+                <div class="aq-kpi-body">
+                    <div class="aq-kpi-label">Revenue (30 days)</div>
+                    <div class="aq-kpi-value">{% format_currency sales.total %}</div>
+                    <div class="aq-kpi-sub">total sales value</div>
                 </div>
             </div>
         </div>
 
         {% if employee.notes %}
-        <div class="card mb-3">
-            <div class="card-header"><strong>Notes</strong></div>
-            <div class="card-body">{{ employee.notes|linebreaksbr }}</div>
+        <div class="aq-panel">
+            <div class="aq-panel-head"><strong><i class="fas fa-note-sticky aq-text-primary me-1"></i>Notes</strong></div>
+            <div class="aq-panel-body">
+                <p class="mb-0" style="font-size:11.5px;">{{ employee.notes|linebreaksbr }}</p>
+            </div>
         </div>
         {% endif %}
 
-        <div class="d-flex gap-2">
-            <a href="/employees/" class="btn btn-outline-secondary">
-                <i class="fas fa-arrow-left me-1"></i>Back
-            </a>
+        {% if employee.user %}
+        <div class="aq-panel">
+            <div class="aq-panel-head"><strong><i class="fas fa-user-lock aq-text-primary me-1"></i>Linked Login</strong></div>
+            <div class="aq-panel-body">
+                <div style="font-size:11.5px;">
+                    System user: <strong>{{ employee.user.username }}</strong>
+                    · Role: {{ employee.user.profile.role.name|default:"—" }}
+                    · {% if employee.user.is_active %}<span class="badge bg-success">Login Active</span>{% else %}<span class="badge bg-secondary">Login Disabled</span>{% endif %}
+                </div>
+            </div>
+        </div>
+        {% endif %}
+    </div>
+</div>
+
+{% if can_manage %}
+<div class="modal fade" id="deleteEmpModal" tabindex="-1">
+    <div class="modal-dialog modal-sm">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title text-danger"><i class="fas fa-triangle-exclamation me-2"></i>Confirm Delete</h5>
+                <button class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <p class="mb-1">Delete <strong>{{ employee.full_name }}</strong>?</p>
+                <p class="text-muted mb-0" style="font-size:10.5px;">Moved to Trash. Restorable by Super Admin.</p>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-sm btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                <button class="btn btn-sm btn-danger" id="confirmEmpDeleteBtn"><i class="fas fa-trash me-1"></i>Delete</button>
+            </div>
         </div>
     </div>
-
 </div>
+{% endif %}
+
+{% endblock %}
+
+{% block extra_js %}
+<script>
+const CSRF_TOKEN = '{{ csrf_token }}';
+const EMP_ID = {{ employee.pk }};
+
+{% if can_manage %}
+// ─── Inline edit ────────────────────────────────────────────
+document.querySelectorAll('.editable-cell').forEach(cell => {
+    cell.addEventListener('click', function () {
+        if (this.querySelector('input')) return;
+        const val = this.textContent.trim();
+        const field = this.dataset.field;
+        const type = this.dataset.type || 'text';
+        this.dataset.original = val;
+        this.innerHTML = `<input type="${type === 'number' ? 'number' : 'text'}" class="editable-input" value="${val === '—' ? '' : val}" ${type === 'number' ? 'min="0" step="0.01"' : ''}>`;
+        const input = this.querySelector('input');
+        input.focus(); input.select();
+        input.addEventListener('blur', () => saveField(field, input.value.trim(), this, val));
+        input.addEventListener('keydown', e => {
+            if (e.key === 'Enter') input.blur();
+            if (e.key === 'Escape') this.textContent = val;
+        });
+    });
+});
+
+// Status dropdown
+document.getElementById('statusSelect')?.addEventListener('change', function () {
+    saveField('status', this.value, null, null);
+});
+
+function saveField(field, value, cell, original) {
+    const fd = new FormData();
+    fd.append('field', field);
+    fd.append('value', value);
+
+    fetch(`/employees/${EMP_ID}/edit-inline/`, {
+        method: 'POST', headers: { 'X-CSRFToken': CSRF_TOKEN }, body: fd,
+    }).then(r => r.json()).then(data => {
+        if (data.success) {
+            if (cell) cell.textContent = data.value || '—';
+            showToast('Updated.', 'success');
+        } else {
+            if (cell) cell.textContent = original;
+            showToast(data.error, 'error');
+        }
+    }).catch(() => {
+        if (cell) cell.textContent = original;
+        showToast('Network error.', 'error');
+    });
+}
+
+// ─── Delete ─────────────────────────────────────────────────
+function confirmEmpDelete() {
+    new bootstrap.Modal(document.getElementById('deleteEmpModal')).show();
+}
+
+document.getElementById('confirmEmpDeleteBtn')?.addEventListener('click', function () {
+    this.disabled = true;
+    this.innerHTML = '<i class="fas fa-spinner fa-spin"></i>';
+    fetch(`/employees/${EMP_ID}/delete/`, {
+        method: 'POST', headers: { 'X-CSRFToken': CSRF_TOKEN },
+    }).then(r => r.json()).then(data => {
+        if (data.success) {
+            showToast(data.message, 'success');
+            setTimeout(() => { window.location.href = '/employees/'; }, 900);
+        } else {
+            showToast(data.error, 'error');
+            this.disabled = false;
+            this.innerHTML = '<i class="fas fa-trash me-1"></i>Delete';
+        }
+    });
+});
+{% endif %}
+</script>
 {% endblock %}

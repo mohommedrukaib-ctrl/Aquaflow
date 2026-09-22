@@ -110,7 +110,16 @@ class Membership(models.Model):
             self.membership_number = f'MEM-{num:06d}'
 
         if not self.expiry_date and self.plan:
-            self.expiry_date = self.start_date + timedelta(days=self.plan.duration_days)
+            # start_date may arrive as str from forms — convert first
+            start = self.start_date
+            if isinstance(start, str):
+                from datetime import datetime
+                try:
+                    start = datetime.strptime(start.strip(), '%Y-%m-%d').date()
+                except ValueError:
+                    from django.utils import timezone
+                    start = timezone.now().date()
+            self.expiry_date = start + timedelta(days=self.plan.duration_days)
 
         if not self.wash_count_total and self.plan:
             self.wash_count_total = self.plan.wash_count

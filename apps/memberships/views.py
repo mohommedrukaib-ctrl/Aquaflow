@@ -203,7 +203,16 @@ def membership_create_ajax(request):
             customer = Customer.objects.get(pk=customer_id, is_deleted=False)
             plan     = MembershipPlan.objects.get(pk=plan_id, is_active=True)
 
+            
+            if isinstance(start_date, str):
+                start_date = start_date.strip()
             if not start_date:
+                start_date = timezone.now().date()
+            else:
+             from datetime import datetime
+            try:
+                start_date = datetime.strptime(str(start_date), '%Y-%m-%d').date()
+            except (ValueError, TypeError):
                 start_date = timezone.now().date()
 
             membership = Membership.objects.create(

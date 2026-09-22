@@ -5,115 +5,99 @@
 {% block page_icon %}fas fa-wallet{% endblock %}
 {% block page_title %}Expenses{% endblock %}
 {% block page_subtitle %}Track business expenses{% endblock %}
-
-{% block breadcrumbs %}
-<span>/</span>
-<span class="current">Expenses</span>
-{% endblock %}
+{% block breadcrumbs %}<span>/</span><span class="current">Expenses</span>{% endblock %}
 
 {% block content %}
 
-<div class="row g-3 mb-3">
-    <div class="col-md-4">
-        <div class="aq-stat-card">
-            <div class="aq-stat-info">
-                <h6>Total Expenses</h6>
-                <div class="aq-stat-value">{% format_currency total_amount %}</div>
-                <div class="aq-stat-meta">{{ total_count }} records</div>
-            </div>
-            <div class="aq-stat-icon danger"><i class="fas fa-wallet"></i></div>
+<!-- KPI Strip -->
+<div class="aq-kpi-grid">
+    <div class="aq-kpi dgr">
+        <div class="aq-kpi-ico"><i class="fas fa-wallet"></i></div>
+        <div class="aq-kpi-body">
+            <div class="aq-kpi-label">Total Expenses</div>
+            <div class="aq-kpi-value">{% format_currency total_amount %}</div>
+            <div class="aq-kpi-sub">{{ total_count }} record{{ total_count|pluralize }}</div>
         </div>
     </div>
-    <div class="col-md-4">
-        <div class="aq-stat-card">
-            <div class="aq-stat-info">
-                <h6>This Month</h6>
-                <div class="aq-stat-value">{% format_currency monthly_total %}</div>
-                <div class="aq-stat-meta">Current month</div>
-            </div>
-            <div class="aq-stat-icon warning"><i class="fas fa-calendar"></i></div>
+
+    <div class="aq-kpi warn">
+        <div class="aq-kpi-ico"><i class="fas fa-calendar"></i></div>
+        <div class="aq-kpi-body">
+            <div class="aq-kpi-label">This Month</div>
+            <div class="aq-kpi-value">{% format_currency monthly_total %}</div>
+            <div class="aq-kpi-sub">Current month</div>
         </div>
     </div>
-    <div class="col-md-4">
-        <div class="aq-stat-card" style="height:100%;">
-            <div class="aq-stat-info" style="width:100%;">
-                <h6>Top Categories (Month)</h6>
-                {% for c in by_category %}
-                <div class="d-flex justify-content-between mt-1">
-                    <small>{{ c.category__name }}</small>
-                    <small class="fw-bold">{% format_currency c.total %}</small>
-                </div>
-                {% empty %}
-                <small class="text-muted">No expenses this month</small>
-                {% endfor %}
-            </div>
+
+    {% for c in by_category|slice:":2" %}
+    <div class="aq-kpi">
+        <div class="aq-kpi-ico"><i class="fas fa-tag"></i></div>
+        <div class="aq-kpi-body">
+            <div class="aq-kpi-label">{{ c.category__name|truncatechars:18 }}</div>
+            <div class="aq-kpi-value">{% format_currency c.total %}</div>
+            <div class="aq-kpi-sub">{{ c.count }} this month</div>
         </div>
     </div>
+    {% endfor %}
 </div>
 
-<div class="card">
-    <div class="card-header d-flex justify-content-between align-items-center">
-        <strong>
-            <i class="fas fa-list me-2 aq-text-primary"></i>Expense List
-        </strong>
+<div class="aq-panel">
+    <div class="aq-panel-head">
+        <strong><i class="fas fa-list aq-text-primary me-1"></i>Expense List</strong>
         {% if can_manage %}
-        <button class="btn btn-primary btn-sm" onclick="openAddModal()">
+        <button class="btn btn-sm btn-primary" onclick="openAddModal()">
             <i class="fas fa-plus me-1"></i>Add Expense
         </button>
         {% endif %}
     </div>
-    <div class="card-body">
-        <form method="GET" class="row g-2 mb-3">
-            <div class="col-md-4">
-                <input type="text" name="q" class="form-control" placeholder="Search description..." value="{{ search }}">
-            </div>
-            <div class="col-md-3">
-                <select name="category" class="form-select">
-                    <option value="">All Categories</option>
-                    {% for cat in categories %}
-                    <option value="{{ cat.pk }}" {% if category == cat.pk|stringformat:"s" %}selected{% endif %}>{{ cat.name }}</option>
-                    {% endfor %}
-                </select>
-            </div>
-            <div class="col-md-2">
-                <input type="date" name="date_from" class="form-control" value="{{ date_from }}">
-            </div>
-            <div class="col-md-2">
-                <input type="date" name="date_to" class="form-control" value="{{ date_to }}">
-            </div>
-            <div class="col-md-1">
-                <button class="btn btn-primary w-100"><i class="fas fa-search"></i></button>
-            </div>
-        </form>
 
+    <form method="GET" class="aq-toolbar">
+        <div class="input-group" style="width:260px;">
+            <span class="input-group-text"><i class="fas fa-search"></i></span>
+            <input type="text" name="q" class="form-control" value="{{ search }}" placeholder="Search description…">
+        </div>
+        <select name="category" class="form-select" style="width:170px;">
+            <option value="">All Categories</option>
+            {% for cat in categories %}
+            <option value="{{ cat.pk }}" {% if category == cat.pk|stringformat:"s" %}selected{% endif %}>{{ cat.name }}</option>
+            {% endfor %}
+        </select>
+        <input type="date" name="date_from" class="form-control" style="width:140px;" value="{{ date_from }}">
+        <input type="date" name="date_to" class="form-control" style="width:140px;" value="{{ date_to }}">
+        <button class="btn btn-outline-primary btn-sm"><i class="fas fa-filter me-1"></i>Filter</button>
+        <a href="/finance/" class="btn btn-outline-secondary btn-sm"><i class="fas fa-rotate"></i></a>
+    </form>
+
+    <div class="aq-panel-body flush">
         {% if expenses %}
-        <div class="table-responsive">
-            <table class="table table-hover align-middle">
+        <div class="aq-table-scroll">
+            <table class="table table-hover">
                 <thead>
                     <tr>
-                        <th>#</th>
-                        <th>Date</th>
+                        <th>Expense #</th>
+                        <th class="nowrap">Date</th>
                         <th>Category</th>
                         <th>Description</th>
                         <th>Payment</th>
-                        <th class="text-end">Amount</th>
+                        <th class="num">Amount</th>
                         <th>By</th>
-                        {% if can_manage %}<th></th>{% endif %}
+                        {% if can_manage %}<th style="width:36px;"></th>{% endif %}
                     </tr>
                 </thead>
                 <tbody>
                     {% for e in expenses %}
                     <tr>
-                        <td><small><code>{{ e.expense_number }}</code></small></td>
-                        <td><small>{{ e.expense_date|date:"d M Y" }}</small></td>
-                        <td><span class="badge bg-light text-dark border">{{ e.category.name }}</span></td>
-                        <td>{{ e.description }}</td>
-                        <td><small>{{ e.payment_method.name|default:"—" }}</small></td>
-                        <td class="text-end fw-bold text-danger">{% format_currency e.amount %}</td>
-                        <td><small>{{ e.created_by.username|default:"—" }}</small></td>
+                        <td class="nowrap"><code>{{ e.expense_number }}</code></td>
+                        <td class="nowrap text-muted">{{ e.expense_date|date:"d M Y" }}</td>
+                        <td><span class="badge bg-secondary">{{ e.category.name }}</span></td>
+                        <td>{{ e.description|truncatechars:38 }}</td>
+                        <td class="text-muted">{{ e.payment_method.name|default:"—" }}</td>
+                        <td class="num"><strong class="aq-text-danger">{% format_currency e.amount %}</strong></td>
+                        <td class="text-muted">{{ e.created_by.username|default:"—"|truncatechars:10 }}</td>
                         {% if can_manage %}
-                        <td>
-                            <button class="btn btn-sm btn-outline-danger" onclick="deleteExpense({{ e.pk }}, '{{ e.expense_number }}')">
+                        <td class="text-end">
+                            <button class="btn btn-sm btn-outline-danger btn-icon"
+                                    onclick="deleteExpense({{ e.pk }}, '{{ e.expense_number }}')">
                                 <i class="fas fa-trash"></i>
                             </button>
                         </td>
@@ -124,29 +108,30 @@
             </table>
         </div>
 
-        {% if page_obj.has_other_pages %}
-        <nav class="mt-3">
-            <ul class="pagination pagination-sm justify-content-center">
-                {% if page_obj.has_previous %}
-                <li class="page-item"><a class="page-link" href="?page={{ page_obj.previous_page_number }}">Previous</a></li>
-                {% endif %}
-                <li class="page-item disabled"><span class="page-link">Page {{ page_obj.number }} of {{ page_obj.paginator.num_pages }}</span></li>
-                {% if page_obj.has_next %}
-                <li class="page-item"><a class="page-link" href="?page={{ page_obj.next_page_number }}">Next</a></li>
-                {% endif %}
+        <div class="aq-pagebar">
+            <span>{{ page_obj.paginator.count }} expense{{ page_obj.paginator.count|pluralize }} · Page {{ page_obj.number }}/{{ page_obj.paginator.num_pages }}</span>
+            {% if page_obj.has_other_pages %}
+            <ul class="pagination pagination-sm mb-0">
+                {% if page_obj.has_previous %}<li class="page-item"><a class="page-link" href="?page={{ page_obj.previous_page_number }}&q={{ search }}&category={{ category }}">‹</a></li>{% endif %}
+                <li class="page-item disabled"><span class="page-link">{{ page_obj.number }}</span></li>
+                {% if page_obj.has_next %}<li class="page-item"><a class="page-link" href="?page={{ page_obj.next_page_number }}&q={{ search }}&category={{ category }}">›</a></li>{% endif %}
             </ul>
-        </nav>
-        {% endif %}
+            {% endif %}
+        </div>
 
         {% else %}
-        <div class="text-center py-5">
-            <i class="fas fa-wallet fa-3x text-muted mb-3"></i>
-            <h5 class="text-muted">No expenses recorded</h5>
+        <div class="aq-empty">
+            <i class="fas fa-wallet"></i>
+            <h5>No expenses recorded</h5>
+            {% if can_manage %}
+            <button class="btn btn-sm btn-primary" onclick="openAddModal()"><i class="fas fa-plus me-1"></i>Add First Expense</button>
+            {% endif %}
         </div>
         {% endif %}
     </div>
 </div>
 
+{% if can_manage %}
 <!-- Add Expense Modal -->
 <div class="modal fade" id="addModal" tabindex="-1">
     <div class="modal-dialog modal-lg">
@@ -156,51 +141,45 @@
                 <button class="btn-close" data-bs-dismiss="modal"></button>
             </div>
             <div class="modal-body">
-                <div class="row g-3">
+                <div class="row g-2">
                     <div class="col-md-8">
-                        <label class="form-label fw-semibold">Description <span class="text-danger">*</span></label>
+                        <label class="form-label">Description <span class="text-danger">*</span></label>
                         <input type="text" id="expDesc" class="form-control" placeholder="e.g. Electricity bill Aug 2026">
                     </div>
                     <div class="col-md-4">
-                        <label class="form-label fw-semibold">Amount <span class="text-danger">*</span></label>
-                        <input type="number" id="expAmount" class="form-control form-control-lg" min="0" step="0.01">
+                        <label class="form-label">Amount ({{ CURRENCY_SYMBOL }}) <span class="text-danger">*</span></label>
+                        <input type="number" id="expAmount" class="form-control" min="0" step="0.01" placeholder="0.00">
                     </div>
-                    <div class="col-md-6">
-                        <label class="form-label fw-semibold">Category <span class="text-danger">*</span></label>
+                    <div class="col-md-8">
+                        <label class="form-label">Category <span class="text-danger">*</span></label>
                         <div class="aq-smart-input" id="expCategoryInput"
-                            data-name="category"
-                            data-search-url="/finance/categories/search/"
-                            data-create-url="/finance/categories/create/"
-                            data-results-key="categories"
-                            data-label="Category"
-                            data-placeholder="Search or type new..."
-                            data-required="true"></div>
+                             data-name="category"
+                             data-search-url="/finance/categories/search/"
+                             data-create-url="/finance/categories/create/"
+                             data-results-key="categories"
+                             data-label="Category"
+                             data-placeholder="Search or type to add…"
+                             data-required="true"></div>
                     </div>
-                    <div class="col-md-3">
-                        <label class="form-label fw-semibold">Date <span class="text-danger">*</span></label>
+                    <div class="col-md-4">
+                        <label class="form-label">Date <span class="text-danger">*</span></label>
                         <input type="date" id="expDate" class="form-control" value="{% now 'Y-m-d' %}">
                     </div>
-                    <div class="col-md-3">
-                        <label class="form-label fw-semibold">Payment Method</label>
-                        <select id="expPayment" class="form-select">
-                            <option value="">—</option>
-                            {% for cat in categories %}{% endfor %}
-                        </select>
-                    </div>
-                    <div class="col-md-12">
-                        <label class="form-label fw-semibold">Notes</label>
+                    <div class="col-12">
+                        <label class="form-label">Notes</label>
                         <textarea id="expNotes" class="form-control" rows="2"></textarea>
                     </div>
                 </div>
-                <div id="expError" class="alert alert-danger mt-3" style="display:none;"></div>
+                <div id="expError" class="alert alert-danger mt-2 mb-0" style="display:none;"></div>
             </div>
             <div class="modal-footer">
-                <button class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
-                <button class="btn btn-primary" id="saveExpBtn"><i class="fas fa-save me-1"></i>Save Expense</button>
+                <button class="btn btn-sm btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                <button class="btn btn-sm btn-primary" id="saveExpBtn"><i class="fas fa-save me-1"></i>Save Expense</button>
             </div>
         </div>
     </div>
 </div>
+{% endif %}
 
 {% endblock %}
 
@@ -208,18 +187,22 @@
 <script>
 const CSRF_TOKEN = '{{ csrf_token }}';
 
+{% if can_manage %}
 function openAddModal() {
-    ['expDesc', 'expAmount', 'expNotes'].forEach(id => document.getElementById(id).value = '');
+    ['expDesc', 'expAmount', 'expNotes'].forEach(id => {
+        document.getElementById(id).value = '';
+    });
     document.getElementById('expDate').value = '{% now "Y-m-d" %}';
     document.getElementById('expError').style.display = 'none';
 
     const catInput = document.getElementById('expCategoryInput');
-    if (catInput._smartInput) {
-        catInput._smartInput.input.value = '';
-        catInput._smartInput.hiddenInput.value = '';
-        catInput._smartInput.pendingHidden.value = '';
-        catInput._smartInput.clearBtn.style.display = 'none';
-        catInput._smartInput.pendingHint.style.display = 'none';
+    if (catInput && catInput._smartInput) {
+        const si = catInput._smartInput;
+        si.input.value = '';
+        si.hiddenInput.value = '';
+        si.pendingHidden.value = '';
+        si.clearBtn.style.display = 'none';
+        si.pendingHint.style.display = 'none';
     }
 
     new bootstrap.Modal(document.getElementById('addModal')).show();
@@ -230,16 +213,19 @@ document.getElementById('saveExpBtn').addEventListener('click', function () {
     const desc = document.getElementById('expDesc').value.trim();
     const amount = document.getElementById('expAmount').value.trim();
     const date = document.getElementById('expDate').value;
-    const catSmart = document.getElementById('expCategoryInput')._smartInput;
-    const catId = catSmart.hiddenInput.value;
     const err = document.getElementById('expError');
     err.style.display = 'none';
 
+    const catSmart = document.getElementById('expCategoryInput')._smartInput;
+    const catId = catSmart ? catSmart.hiddenInput.value : '';
+
     if (!desc) { err.textContent = 'Description required.'; err.style.display = 'block'; return; }
     if (!amount || parseFloat(amount) <= 0) { err.textContent = 'Valid amount required.'; err.style.display = 'block'; return; }
-    if (!catId) { err.textContent = 'Category required.'; err.style.display = 'block'; return; }
+    if (!catId) { err.textContent = 'Category required. Select existing or press Enter to create new.'; err.style.display = 'block'; return; }
 
     this.disabled = true;
+    this.innerHTML = '<i class="fas fa-spinner fa-spin me-1"></i>Saving…';
+
     const fd = new FormData();
     fd.append('description', desc);
     fd.append('amount', amount);
@@ -248,13 +234,12 @@ document.getElementById('saveExpBtn').addEventListener('click', function () {
     fd.append('notes', document.getElementById('expNotes').value.trim());
 
     fetch('/finance/create/', {
-        method: 'POST',
-        headers: { 'X-CSRFToken': CSRF_TOKEN },
-        body: fd,
+        method: 'POST', headers: { 'X-CSRFToken': CSRF_TOKEN }, body: fd,
     })
     .then(r => r.json())
     .then(data => {
         this.disabled = false;
+        this.innerHTML = '<i class="fas fa-save me-1"></i>Save Expense';
         if (data.success) {
             bootstrap.Modal.getInstance(document.getElementById('addModal')).hide();
             showToast(data.message, 'success');
@@ -263,24 +248,25 @@ document.getElementById('saveExpBtn').addEventListener('click', function () {
             err.textContent = data.error;
             err.style.display = 'block';
         }
+    })
+    .catch(() => {
+        this.disabled = false;
+        this.innerHTML = '<i class="fas fa-save me-1"></i>Save Expense';
+        showToast('Network error.', 'error');
     });
 });
 
 function deleteExpense(id, number) {
     if (!confirm(`Delete expense ${number}?`)) return;
     fetch(`/finance/${id}/delete/`, {
-        method: 'POST',
-        headers: { 'X-CSRFToken': CSRF_TOKEN },
+        method: 'POST', headers: { 'X-CSRFToken': CSRF_TOKEN },
     })
     .then(r => r.json())
     .then(data => {
-        if (data.success) {
-            showToast(data.message, 'success');
-            setTimeout(() => location.reload(), 600);
-        } else {
-            showToast(data.error, 'error');
-        }
+        if (data.success) { showToast(data.message, 'success'); setTimeout(() => location.reload(), 600); }
+        else showToast(data.error, 'error');
     });
 }
+{% endif %}
 </script>
 {% endblock %}

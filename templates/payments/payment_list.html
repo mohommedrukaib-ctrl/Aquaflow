@@ -5,118 +5,74 @@
 {% block page_icon %}fas fa-money-bill-wave{% endblock %}
 {% block page_title %}Payments{% endblock %}
 {% block page_subtitle %}All payment transactions{% endblock %}
-
-{% block breadcrumbs %}
-<span>/</span>
-<span class="current">Payments</span>
-{% endblock %}
+{% block breadcrumbs %}<span>/</span><span class="current">Payments</span>{% endblock %}
 
 {% block content %}
 
-<div class="row g-3 mb-3">
-    <div class="col-md-4">
-        <div class="aq-stat-card">
-            <div class="aq-stat-info">
-                <h6>Total Payments</h6>
-                <div class="aq-stat-value">{{ total_count }}</div>
-            </div>
-            <div class="aq-stat-icon primary"><i class="fas fa-money-bill-wave"></i></div>
+<div class="aq-panel">
+    <div class="aq-panel-head">
+        <div class="aq-chips">
+            <span class="aq-chip pri"><i class="fas fa-money-bill-wave"></i> Payments <b>{{ total_count }}</b></span>
+            <span class="aq-chip suc"><i class="fas fa-sack-dollar"></i> Total <b>{% format_currency total_amount %}</b></span>
         </div>
-    </div>
-    <div class="col-md-4">
-        <div class="aq-stat-card">
-            <div class="aq-stat-info">
-                <h6>Total Amount</h6>
-                <div class="aq-stat-value">{% format_currency total_amount %}</div>
-            </div>
-            <div class="aq-stat-icon success"><i class="fas fa-dollar-sign"></i></div>
-        </div>
-    </div>
-    <div class="col-md-4">
-        <a href="{% url 'sales_summary' %}" class="aq-stat-card" style="text-decoration:none;">
-            <div class="aq-stat-info">
-                <h6>Daily Sales Summary</h6>
-                <div class="aq-stat-value" style="font-size:16px;">
-                    View Today's Total
-                </div>
-                <div class="aq-stat-meta">Cash reconciliation</div>
-            </div>
-            <div class="aq-stat-icon warning"><i class="fas fa-chart-pie"></i></div>
-        </a>
-    </div>
-</div>
-
-<div class="card">
-    <div class="card-header d-flex justify-content-between align-items-center">
-        <strong><i class="fas fa-list me-2 aq-text-primary"></i>Payment List</strong>
-        <a href="{% url 'sales_summary' %}" class="btn btn-outline-primary btn-sm">
+        <a href="{% url 'sales_summary' %}" class="btn btn-sm btn-outline-primary">
             <i class="fas fa-chart-pie me-1"></i>Daily Summary
         </a>
     </div>
-    <div class="card-body">
 
-        <form method="GET" class="row g-2 mb-3">
-            <div class="col-md-4">
-                <input type="text" name="q" class="form-control" placeholder="Invoice#, order#, ref, customer..." value="{{ search }}">
-            </div>
-            <div class="col-md-2">
-                <select name="method" class="form-select">
-                    <option value="">All Methods</option>
-                    {% for pm in payment_methods %}
-                    <option value="{{ pm.pk }}" {% if method == pm.pk|stringformat:"s" %}selected{% endif %}>{{ pm.name }}</option>
-                    {% endfor %}
-                </select>
-            </div>
-            <div class="col-md-2">
-                <input type="date" name="date_from" class="form-control" value="{{ date_from }}">
-            </div>
-            <div class="col-md-2">
-                <input type="date" name="date_to" class="form-control" value="{{ date_to }}">
-            </div>
-            <div class="col-md-2">
-                <button class="btn btn-primary w-100"><i class="fas fa-search me-1"></i>Filter</button>
-            </div>
-        </form>
+    <form method="GET" class="aq-toolbar">
+        <div class="input-group" style="width:280px;">
+            <span class="input-group-text"><i class="fas fa-search"></i></span>
+            <input type="text" name="q" class="form-control" value="{{ search }}"
+                   placeholder="Invoice#, order#, ref, customer…">
+        </div>
+        <select name="method" class="form-select" style="width:140px;">
+            <option value="">All Methods</option>
+            {% for pm in payment_methods %}
+            <option value="{{ pm.pk }}" {% if method == pm.pk|stringformat:"s" %}selected{% endif %}>{{ pm.name }}</option>
+            {% endfor %}
+        </select>
+        <input type="date" name="date_from" class="form-control" style="width:140px;" value="{{ date_from }}">
+        <input type="date" name="date_to" class="form-control" style="width:140px;" value="{{ date_to }}">
+        <button class="btn btn-outline-primary btn-sm"><i class="fas fa-filter me-1"></i>Filter</button>
+        <a href="/payments/" class="btn btn-outline-secondary btn-sm"><i class="fas fa-rotate"></i></a>
+    </form>
 
+    <div class="aq-panel-body flush">
         {% if payments %}
-        <div class="table-responsive">
-            <table class="table table-hover align-middle">
+        <div class="aq-table-scroll">
+            <table class="table table-hover">
                 <thead>
                     <tr>
-                        <th>Date/Time</th>
+                        <th class="nowrap">Date / Time</th>
                         <th>Invoice</th>
                         <th>Customer</th>
                         <th>Method</th>
                         <th>Reference</th>
                         <th>Cashier</th>
-                        <th class="text-end">Amount</th>
+                        <th class="num">Amount</th>
                         <th>Status</th>
                     </tr>
                 </thead>
                 <tbody>
                     {% for p in payments %}
                     <tr>
-                        <td><small>{{ p.processed_at|date:"d M Y H:i" }}</small></td>
-                        <td>
-                            <a href="/invoices/{{ p.invoice.pk }}/">
-                                <strong>{{ p.invoice.invoice_number }}</strong>
-                            </a>
+                        <td class="nowrap text-muted">{{ p.processed_at|date:"d M Y · H:i" }}</td>
+                        <td class="nowrap">
+                            <a href="/invoices/{{ p.invoice.pk }}/"><code style="font-weight:700;">{{ p.invoice.invoice_number }}</code></a>
                         </td>
-                        <td>{{ p.order.customer.name }}</td>
-                        <td><span class="badge bg-light text-dark border">{{ p.payment_method.name }}</span></td>
-                        <td><small>{{ p.reference|default:"—" }}</small></td>
-                        <td><small>{{ p.processed_by.username|default:"—" }}</small></td>
-                        <td class="text-end fw-bold {% if p.amount < 0 %}text-danger{% endif %}">
-                            {% format_currency p.amount %}
+                        <td>{{ p.order.customer.name|truncatechars:20 }}</td>
+                        <td><span class="badge bg-primary">{{ p.payment_method.name }}</span></td>
+                        <td class="text-muted" style="font-size:10px;">{{ p.reference|default:"—"|truncatechars:20 }}</td>
+                        <td class="text-muted">{{ p.processed_by.username|default:"—"|truncatechars:12 }}</td>
+                        <td class="num">
+                            <strong {% if p.amount < 0 %}class="aq-text-danger"{% endif %}>{% format_currency p.amount %}</strong>
                         </td>
                         <td>
-                            {% if p.status == 'completed' %}
-                            <span class="badge bg-success">Completed</span>
-                            {% elif p.status == 'refunded' %}
-                            <span class="badge bg-info">Refund</span>
-                            {% else %}
-                            <span class="badge bg-secondary">{{ p.get_status_display }}</span>
-                            {% endif %}
+                            {% if p.status == 'completed' %}<span class="badge bg-success">Completed</span>
+                            {% elif p.status == 'refunded' %}<span class="badge bg-info">Refund</span>
+                            {% elif p.status == 'failed' %}<span class="badge bg-danger">Failed</span>
+                            {% else %}<span class="badge bg-secondary">{{ p.get_status_display }}</span>{% endif %}
                         </td>
                     </tr>
                     {% endfor %}
@@ -124,26 +80,24 @@
             </table>
         </div>
 
-        {% if page_obj.has_other_pages %}
-        <nav class="mt-3">
-            <ul class="pagination pagination-sm justify-content-center">
-                {% if page_obj.has_previous %}
-                <li class="page-item"><a class="page-link" href="?page={{ page_obj.previous_page_number }}">Previous</a></li>
-                {% endif %}
-                <li class="page-item disabled"><span class="page-link">Page {{ page_obj.number }} of {{ page_obj.paginator.num_pages }}</span></li>
-                {% if page_obj.has_next %}
-                <li class="page-item"><a class="page-link" href="?page={{ page_obj.next_page_number }}">Next</a></li>
-                {% endif %}
+        <div class="aq-pagebar">
+            <span>{{ page_obj.paginator.count }} payment{{ page_obj.paginator.count|pluralize }} · Page {{ page_obj.number }}/{{ page_obj.paginator.num_pages }}</span>
+            {% if page_obj.has_other_pages %}
+            <ul class="pagination pagination-sm mb-0">
+                {% if page_obj.has_previous %}<li class="page-item"><a class="page-link" href="?page={{ page_obj.previous_page_number }}&q={{ search }}&method={{ method }}">‹</a></li>{% endif %}
+                <li class="page-item disabled"><span class="page-link">{{ page_obj.number }}</span></li>
+                {% if page_obj.has_next %}<li class="page-item"><a class="page-link" href="?page={{ page_obj.next_page_number }}&q={{ search }}&method={{ method }}">›</a></li>{% endif %}
             </ul>
-        </nav>
-        {% endif %}
+            {% endif %}
+        </div>
 
         {% else %}
-        <div class="text-center py-5">
-            <i class="fas fa-money-bill-wave fa-3x text-muted mb-3"></i>
-            <h5 class="text-muted">No payments found</h5>
+        <div class="aq-empty">
+            <i class="fas fa-money-bill-wave"></i>
+            <h5>No payments found</h5>
         </div>
         {% endif %}
     </div>
 </div>
+
 {% endblock %}

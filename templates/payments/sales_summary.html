@@ -5,136 +5,129 @@
 {% block page_icon %}fas fa-chart-pie{% endblock %}
 {% block page_title %}Daily Sales Summary{% endblock %}
 {% block page_subtitle %}{{ target_date|date:"l, d M Y" }}{% endblock %}
-
 {% block breadcrumbs %}
-<span>/</span>
-<a href="/payments/">Payments</a>
-<span>/</span>
-<span class="current">Summary</span>
+<span>/</span><a href="/payments/">Payments</a>
+<span>/</span><span class="current">Summary</span>
 {% endblock %}
 
 {% block content %}
 
-<div class="card mb-3">
-    <div class="card-body">
-        <form method="GET" class="row g-2">
-            <div class="col-md-4">
-                <input type="date" name="date" class="form-control" value="{{ target_date|date:'Y-m-d' }}">
-            </div>
-            <div class="col-md-2">
-                <button class="btn btn-primary w-100"><i class="fas fa-search me-1"></i>View</button>
-            </div>
-            <div class="col-md-2">
-                <a href="?date={% now 'Y-m-d' %}" class="btn btn-outline-primary w-100">Today</a>
-            </div>
-        </form>
-    </div>
-</div>
+<!-- Date Filter -->
+<form method="GET" class="aq-toolbar" style="margin-bottom:8px; border-radius:var(--aq-radius); border:1px solid var(--aq-border);">
+    <input type="date" name="date" class="form-control" style="width:160px;" value="{{ target_date|date:'Y-m-d' }}">
+    <button class="btn btn-sm btn-primary"><i class="fas fa-magnifying-glass me-1"></i>View</button>
+    <a href="?date={% now 'Y-m-d' %}" class="btn btn-sm btn-outline-primary">Today</a>
+    <div class="aq-toolbar-spacer"></div>
+    <button type="button" class="btn btn-sm btn-outline-secondary" onclick="window.print()">
+        <i class="fas fa-print me-1"></i>Print
+    </button>
+</form>
 
-<div class="row g-3 mb-4">
-    <div class="col-md-3">
-        <div class="aq-stat-card">
-            <div class="aq-stat-info">
-                <h6>Grand Total</h6>
-                <div class="aq-stat-value">{% format_currency grand_total %}</div>
-                <div class="aq-stat-meta">All payment methods</div>
-            </div>
-            <div class="aq-stat-icon success"><i class="fas fa-dollar-sign"></i></div>
+<!-- KPI Strip -->
+<div class="aq-kpi-grid">
+    <div class="aq-kpi suc">
+        <div class="aq-kpi-ico"><i class="fas fa-sack-dollar"></i></div>
+        <div class="aq-kpi-body">
+            <div class="aq-kpi-label">Grand Total</div>
+            <div class="aq-kpi-value">{% format_currency grand_total %}</div>
+            <div class="aq-kpi-sub">All payment methods</div>
         </div>
     </div>
-    <div class="col-md-3">
-        <div class="aq-stat-card">
-            <div class="aq-stat-info">
-                <h6>Transactions</h6>
-                <div class="aq-stat-value">{{ total_count }}</div>
-                <div class="aq-stat-meta">Payments today</div>
-            </div>
-            <div class="aq-stat-icon primary"><i class="fas fa-receipt"></i></div>
+
+    <div class="aq-kpi">
+        <div class="aq-kpi-ico"><i class="fas fa-receipt"></i></div>
+        <div class="aq-kpi-body">
+            <div class="aq-kpi-label">Transactions</div>
+            <div class="aq-kpi-value">{{ total_count }}</div>
+            <div class="aq-kpi-sub">Payments today</div>
         </div>
     </div>
-    <div class="col-md-3">
-        <div class="aq-stat-card">
-            <div class="aq-stat-info">
-                <h6>Orders Created</h6>
-                <div class="aq-stat-value">{{ orders_count }}</div>
-                <div class="aq-stat-meta">Total orders</div>
-            </div>
-            <div class="aq-stat-icon info"><i class="fas fa-file-invoice"></i></div>
+
+    <div class="aq-kpi pur">
+        <div class="aq-kpi-ico"><i class="fas fa-file-invoice"></i></div>
+        <div class="aq-kpi-body">
+            <div class="aq-kpi-label">Orders Created</div>
+            <div class="aq-kpi-value">{{ orders_count }}</div>
+            <div class="aq-kpi-sub">Total orders</div>
         </div>
     </div>
-    <div class="col-md-3">
-        <div class="aq-stat-card">
-            <div class="aq-stat-info">
-                <h6>Voided</h6>
-                <div class="aq-stat-value">{{ voided_count }}</div>
-                <div class="aq-stat-meta">Cancelled orders</div>
-            </div>
-            <div class="aq-stat-icon danger"><i class="fas fa-ban"></i></div>
+
+    <div class="aq-kpi dgr">
+        <div class="aq-kpi-ico"><i class="fas fa-ban"></i></div>
+        <div class="aq-kpi-body">
+            <div class="aq-kpi-label">Voided</div>
+            <div class="aq-kpi-value">{{ voided_count }}</div>
+            <div class="aq-kpi-sub">Cancelled orders</div>
         </div>
     </div>
 </div>
 
-<div class="row g-3">
+<div class="row g-2">
 
     <!-- By Payment Method -->
-    <div class="col-md-6">
-        <div class="card">
-            <div class="card-header">
-                <strong><i class="fas fa-credit-card me-2 aq-text-primary"></i>Breakdown by Payment Method</strong>
+    <div class="col-lg-6">
+        <div class="aq-panel">
+            <div class="aq-panel-head">
+                <strong><i class="fas fa-credit-card aq-text-primary me-1"></i>By Payment Method</strong>
             </div>
-            <div class="card-body p-0">
-                <table class="table mb-0">
+            <div class="aq-panel-body flush">
+                <table class="table">
                     <thead>
                         <tr>
                             <th>Method</th>
-                            <th class="text-end">Transactions</th>
-                            <th class="text-end">Total</th>
+                            <th class="num">Transactions</th>
+                            <th class="num">Total</th>
                         </tr>
                     </thead>
                     <tbody>
                         {% for m in by_method %}
                         <tr>
-                            <td><strong>{{ m.payment_method__name }}</strong></td>
-                            <td class="text-end">{{ m.count }}</td>
-                            <td class="text-end fw-bold aq-text-success">{% format_currency m.total %}</td>
+                            <td class="fw-semibold">{{ m.payment_method__name }}</td>
+                            <td class="num">{{ m.count }}</td>
+                            <td class="num"><strong class="aq-text-success">{% format_currency m.total %}</strong></td>
                         </tr>
                         {% empty %}
                         <tr><td colspan="3" class="text-center text-muted py-3">No payments today.</td></tr>
                         {% endfor %}
                     </tbody>
+                    {% if by_method %}
                     <tfoot>
-                        <tr class="table-primary">
-                            <th>Total</th>
-                            <th class="text-end">{{ total_count }}</th>
-                            <th class="text-end aq-text-primary">{% format_currency grand_total %}</th>
+                        <tr style="background:var(--aq-surface-2);">
+                            <th>TOTAL</th>
+                            <th class="num">{{ total_count }}</th>
+                            <th class="num aq-text-primary">{% format_currency grand_total %}</th>
                         </tr>
                     </tfoot>
+                    {% endif %}
                 </table>
             </div>
         </div>
     </div>
 
     <!-- By Cashier -->
-    <div class="col-md-6">
-        <div class="card">
-            <div class="card-header">
-                <strong><i class="fas fa-users me-2 aq-text-primary"></i>Breakdown by Cashier</strong>
+    <div class="col-lg-6">
+        <div class="aq-panel">
+            <div class="aq-panel-head">
+                <strong><i class="fas fa-users aq-text-primary me-1"></i>By Cashier</strong>
             </div>
-            <div class="card-body p-0">
-                <table class="table mb-0">
+            <div class="aq-panel-body flush">
+                <table class="table">
                     <thead>
                         <tr>
                             <th>Cashier</th>
-                            <th class="text-end">Sales</th>
-                            <th class="text-end">Total</th>
+                            <th class="num">Sales</th>
+                            <th class="num">Total</th>
                         </tr>
                     </thead>
                     <tbody>
                         {% for c in by_cashier %}
                         <tr>
-                            <td><strong>{{ c.processed_by__username|default:"—" }}</strong></td>
-                            <td class="text-end">{{ c.count }}</td>
-                            <td class="text-end fw-bold">{% format_currency c.total %}</td>
+                            <td class="fw-semibold">
+                                {% if c.processed_by__first_name %}{{ c.processed_by__first_name }} {{ c.processed_by__last_name }}
+                                {% else %}{{ c.processed_by__username|default:"—" }}{% endif %}
+                            </td>
+                            <td class="num">{{ c.count }}</td>
+                            <td class="num"><strong>{% format_currency c.total %}</strong></td>
                         </tr>
                         {% empty %}
                         <tr><td colspan="3" class="text-center text-muted py-3">No data.</td></tr>
@@ -145,12 +138,6 @@
         </div>
     </div>
 
-</div>
-
-<div class="mt-3 text-end">
-    <button class="btn btn-outline-primary" onclick="window.print()">
-        <i class="fas fa-print me-1"></i>Print Summary
-    </button>
 </div>
 
 {% endblock %}

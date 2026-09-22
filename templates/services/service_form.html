@@ -2,35 +2,36 @@
 {% load aquaflow_tags %}
 
 {% block title %}{{ action }} Service — AquaFlow{% endblock %}
-{% block page_icon %}fas fa-concierge-bell{% endblock %}
+{% block page_icon %}fas fa-list-check{% endblock %}
 {% block page_title %}{{ action }} Service{% endblock %}
-
+{% block page_subtitle %}{% if action == 'Create' %}Add a new service or repair{% else %}Update service details{% endif %}{% endblock %}
 {% block breadcrumbs %}
-<span>/</span>
-<a href="/services/">Services</a>
-<span>/</span>
-<span class="current">{{ action }}</span>
+<span>/</span><a href="/services/">Services</a>
+<span>/</span><span class="current">{{ action }}</span>
 {% endblock %}
 
 {% block content %}
 <div class="row justify-content-center">
-    <div class="col-md-8">
-        <div class="card">
-            <div class="card-header">
-                <strong><i class="fas fa-concierge-bell me-2 aq-text-primary"></i>Service Information</strong>
-            </div>
-            <div class="card-body">
-                <form method="POST" novalidate>
-                    {% csrf_token %}
-                    <div class="row g-3">
+    <div class="col-lg-9">
+        <form method="POST" novalidate>
+            {% csrf_token %}
+
+            <div class="aq-panel">
+                <div class="aq-panel-head">
+                    <strong><i class="fas fa-list-check aq-text-primary me-1"></i>Service Information</strong>
+                </div>
+                <div class="aq-panel-body">
+                    <div class="row g-2">
 
                         <div class="col-md-8">
-                            <label class="form-label fw-semibold">Service Name <span class="text-danger">*</span></label>
-                            <input type="text" name="name" class="form-control" value="{{ service.name|default:'' }}" required autofocus placeholder="e.g. Premium Wash, AC Repair">
+                            <label class="form-label">Service Name <span class="text-danger">*</span></label>
+                            <input type="text" name="name" class="form-control"
+                                   value="{{ service.name|default:'' }}" required autofocus
+                                   placeholder="e.g. Premium Wash, AC Repair">
                         </div>
 
                         <div class="col-md-4">
-                            <label class="form-label fw-semibold">Category</label>
+                            <label class="form-label">Category</label>
                             <select name="category_id" class="form-select">
                                 <option value="">— No Category —</option>
                                 {% for cat in categories %}
@@ -39,63 +40,69 @@
                             </select>
                         </div>
 
-                        <div class="col-md-12">
-                            <label class="form-label fw-semibold">Description</label>
-                            <textarea name="description" class="form-control" rows="3" placeholder="Describe this service...">{{ service.description|default:'' }}</textarea>
+                        <div class="col-12">
+                            <label class="form-label">Description</label>
+                            <textarea name="description" class="form-control" rows="3"
+                                      placeholder="Describe this service…">{{ service.description|default:'' }}</textarea>
                         </div>
 
                         <div class="col-md-4">
-                            <label class="form-label fw-semibold">Duration (minutes)</label>
-                            <input type="number" name="duration_minutes" class="form-control" value="{{ service.duration_minutes|default:30 }}" min="5" max="480">
+                            <label class="form-label">Duration (minutes)</label>
+                            <input type="number" name="duration_minutes" class="form-control"
+                                   value="{{ service.duration_minutes|default:30 }}" min="5" max="480">
                         </div>
 
                         {% if action == 'Create' %}
                         <div class="col-md-4">
-                            <label class="form-label fw-semibold">Default Price ({{ CURRENCY_SYMBOL }})</label>
+                            <label class="form-label">Default Price ({{ CURRENCY_SYMBOL }})</label>
                             <input type="number" name="default_price" class="form-control" min="0" step="0.01" placeholder="0.00">
-                            <small class="text-muted">Optional. Can set per vehicle type later.</small>
+                            <small class="text-muted" style="font-size:10px;">Optional — set per vehicle type later</small>
                         </div>
                         {% endif %}
 
                         {% if action == 'Update' %}
                         <div class="col-md-4">
-                            <label class="form-label fw-semibold">Status</label>
-                            <div class="form-check form-switch mt-2">
+                            <label class="form-label">Status</label>
+                            <div class="form-check form-switch mt-1">
                                 <input type="checkbox" name="is_active" value="true" class="form-check-input" role="switch"
-                                    {% if service.is_active %}checked{% endif %}>
+                                       {% if service.is_active %}checked{% endif %}>
                                 <label class="form-check-label">Active</label>
-                            </div>
-                        </div>
-
-                        <div class="col-md-12">
-                            <div class="card bg-light border-0">
-                                <div class="card-body py-3">
-                                    <div class="form-check mb-2">
-                                        <input type="checkbox" name="tax_override_enabled" value="true" class="form-check-input" id="taxOverride"
-                                            {% if service.tax_override_enabled %}checked{% endif %}>
-                                        <label class="form-check-label fw-semibold" for="taxOverride">
-                                            Override business tax for this service
-                                        </label>
-                                    </div>
-                                    <div id="taxFields" {% if not service.tax_override_enabled %}style="display:none;"{% endif %}>
-                                        <label class="form-label small">Custom Tax %</label>
-                                        <input type="number" name="tax_override_percentage" class="form-control form-control-sm" style="width:150px;"
-                                            value="{{ service.tax_override_percentage|default:0 }}" min="0" max="100" step="0.01">
-                                    </div>
-                                </div>
                             </div>
                         </div>
                         {% endif %}
 
                     </div>
-
-                    <div class="mt-4 d-flex justify-content-between">
-                        <a href="/services/" class="btn btn-secondary"><i class="fas fa-arrow-left me-1"></i>Back</a>
-                        <button type="submit" class="btn btn-primary"><i class="fas fa-save me-1"></i>{{ action }} Service</button>
-                    </div>
-                </form>
+                </div>
             </div>
-        </div>
+
+            {% if action == 'Update' %}
+            <div class="aq-panel">
+                <div class="aq-panel-head">
+                    <strong><i class="fas fa-percent aq-text-primary me-1"></i>Tax Override</strong>
+                </div>
+                <div class="aq-panel-body">
+                    <div class="form-check mb-2">
+                        <input type="checkbox" name="tax_override_enabled" value="true" class="form-check-input" id="taxOverride"
+                               {% if service.tax_override_enabled %}checked{% endif %}>
+                        <label class="form-check-label fw-semibold" for="taxOverride">
+                            Override business tax for this service
+                        </label>
+                    </div>
+                    <div id="taxFields" {% if not service.tax_override_enabled %}style="display:none;"{% endif %}>
+                        <label class="form-label">Custom Tax %</label>
+                        <input type="number" name="tax_override_percentage" class="form-control" style="max-width:150px;"
+                               value="{{ service.tax_override_percentage|default:0 }}" min="0" max="100" step="0.01">
+                    </div>
+                </div>
+            </div>
+            {% endif %}
+
+            <div class="d-flex justify-content-between">
+                <a href="/services/" class="btn btn-sm btn-outline-secondary"><i class="fas fa-arrow-left me-1"></i>Back</a>
+                <button type="submit" class="btn btn-sm btn-primary"><i class="fas fa-save me-1"></i>{{ action }} Service</button>
+            </div>
+
+        </form>
     </div>
 </div>
 {% endblock %}

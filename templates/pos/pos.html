@@ -101,7 +101,6 @@
 .pos-sticky { position: sticky; top: calc(var(--aq-navbar-h) + 10px); }
 </style>
 {% endblock %}
-
 {% block content %}
 
 {% if prefill %}
@@ -116,6 +115,7 @@
     <!-- ══ LEFT ══════════════════════════════════════════ -->
     <div>
 
+        {% if features.wash %}
         <div class="pos-box">
             <div class="pos-box-title"><i class="fas fa-spray-can-sparkles me-1"></i>Load from Wash Job</div>
             <div class="aq-smart-input" id="washJobInput" data-name="wash_job"
@@ -123,6 +123,7 @@
                  data-results-key="wash_jobs" data-label="Wash Job"
                  data-placeholder="Search job#, customer, phone, vehicle… or create new"></div>
         </div>
+        {% endif %}
 
         <div class="pos-box">
             <div class="row g-2">
@@ -131,7 +132,7 @@
                     <div class="aq-smart-input" id="customerInput" data-name="customer"
                          data-search-url="/customers/search/" data-create-url="/vehicles/customers/quick-create/"
                          data-results-key="customers" data-label="Customer"
-                         data-placeholder="Search customer…" data-required="true"></div>
+                         data-placeholder="Search or type to add…" data-required="true"></div>
                 </div>
                 <div class="col-md-6">
                     <label class="form-label">Vehicle</label>
@@ -146,23 +147,27 @@
 
         <div class="pos-box">
             <div class="row g-2">
-                <div class="col-md-5">
-                    <label class="form-label"><i class="fas fa-list-check aq-text-primary me-1"></i>Service / Repair</label>
+                <div class="col-md-{% if features.products and features.repairs %}5{% elif features.products or features.repairs %}8{% else %}12{% endif %}">
+                    <label class="form-label"><i class="fas fa-list-check aq-text-primary me-1"></i>Service{% if features.repairs %} / Repair{% endif %}</label>
                     <div class="aq-smart-input" id="serviceInput" data-name="service"
                          data-search-url="/bookings/services/search/" data-results-key="services"
-                         data-label="Service" data-placeholder="Search or type new…"></div>
+                         data-label="Service" data-placeholder="Search or type to add…"></div>
                 </div>
-                <div class="col-md-5">
+                {% if features.products %}
+                <div class="col-md-{% if features.repairs %}5{% else %}4{% endif %}">
                     <label class="form-label"><i class="fas fa-box aq-text-primary me-1"></i>Product</label>
                     <div class="aq-smart-input" id="productInput" data-name="product"
                          data-search-url="/pos/products/search/" data-results-key="products"
-                         data-label="Product" data-placeholder="Search or type new…"></div>
+                         data-label="Product" data-placeholder="Search or type to add…"></div>
                 </div>
+                {% endif %}
+                {% if features.repairs %}
                 <div class="col-md-2 d-flex align-items-end">
                     <button type="button" class="btn btn-sm btn-outline-secondary w-100" onclick="openCustomModal()">
                         <i class="fas fa-screwdriver-wrench me-1"></i>Custom
                     </button>
                 </div>
+                {% endif %}
             </div>
         </div>
 
@@ -174,7 +179,7 @@
                 </button>
             </div>
             <div class="pos-cart-scroll" id="cartContainer">
-                <div class="cart-empty"><i class="fas fa-cart-shopping"></i>Add services, repairs or products</div>
+                <div class="cart-empty"><i class="fas fa-cart-shopping"></i>Add services{% if features.repairs %}, repairs{% endif %}{% if features.products %}, or products{% endif %}</div>
             </div>
         </div>
 
@@ -184,21 +189,27 @@
     <div class="pos-sticky">
 
         <div class="pos-box">
+            {% if features.tax %}
             <div class="vat-toggle">
                 <input type="checkbox" id="vatToggle" class="form-check-input" {% if tax_enabled %}checked{% endif %}>
                 <label for="vatToggle" class="form-check-label fw-semibold mb-0">
                     {{ tax_name }} ({{ tax_percentage }}%)
                 </label>
             </div>
+            {% else %}
+            <input type="checkbox" id="vatToggle" style="display:none;">
+            {% endif %}
             <div class="total-row"><span class="lbl">Subtotal</span><span class="val" id="subtotalDisplay">Rs. 0.00</span></div>
             <div class="total-row">
                 <span class="lbl">Discount</span>
                 <input type="number" id="orderDiscountInput" class="form-control form-control-sm text-end"
                        value="0" min="0" step="0.01" style="width:82px;">
             </div>
+            {% if features.tax %}
             <div class="total-row" id="taxRow" {% if not tax_enabled %}style="display:none;"{% endif %}>
                 <span class="lbl">{{ tax_name }}</span><span class="val" id="taxDisplay">Rs. 0.00</span>
             </div>
+            {% endif %}
             <div class="total-row grand"><span>TOTAL</span><span id="grandTotalDisplay">Rs. 0.00</span></div>
         </div>
 
@@ -226,111 +237,266 @@
     </div>
 </div>
 
-<!-- ══ MODALS (unchanged IDs) ═══════════════════════════ -->
+<!-- ══ MODALS ═══════════════════════════════════════════ -->
 
+<!-- Customer Popup (inline create with phone lookup) -->
 <div class="modal fade" id="customerModal" tabindex="-1">
     <div class="modal-dialog modal-sm">
         <div class="modal-content">
-            <div class="modal-header"><h5 class="modal-title"><i class="fas fa-user-plus me-2"></i>Add Customer</h5><button class="btn-close" data-bs-dismiss="modal"></button></div>
+            <div class="modal-header">
+                <h5 class="modal-title"><i class="fas fa-user-plus me-2"></i>Add Customer</h5>
+                <button class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
             <div class="modal-body">
-                <div class="mb-2"><label class="form-label">Name <span class="text-danger">*</span></label><input type="text" id="quickCustName" class="form-control"></div>
-                <div class="mb-2"><label class="form-label">Phone <span class="text-danger">*</span></label><input type="text" id="quickCustPhone" class="form-control">
-                    <div id="phoneMatchAlert" class="alert alert-info mt-2 mb-0" style="display:none;"></div></div>
+                <div class="mb-2">
+                    <label class="form-label">Name <span class="text-danger">*</span></label>
+                    <input type="text" id="quickCustName" class="form-control" placeholder="Customer name">
+                </div>
+                <div class="mb-2">
+                    <label class="form-label">Phone <span class="text-danger">*</span></label>
+                    <input type="text" id="quickCustPhone" class="form-control" placeholder="Phone number">
+                    <div id="phoneMatchAlert" class="alert alert-info mt-2 mb-0 py-1" style="display:none;"></div>
+                </div>
                 <div id="quickCustError" class="alert alert-danger mb-0" style="display:none;"></div>
             </div>
-            <div class="modal-footer"><button class="btn btn-sm btn-secondary" data-bs-dismiss="modal">Cancel</button><button class="btn btn-sm btn-primary" id="saveQuickCustBtn">Save</button></div>
+            <div class="modal-footer">
+                <button class="btn btn-sm btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                <button class="btn btn-sm btn-primary" id="saveQuickCustBtn"><i class="fas fa-save me-1"></i>Save & Select</button>
+            </div>
         </div>
     </div>
 </div>
 
+{% if features.products %}
+<!-- Product Popup (inline create) -->
 <div class="modal fade" id="productModal" tabindex="-1">
     <div class="modal-dialog modal-sm">
         <div class="modal-content">
-            <div class="modal-header"><h5 class="modal-title"><i class="fas fa-box me-2"></i>Add Product</h5><button class="btn-close" data-bs-dismiss="modal"></button></div>
+            <div class="modal-header">
+                <h5 class="modal-title"><i class="fas fa-box me-2"></i>Add Product</h5>
+                <button class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
             <div class="modal-body">
-                <div class="mb-2"><label class="form-label">Name <span class="text-danger">*</span></label><input type="text" id="popProdName" class="form-control"></div>
-                <div class="mb-2"><label class="form-label">Price <span class="text-danger">*</span></label><input type="number" id="popProdPrice" class="form-control" min="0" step="0.01"></div>
+                <div class="mb-2">
+                    <label class="form-label">Name <span class="text-danger">*</span></label>
+                    <input type="text" id="popProdName" class="form-control">
+                </div>
+                <div class="mb-2">
+                    <label class="form-label">Price <span class="text-danger">*</span></label>
+                    <input type="number" id="popProdPrice" class="form-control" min="0" step="0.01">
+                </div>
                 <div id="popProdError" class="alert alert-danger mb-0" style="display:none;"></div>
             </div>
-            <div class="modal-footer"><button class="btn btn-sm btn-secondary" data-bs-dismiss="modal">Cancel</button><button class="btn btn-sm btn-primary" id="savePopProdBtn">Save &amp; Add</button></div>
+            <div class="modal-footer">
+                <button class="btn btn-sm btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                <button class="btn btn-sm btn-primary" id="savePopProdBtn">Save & Add</button>
+            </div>
         </div>
     </div>
 </div>
+{% endif %}
 
+{% if features.repairs %}
+<!-- Custom Item Popup -->
 <div class="modal fade" id="customItemModal" tabindex="-1">
     <div class="modal-dialog modal-sm">
         <div class="modal-content">
-            <div class="modal-header"><h5 class="modal-title"><i class="fas fa-screwdriver-wrench me-2"></i>Custom Item</h5><button class="btn-close" data-bs-dismiss="modal"></button></div>
+            <div class="modal-header">
+                <h5 class="modal-title"><i class="fas fa-screwdriver-wrench me-2"></i>Custom Item</h5>
+                <button class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
             <div class="modal-body">
-                <div class="mb-2"><label class="form-label">Type</label><select id="customType" class="form-select"><option value="repair">Repair</option><option value="service">Service</option><option value="custom">Other</option></select></div>
-                <div class="mb-2"><label class="form-label">Description <span class="text-danger">*</span></label><input type="text" id="customName" class="form-control" placeholder="e.g. Tire Replacement"></div>
+                <div class="mb-2">
+                    <label class="form-label">Type</label>
+                    <select id="customType" class="form-select">
+                        <option value="repair">Repair</option>
+                        <option value="service">Service</option>
+                        <option value="custom">Other</option>
+                    </select>
+                </div>
+                <div class="mb-2">
+                    <label class="form-label">Description <span class="text-danger">*</span></label>
+                    <input type="text" id="customName" class="form-control" placeholder="e.g. Tire Replacement">
+                </div>
                 <div class="row g-2">
-                    <div class="col-6"><label class="form-label">Price</label><input type="number" id="customPrice" class="form-control" min="0" step="0.01" value="0"></div>
-                    <div class="col-6"><label class="form-label">Qty</label><input type="number" id="customQty" class="form-control" min="1" value="1"></div>
+                    <div class="col-6">
+                        <label class="form-label">Price</label>
+                        <input type="number" id="customPrice" class="form-control" min="0" step="0.01" value="0">
+                    </div>
+                    <div class="col-6">
+                        <label class="form-label">Qty</label>
+                        <input type="number" id="customQty" class="form-control" min="1" value="1">
+                    </div>
                 </div>
             </div>
-            <div class="modal-footer"><button class="btn btn-sm btn-secondary" data-bs-dismiss="modal">Cancel</button><button class="btn btn-sm btn-warning" id="saveCustomBtn"><i class="fas fa-plus me-1"></i>Add</button></div>
+            <div class="modal-footer">
+                <button class="btn btn-sm btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                <button class="btn btn-sm btn-warning" id="saveCustomBtn"><i class="fas fa-plus me-1"></i>Add</button>
+            </div>
         </div>
     </div>
 </div>
+{% endif %}
 
+<!-- Vehicle Popup (inline create with smart inputs) -->
 <div class="modal fade" id="vehicleModal" tabindex="-1">
     <div class="modal-dialog modal-lg">
         <div class="modal-content">
-            <div class="modal-header"><h5 class="modal-title"><i class="fas fa-car me-2"></i>Add Vehicle</h5><button class="btn-close" data-bs-dismiss="modal"></button></div>
+            <div class="modal-header">
+                <h5 class="modal-title"><i class="fas fa-car me-2"></i>Add Vehicle</h5>
+                <button class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
             <div class="modal-body">
                 <div class="alert alert-info py-1"><i class="fas fa-user me-1"></i>For: <strong id="vehicleCustomerName"></strong></div>
                 <div class="row g-2">
-                    <div class="col-12"><label class="form-label">Registration <span class="text-danger">*</span></label><input type="text" id="vehModalReg" class="form-control text-uppercase fw-bold"></div>
-                    <div class="col-md-6"><label class="form-label">Brand <span class="text-danger">*</span></label><div class="aq-smart-input" id="vehModalBrand" data-name="brand" data-search-url="/vehicles/brands/search/" data-create-url="/vehicles/brands/create/" data-results-key="brands" data-label="Brand" data-uppercase="true" data-required="true"></div></div>
-                    <div class="col-md-6"><label class="form-label">Model <span class="text-danger">*</span></label><div class="aq-smart-input" id="vehModalModel" data-name="model" data-search-url="/vehicles/models/search/" data-create-url="/vehicles/models/create/" data-results-key="models" data-label="Model" data-uppercase="true" data-disabled="true" data-required="true"></div></div>
-                    <div class="col-md-4"><label class="form-label">Type</label><div class="aq-smart-input" id="vehModalType" data-name="vehicle_type" data-search-url="/vehicles/types/search/" data-create-url="/vehicles/types/create/" data-results-key="types" data-label="Type" data-uppercase="true"></div></div>
-                    <div class="col-md-4"><label class="form-label">Color</label><div class="aq-smart-input" id="vehModalColor" data-name="color" data-search-url="/vehicles/colors/search/" data-create-url="/vehicles/colors/create/" data-results-key="colors" data-label="Color" data-uppercase="true"></div></div>
-                    <div class="col-md-4"><label class="form-label">Fuel</label><div class="aq-smart-input" id="vehModalFuel" data-name="fuel_type" data-search-url="/vehicles/fuels/search/" data-create-url="/vehicles/fuels/create/" data-results-key="fuels" data-label="Fuel" data-uppercase="true"></div></div>
+                    <div class="col-12">
+                        <label class="form-label">Registration <span class="text-danger">*</span></label>
+                        <input type="text" id="vehModalReg" class="form-control text-uppercase fw-bold" placeholder="WP CAA-1234">
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label">Brand <span class="text-danger">*</span></label>
+                        <div class="aq-smart-input" id="vehModalBrand" data-name="brand"
+                             data-search-url="/vehicles/brands/search/" data-create-url="/vehicles/brands/create/"
+                             data-results-key="brands" data-label="Brand" data-uppercase="true" data-required="true"></div>
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label">Model <span class="text-danger">*</span></label>
+                        <div class="aq-smart-input" id="vehModalModel" data-name="model"
+                             data-search-url="/vehicles/models/search/" data-create-url="/vehicles/models/create/"
+                             data-results-key="models" data-label="Model" data-uppercase="true" data-disabled="true" data-required="true"></div>
+                    </div>
+                    <div class="col-md-4">
+                        <label class="form-label">Type</label>
+                        <div class="aq-smart-input" id="vehModalType" data-name="vehicle_type"
+                             data-search-url="/vehicles/types/search/" data-create-url="/vehicles/types/create/"
+                             data-results-key="types" data-label="Type" data-uppercase="true"></div>
+                    </div>
+                    <div class="col-md-4">
+                        <label class="form-label">Color</label>
+                        <div class="aq-smart-input" id="vehModalColor" data-name="color"
+                             data-search-url="/vehicles/colors/search/" data-create-url="/vehicles/colors/create/"
+                             data-results-key="colors" data-label="Color" data-uppercase="true"></div>
+                    </div>
+                    <div class="col-md-4">
+                        <label class="form-label">Fuel</label>
+                        <div class="aq-smart-input" id="vehModalFuel" data-name="fuel_type"
+                             data-search-url="/vehicles/fuels/search/" data-create-url="/vehicles/fuels/create/"
+                             data-results-key="fuels" data-label="Fuel" data-uppercase="true"></div>
+                    </div>
                 </div>
                 <div id="vehModalError" class="alert alert-danger mt-2 mb-0" style="display:none;"></div>
             </div>
-            <div class="modal-footer"><button class="btn btn-sm btn-secondary" data-bs-dismiss="modal">Cancel</button><button class="btn btn-sm btn-primary" id="saveVehicleBtn"><i class="fas fa-save me-1"></i>Save</button></div>
+            <div class="modal-footer">
+                <button class="btn btn-sm btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                <button class="btn btn-sm btn-primary" id="saveVehicleBtn"><i class="fas fa-save me-1"></i>Save & Select</button>
+            </div>
         </div>
     </div>
 </div>
 
+<!-- New Service/Repair Popup (inline create) -->
 <div class="modal fade" id="newServiceModal" tabindex="-1">
     <div class="modal-dialog modal-sm">
         <div class="modal-content">
-            <div class="modal-header"><h5 class="modal-title"><i class="fas fa-list-check me-2"></i>New Service / Repair</h5><button class="btn-close" data-bs-dismiss="modal"></button></div>
+            <div class="modal-header">
+                <h5 class="modal-title"><i class="fas fa-list-check me-2"></i>New Service{% if features.repairs %} / Repair{% endif %}</h5>
+                <button class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
             <div class="modal-body">
-                <div class="mb-2"><label class="form-label">Type</label><select id="newSvcType" class="form-select"><option value="service">Service</option><option value="repair">Repair</option></select></div>
-                <div class="mb-2"><label class="form-label">Name <span class="text-danger">*</span></label><input type="text" id="newSvcName" class="form-control"></div>
-                <div class="row g-2 mb-2">
-                    <div class="col-6"><label class="form-label">Price <span class="text-danger">*</span></label><input type="number" id="newSvcPrice" class="form-control" min="0" step="0.01"></div>
-                    <div class="col-6"><label class="form-label">Qty</label><input type="number" id="newSvcQty" class="form-control" min="1" value="1"></div>
+                {% if features.repairs %}
+                <div class="mb-2">
+                    <label class="form-label">Type</label>
+                    <select id="newSvcType" class="form-select">
+                        <option value="service">Service</option>
+                        <option value="repair">Repair</option>
+                    </select>
                 </div>
-                <div class="form-check mb-2"><input type="checkbox" id="newSvcSaveDb" class="form-check-input" checked><label for="newSvcSaveDb" class="form-check-label">Save to database</label></div>
+                {% else %}
+                <input type="hidden" id="newSvcType" value="service">
+                {% endif %}
+                <div class="mb-2">
+                    <label class="form-label">Name <span class="text-danger">*</span></label>
+                    <input type="text" id="newSvcName" class="form-control">
+                </div>
+                <div class="row g-2 mb-2">
+                    <div class="col-6">
+                        <label class="form-label">Price <span class="text-danger">*</span></label>
+                        <input type="number" id="newSvcPrice" class="form-control" min="0" step="0.01">
+                    </div>
+                    <div class="col-6">
+                        <label class="form-label">Qty</label>
+                        <input type="number" id="newSvcQty" class="form-control" min="1" value="1">
+                    </div>
+                </div>
+                <div class="form-check mb-2">
+                    <input type="checkbox" id="newSvcSaveDb" class="form-check-input" checked>
+                    <label for="newSvcSaveDb" class="form-check-label">Save to database</label>
+                </div>
                 <div id="newSvcError" class="alert alert-danger mb-0" style="display:none;"></div>
             </div>
-            <div class="modal-footer"><button class="btn btn-sm btn-secondary" data-bs-dismiss="modal">Cancel</button><button class="btn btn-sm btn-primary" id="saveNewSvcBtn"><i class="fas fa-plus me-1"></i>Add</button></div>
+            <div class="modal-footer">
+                <button class="btn btn-sm btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                <button class="btn btn-sm btn-primary" id="saveNewSvcBtn"><i class="fas fa-plus me-1"></i>Add</button>
+            </div>
         </div>
     </div>
 </div>
 
+<!-- New Car Wash Popup -->
 <div class="modal fade" id="newWashModal" tabindex="-1">
     <div class="modal-dialog modal-lg">
         <div class="modal-content">
-            <div class="modal-header"><h5 class="modal-title"><i class="fas fa-spray-can-sparkles me-2"></i>New Car Wash / Booking</h5><button class="btn-close" data-bs-dismiss="modal"></button></div>
+            <div class="modal-header">
+                <h5 class="modal-title"><i class="fas fa-spray-can-sparkles me-2"></i>New Car Wash{% if features.bookings %} / Booking{% endif %}</h5>
+                <button class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
             <div class="modal-body">
                 <div class="row g-2">
-                    <div class="col-md-6"><label class="form-label">Customer <span class="text-danger">*</span></label><div class="aq-smart-input" id="washCustInput" data-name="wash_customer" data-search-url="/customers/search/" data-create-url="/vehicles/customers/quick-create/" data-results-key="customers" data-label="Customer" data-placeholder="Search customer…" data-required="true"></div></div>
-                    <div class="col-md-6"><label class="form-label">Vehicle <span class="text-danger">*</span></label><div class="aq-smart-input" id="washVehInput" data-name="wash_vehicle" data-search-url="/vehicles/search/" data-create-url="/bookings/vehicles/quick-create/" data-results-key="vehicles" data-label="Vehicle" data-placeholder="Select customer first…" data-uppercase="true" data-disabled="true" data-required="true"></div></div>
-                    <div class="col-md-6"><label class="form-label">Service</label><div class="aq-smart-input" id="washSvcInput" data-name="wash_service" data-search-url="/bookings/services/search/" data-results-key="services" data-label="Service" data-placeholder="Search service…"></div></div>
-                    <div class="col-md-3"><label class="form-label">Date</label><input type="date" id="washDate" class="form-control"></div>
-                    <div class="col-md-3"><label class="form-label">Time</label><input type="time" id="washTime" class="form-control"></div>
-                    <div class="col-12"><label class="form-label">Notes</label><textarea id="washNotes" class="form-control" rows="2"></textarea></div>
+                    <div class="col-md-6">
+                        <label class="form-label">Customer <span class="text-danger">*</span></label>
+                        <div class="aq-smart-input" id="washCustInput" data-name="wash_customer"
+                             data-search-url="/customers/search/" data-create-url="/vehicles/customers/quick-create/"
+                             data-results-key="customers" data-label="Customer"
+                             data-placeholder="Search or type to add…" data-required="true"></div>
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label">Vehicle <span class="text-danger">*</span></label>
+                        <div class="aq-smart-input" id="washVehInput" data-name="wash_vehicle"
+                             data-search-url="/vehicles/search/" data-create-url="/bookings/vehicles/quick-create/"
+                             data-results-key="vehicles" data-label="Vehicle"
+                             data-placeholder="Select customer first…" data-uppercase="true" data-disabled="true" data-required="true"></div>
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label">Service</label>
+                        <div class="aq-smart-input" id="washSvcInput" data-name="wash_service"
+                             data-search-url="/bookings/services/search/" data-results-key="services"
+                             data-label="Service" data-placeholder="Search or type to add…"></div>
+                    </div>
+                    <div class="col-md-3">
+                        <label class="form-label">Date</label>
+                        <input type="date" id="washDate" class="form-control">
+                    </div>
+                    <div class="col-md-3">
+                        <label class="form-label">Time</label>
+                        <input type="time" id="washTime" class="form-control">
+                    </div>
+                    <div class="col-12">
+                        <label class="form-label">Notes</label>
+                        <textarea id="washNotes" class="form-control" rows="2"></textarea>
+                    </div>
                 </div>
-                <div class="alert alert-info mt-2 mb-0"><i class="fas fa-circle-info me-1"></i><strong>Today</strong> = Walk-in · <strong>Future date</strong> = Booking + Wash Job</div>
+                {% if features.bookings %}
+                <div class="alert alert-info mt-2 mb-0">
+                    <i class="fas fa-circle-info me-1"></i>
+                    <strong>Today</strong> = Walk-in · <strong>Future date</strong> = Booking + Wash Job
+                </div>
+                {% endif %}
                 <div id="washError" class="alert alert-danger mt-2 mb-0" style="display:none;"></div>
             </div>
-            <div class="modal-footer"><button class="btn btn-sm btn-secondary" data-bs-dismiss="modal">Cancel</button><button class="btn btn-sm btn-primary" id="saveWashBtn"><i class="fas fa-save me-1"></i>Create &amp; Load</button></div>
+            <div class="modal-footer">
+                <button class="btn btn-sm btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                <button class="btn btn-sm btn-primary" id="saveWashBtn"><i class="fas fa-save me-1"></i>Create & Load</button>
+            </div>
         </div>
     </div>
 </div>
@@ -339,6 +505,11 @@
 
 {% block extra_js %}
 <script>
+
+const FEATURE_PRODUCTS  = {{ features.products|yesno:"true,false" }};
+const FEATURE_TAX       = {{ features.tax|yesno:"true,false" }};
+const FEATURE_REPAIRS   = {{ features.repairs|yesno:"true,false" }};
+const FEATURE_JOB_NOTES = {{ features.job_notes|yesno:"true,false" }};
 const CSRF_TOKEN = '{{ csrf_token }}';
 const BRANCH_ID = {{ branch.pk }};
 const IDEMPOTENCY_KEY = '{{ idempotency_key }}';
@@ -584,25 +755,43 @@ function renderCart() {
     updateTotals();
 }
 function updateTotals() {
-    const vatEnabled=document.getElementById('vatToggle').checked;
-    const discount=parseFloat(document.getElementById('orderDiscountInput').value)||0;
-    let subtotal=0, tax=0;
-    cart.forEach(i=>{subtotal+=i.unit_price*i.quantity;});
-    const afterDisc=Math.max(0,subtotal-discount);
-    cart.forEach(i=>{
-        const ls=i.unit_price*i.quantity;
-        const ratio=subtotal>0?ls/subtotal:0;
-        const da=discount*ratio;
-        const lad=ls-da;
-        if(vatEnabled&&i.vat&&lad>0) tax+=lad*TAX_PCT/100;
+    const vatEnabled = FEATURE_TAX && document.getElementById('vatToggle').checked;
+    const discount = parseFloat(document.getElementById('orderDiscountInput').value) || 0;
+    let subtotal = 0, tax = 0;
+
+    cart.forEach(i => { subtotal += i.unit_price * i.quantity; });
+
+    const afterDisc = Math.max(0, subtotal - discount);
+
+    cart.forEach(i => {
+        const ls = i.unit_price * i.quantity;
+        const ratio = subtotal > 0 ? ls / subtotal : 0;
+        const da = discount * ratio;
+        const lad = ls - da;
+        if (vatEnabled && i.vat && lad > 0) tax += lad * TAX_PCT / 100;
     });
-    const total=afterDisc+tax;
-    document.getElementById('subtotalDisplay').textContent=fmtCurrency(subtotal);
-    document.getElementById('taxRow').style.display=vatEnabled?'flex':'none';
-    const td=document.getElementById('taxDisplay'); if(td) td.textContent=fmtCurrency(tax);
-    document.getElementById('grandTotalDisplay').textContent=fmtCurrency(total);
-    if(payments.length===1){payments[0].amount=total;renderPayments();}
-    document.getElementById('completeSaleBtn').disabled=cart.length===0||payments.length===0;
+
+    const total = afterDisc + tax;
+
+    document.getElementById('subtotalDisplay').textContent = fmtCurrency(subtotal);
+
+    const taxRow = document.getElementById('taxRow');
+    if (taxRow) {
+        taxRow.style.display = vatEnabled ? 'flex' : 'none';
+    }
+
+    const td = document.getElementById('taxDisplay');
+    if (td) td.textContent = fmtCurrency(tax);
+
+    document.getElementById('grandTotalDisplay').textContent = fmtCurrency(total);
+
+    if (payments.length === 1) {
+        payments[0].amount = total;
+        renderPayments();
+    }
+
+    document.getElementById('completeSaleBtn').disabled =
+        cart.length === 0 || payments.length === 0;
 }
 document.getElementById('vatToggle').addEventListener('change', updateTotals);
 document.getElementById('orderDiscountInput').addEventListener('input', updateTotals);
@@ -618,13 +807,23 @@ document.querySelectorAll('.pay-btn').forEach(btn => {
     });
 });
 function getGrandTotal() {
-    const vatEnabled=document.getElementById('vatToggle').checked;
-    const discount=parseFloat(document.getElementById('orderDiscountInput').value)||0;
-    let subtotal=cart.reduce((s,i)=>s+(i.unit_price*i.quantity),0);
-    const afterDisc=Math.max(0,subtotal-discount);
-    let tax=0;
-    if(vatEnabled){cart.forEach(i=>{const ls=i.unit_price*i.quantity;const r=subtotal>0?ls/subtotal:0;const d=discount*r;const l=ls-d;if(i.vat&&l>0)tax+=l*TAX_PCT/100;});}
-    return afterDisc+tax;
+    const vatEnabled = FEATURE_TAX && document.getElementById('vatToggle').checked;
+    const discount = parseFloat(document.getElementById('orderDiscountInput').value) || 0;
+    let subtotal = cart.reduce((s, i) => s + (i.unit_price * i.quantity), 0);
+    const afterDisc = Math.max(0, subtotal - discount);
+    let tax = 0;
+
+    if (vatEnabled) {
+        cart.forEach(i => {
+            const ls = i.unit_price * i.quantity;
+            const r = subtotal > 0 ? ls / subtotal : 0;
+            const d = discount * r;
+            const l = ls - d;
+            if (i.vat && l > 0) tax += l * TAX_PCT / 100;
+        });
+    }
+
+    return afterDisc + tax;
 }
 function renderPayments() {
     const el=document.getElementById('paymentEntries');

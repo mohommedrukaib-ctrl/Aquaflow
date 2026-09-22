@@ -1,82 +1,171 @@
 {% extends "base/base.html" %}
 {% load aquaflow_tags %}
 
-{% block title %}{{ customer.name }} — Loyalty History{% endblock %}
-{% block page_icon %}fas fa-history{% endblock %}
-{% block page_title %}{{ customer.name }} — Loyalty{% endblock %}
-
+{% block title %}Loyalty — {{ customer.name }}{% endblock %}
+{% block page_icon %}fas fa-gift{% endblock %}
+{% block page_title %}{{ customer.name }}{% endblock %}
+{% block page_subtitle %}Loyalty points history{% endblock %}
 {% block breadcrumbs %}
-<span>/</span>
-<a href="/loyalty/">Loyalty</a>
-<span>/</span>
-<span class="current">{{ customer.name }}</span>
+<span>/</span><a href="/loyalty/">Loyalty</a>
+<span>/</span><span class="current">{{ customer.name|truncatechars:20 }}</span>
+{% endblock %}
+
+{% block extra_css %}
+<style>
+.pts-in  { color: var(--aq-success); font-weight: 700; }
+.pts-out { color: var(--aq-danger);  font-weight: 700; }
+</style>
 {% endblock %}
 
 {% block content %}
-<div class="row g-3 mb-3">
-    <div class="col-md-6">
-        <div class="aq-stat-card">
-            <div class="aq-stat-info">
-                <h6>Current Balance</h6>
-                <div class="aq-stat-value" style="font-size:36px;">{{ customer.loyalty_points }}</div>
-                <div class="aq-stat-meta">Points</div>
-            </div>
-            <div class="aq-stat-icon warning"><i class="fas fa-gift"></i></div>
+
+{% with role=request.user.profile.role %}
+{% with can_adjust=role.code|default:""|slice:":11" %}
+
+<div class="aq-panel">
+    <div class="aq-panel-head">
+        <div class="aq-chips">
+            <span class="aq-chip pri"><i class="fas fa-user"></i> <a href="/customers/{{ customer.pk }}/">{{ customer.customer_code }}</a></span>
+            <span class="aq-chip"><i class="fas fa-phone"></i> {{ customer.phone|default:"—" }}</span>
+            <span class="aq-chip suc"><i class="fas fa-gift"></i> Balance <b>{{ customer.loyalty_points }} pts</b></span>
         </div>
+        {% if role.code == 'SUPER_ADMIN' or 'memberships.manage' in role.get_permissions %}
+        <button class="btn btn-sm btn-primary" onclick="openAdjustModal()">
+            <i class="fas fa-sliders me-1"></i>Adjust Points
+        </button>
+        {% endif %}
     </div>
-    <div class="col-md-6">
-        <div class="aq-stat-card">
-            <div class="aq-stat-info">
-                <h6>{{ customer.name }}</h6>
-                <div class="aq-stat-value" style="font-size:16px;">{{ customer.customer_code }}</div>
-                <div class="aq-stat-meta">{{ customer.phone }}</div>
+
+    <div class="aq-panel-body flush">
+        {% if transactions %}
+        <div class="aq-table-scroll">
+            <table class="table table-hover">
+                <thead>
+                    <tr>
+                        <th class="nowrap">Date</th>
+                        <th>Type</th>
+                        <th>Description</th>
+                        <th>Reference</th>
+                        <th class="num">Points</th>
+                        <th class="num">Balance</th>
+                        <th>By</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for t in transactions %}
+                    <tr>
+                        <td class="nowrap text-muted">{{ t.created_at|date:"d M Y · H:i" }}</td>
+                        <td>
+                            {% if t.transaction_type == 'earn' %}<span class="badge bg-success">Earned</span>
+                            {% elif t.transaction_type == 'redeem' %}<span class="badge bg-warning">Redeemed</span>
+                            {% elif t.transaction_type == 'bonus' %}<span class="badge bg-info">Bonus</span>
+                            {% elif t.transaction_type == 'expire' %}<span class="badge bg-dark">Expired</span>
+                            {% else %}<span class="badge bg-secondary">Adjust</span>{% endif %}
+                        </td>
+                        <td>{{ t.description|default:"—"|truncatechars:40 }}</td>
+                        <td class="text-muted" style="font-size:10px;">
+                            {% if t.reference_type %}{{ t.reference_type }} #{{ t.reference_id }}{% else %}—{% endif %}
+                        </td>
+                        <td class="num">
+                            {% if t.points > 0 %}<span class="pts-in">+{{ t.points }}</span>
+                            {% else %}<span class="pts-out">{{ t.points }}</span>{% endif %}
+                        </td>
+                        <td class="num"><strong>{{ t.balance_after }}</strong></td>
+                        <td class="text-muted">{{ t.created_by.username|default:"system"|truncatechars:10 }}</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+
+        <div class="aq-pagebar">
+            <span>{{ page_obj.paginator.count }} transaction{{ page_obj.paginator.count|pluralize }} · Page {{ page_obj.number }}/{{ page_obj.paginator.num_pages }}</span>
+            {% if page_obj.has_other_pages %}
+            <ul class="pagination pagination-sm mb-0">
+                {% if page_obj.has_previous %}<li class="page-item"><a class="page-link" href="?page={{ page_obj.previous_page_number }}">‹</a></li>{% endif %}
+                <li class="page-item disabled"><span class="page-link">{{ page_obj.number }}</span></li>
+                {% if page_obj.has_next %}<li class="page-item"><a class="page-link" href="?page={{ page_obj.next_page_number }}">›</a></li>{% endif %}
+            </ul>
+            {% endif %}
+        </div>
+        {% else %}
+        <div class="aq-empty"><i class="fas fa-gift"></i><h5>No loyalty activity yet</h5></div>
+        {% endif %}
+    </div>
+</div>
+
+<!-- Adjust Modal -->
+<div class="modal fade" id="adjustModal" tabindex="-1">
+    <div class="modal-dialog modal-sm">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title"><i class="fas fa-sliders me-2"></i>Adjust Points</h5>
+                <button class="btn-close" data-bs-dismiss="modal"></button>
             </div>
-            <div class="aq-stat-icon primary"><i class="fas fa-user"></i></div>
+            <div class="modal-body">
+                <div class="alert alert-info py-1 mb-2" style="font-size:10.5px;">
+                    Current balance: <strong>{{ customer.loyalty_points }} pts</strong>
+                </div>
+                <div class="mb-2">
+                    <label class="form-label">Points <span class="text-danger">*</span></label>
+                    <input type="number" id="adjPoints" class="form-control" placeholder="e.g. 50 or -20">
+                    <small class="text-muted" style="font-size:9.5px;">Positive to add, negative to deduct</small>
+                </div>
+                <div class="mb-2">
+                    <label class="form-label">Reason <span class="text-danger">*</span></label>
+                    <input type="text" id="adjReason" class="form-control" placeholder="e.g. Goodwill bonus">
+                </div>
+                <div id="adjError" class="alert alert-danger mb-0" style="display:none;"></div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-sm btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                <button class="btn btn-sm btn-primary" id="saveAdjBtn"><i class="fas fa-save me-1"></i>Apply</button>
+            </div>
         </div>
     </div>
 </div>
 
-<div class="card">
-    <div class="card-header"><strong>Transaction History</strong></div>
-    <div class="card-body p-0">
-        <table class="table mb-0">
-            <thead>
-                <tr>
-                    <th>Date</th>
-                    <th>Type</th>
-                    <th>Description</th>
-                    <th class="text-end">Points</th>
-                    <th class="text-end">Balance</th>
-                    <th>By</th>
-                </tr>
-            </thead>
-            <tbody>
-                {% for tx in transactions %}
-                <tr>
-                    <td><small>{{ tx.created_at|date:"d M Y H:i" }}</small></td>
-                    <td>
-                        {% if tx.transaction_type == 'earn' %}
-                        <span class="badge bg-success">Earned</span>
-                        {% elif tx.transaction_type == 'redeem' %}
-                        <span class="badge bg-warning">Redeemed</span>
-                        {% elif tx.transaction_type == 'adjust' %}
-                        <span class="badge bg-info">Adjustment</span>
-                        {% else %}
-                        <span class="badge bg-secondary">{{ tx.get_transaction_type_display }}</span>
-                        {% endif %}
-                    </td>
-                    <td>{{ tx.description|default:"—" }}</td>
-                    <td class="text-end fw-bold {% if tx.points < 0 %}text-danger{% else %}text-success{% endif %}">
-                        {% if tx.points > 0 %}+{% endif %}{{ tx.points }}
-                    </td>
-                    <td class="text-end">{{ tx.balance_after }}</td>
-                    <td><small>{{ tx.created_by.username|default:"—" }}</small></td>
-                </tr>
-                {% empty %}
-                <tr><td colspan="6" class="text-center text-muted py-4">No transactions yet.</td></tr>
-                {% endfor %}
-            </tbody>
-        </table>
-    </div>
-</div>
+{% endwith %}
+{% endwith %}
+
+{% endblock %}
+
+{% block extra_js %}
+<script>
+const CSRF_TOKEN = '{{ csrf_token }}';
+
+function openAdjustModal() {
+    document.getElementById('adjPoints').value = '';
+    document.getElementById('adjReason').value = '';
+    document.getElementById('adjError').style.display = 'none';
+    new bootstrap.Modal(document.getElementById('adjustModal')).show();
+    setTimeout(() => document.getElementById('adjPoints').focus(), 300);
+}
+
+document.getElementById('saveAdjBtn').addEventListener('click', function () {
+    const points = document.getElementById('adjPoints').value.trim();
+    const reason = document.getElementById('adjReason').value.trim();
+    const err = document.getElementById('adjError');
+    err.style.display = 'none';
+
+    if (!points || parseInt(points) === 0) { err.textContent = 'Points cannot be zero.'; err.style.display = 'block'; return; }
+    if (!reason) { err.textContent = 'Reason required.'; err.style.display = 'block'; return; }
+
+    this.disabled = true;
+    const fd = new FormData();
+    fd.append('points', points);
+    fd.append('reason', reason);
+
+    fetch('{% url "points_adjust" customer.pk %}', {
+        method: 'POST', headers: { 'X-CSRFToken': CSRF_TOKEN }, body: fd,
+    }).then(r => r.json()).then(data => {
+        this.disabled = false;
+        if (data.success) {
+            bootstrap.Modal.getInstance(document.getElementById('adjustModal')).hide();
+            showToast(data.message, 'success');
+            setTimeout(() => location.reload(), 700);
+        } else { err.textContent = data.error || 'Failed.'; err.style.display = 'block'; }
+    }).catch(() => { this.disabled = false; showToast('Network error.', 'error'); });
+});
+</script>
 {% endblock %}
