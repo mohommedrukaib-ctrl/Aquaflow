@@ -5,7 +5,7 @@ Powered by Quantum Axis
 
 from .base import *  # noqa: F401, F403
 
-DEBUG = True
+DEBUG = False
 
 ALLOWED_HOSTS = ['*']
 

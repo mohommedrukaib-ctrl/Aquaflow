@@ -51,6 +51,8 @@ urlpatterns = [
     # ─── REST API ─────────────────────────────────────────────
     path('api/v1/', include('apps.system.urls.api')),
 
+    
+
 ]
 
 # ─── Debug Toolbar ────────────────────────────────────────────
@@ -69,3 +71,9 @@ if settings.DEBUG:
         settings.MEDIA_URL,
         document_root=settings.MEDIA_ROOT
     )
+
+    # ─── Custom Error Handlers ────────────────────────────────────
+handler400 = 'config.error_views.handler400'
+handler403 = 'config.error_views.handler403'
+handler404 = 'config.error_views.handler404'
+handler500 = 'config.error_views.handler500'

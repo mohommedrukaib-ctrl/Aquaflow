@@ -1,0 +1,617 @@
+﻿├── .qodo
+│   ├── agents
+│   ├── workflows
+│   └── settings.json
+├── apps
+│   ├── accounts
+│   │   ├── migrations
+│   │   │   ├── 0001_initial.py
+│   │   │   ├── 0002_securityconfig_accountlockout_loginattempt.py
+│   │   │   └── __init__.py
+│   │   ├── apps.py
+│   │   ├── models.py
+│   │   ├── role_views.py
+│   │   ├── security_middleware.py
+│   │   ├── security_models.py
+│   │   ├── urls.py
+│   │   ├── views.py
+│   │   └── __init__.py
+│   ├── audit
+│   │   ├── migrations
+│   │   │   └── __init__.py
+│   │   ├── apps.py
+│   │   ├── models.py
+│   │   ├── urls.py
+│   │   ├── views.py
+│   │   └── __init__.py
+│   ├── backups
+│   │   ├── migrations
+│   │   │   ├── 0001_initial.py
+│   │   │   ├── 0002_backupschedule.py
+│   │   │   └── __init__.py
+│   │   ├── apps.py
+│   │   ├── middleware.py
+│   │   ├── models.py
+│   │   ├── services.py
+│   │   ├── urls.py
+│   │   ├── views.py
+│   │   └── __init__.py
+│   ├── bookings
+│   │   ├── migrations
+│   │   │   ├── 0001_initial.py
+│   │   │   └── __init__.py
+│   │   ├── apps.py
+│   │   ├── forms.py
+│   │   ├── models.py
+│   │   ├── urls.py
+│   │   ├── views.py
+│   │   └── __init__.py
+│   ├── branches
+│   │   ├── migrations
+│   │   │   ├── 0001_initial.py
+│   │   │   └── __init__.py
+│   │   ├── apps.py
+│   │   ├── models.py
+│   │   ├── urls.py
+│   │   └── __init__.py
+│   ├── businesses
+│   │   ├── migrations
+│   │   │   ├── 0001_initial.py
+│   │   │   ├── 0002_business_job_note_format_business_job_note_message_and_more.py
+│   │   │   └── __init__.py
+│   │   ├── apps.py
+│   │   ├── models.py
+│   │   ├── urls.py
+│   │   ├── views.py
+│   │   └── __init__.py
+│   ├── customers
+│   │   ├── migrations
+│   │   │   ├── 0001_initial.py
+│   │   │   └── __init__.py
+│   │   ├── apps.py
+│   │   ├── forms.py
+│   │   ├── models.py
+│   │   ├── urls.py
+│   │   ├── views.py
+│   │   └── __init__.py
+│   ├── employees
+│   │   ├── migrations
+│   │   │   ├── 0001_initial.py
+│   │   │   ├── 0002_employee.py
+│   │   │   └── __init__.py
+│   │   ├── apps.py
+│   │   ├── models.py
+│   │   ├── urls.py
+│   │   ├── views.py
+│   │   └── __init__.py
+│   ├── finance
+│   │   ├── migrations
+│   │   │   ├── 0001_initial.py
+│   │   │   ├── 0002_expense.py
+│   │   │   └── __init__.py
+│   │   ├── apps.py
+│   │   ├── models.py
+│   │   ├── urls.py
+│   │   ├── views.py
+│   │   └── __init__.py
+│   ├── inventory
+│   │   ├── migrations
+│   │   │   ├── 0001_initial.py
+│   │   │   ├── 0002_product_inventorystock_and_more.py
+│   │   │   ├── 0003_product_barcode_product_reorder_quantity_and_more.py
+│   │   │   └── __init__.py
+│   │   ├── apps.py
+│   │   ├── models.py
+│   │   ├── urls.py
+│   │   ├── views.py
+│   │   └── __init__.py
+│   ├── invoices
+│   │   ├── migrations
+│   │   │   ├── 0001_initial.py
+│   │   │   ├── 0002_initial.py
+│   │   │   └── __init__.py
+│   │   ├── apps.py
+│   │   ├── models.py
+│   │   ├── urls.py
+│   │   ├── views.py
+│   │   └── __init__.py
+│   ├── loyalty
+│   │   ├── migrations
+│   │   │   ├── 0001_initial.py
+│   │   │   └── __init__.py
+│   │   ├── apps.py
+│   │   ├── models.py
+│   │   ├── services.py
+│   │   ├── urls.py
+│   │   ├── views.py
+│   │   └── __init__.py
+│   ├── memberships
+│   │   ├── migrations
+│   │   │   ├── 0001_initial.py
+│   │   │   └── __init__.py
+│   │   ├── apps.py
+│   │   ├── models.py
+│   │   ├── urls.py
+│   │   ├── views.py
+│   │   └── __init__.py
+│   ├── orders
+│   │   ├── migrations
+│   │   │   ├── 0001_initial.py
+│   │   │   └── __init__.py
+│   │   ├── apps.py
+│   │   ├── models.py
+│   │   ├── urls.py
+│   │   ├── views.py
+│   │   └── __init__.py
+│   ├── payments
+│   │   ├── migrations
+│   │   │   ├── 0001_initial.py
+│   │   │   ├── 0002_payment.py
+│   │   │   └── __init__.py
+│   │   ├── apps.py
+│   │   ├── models.py
+│   │   ├── urls.py
+│   │   ├── views.py
+│   │   └── __init__.py
+│   ├── pos
+│   │   ├── migrations
+│   │   │   └── __init__.py
+│   │   ├── apps.py
+│   │   ├── models.py
+│   │   ├── urls.py
+│   │   ├── views.py
+│   │   └── __init__.py
+│   ├── reports
+│   │   ├── migrations
+│   │   │   └── __init__.py
+│   │   ├── apps.py
+│   │   ├── models.py
+│   │   ├── urls.py
+│   │   ├── views.py
+│   │   └── __init__.py
+│   ├── services
+│   │   ├── migrations
+│   │   │   ├── 0001_initial.py
+│   │   │   └── __init__.py
+│   │   ├── apps.py
+│   │   ├── forms.py
+│   │   ├── models.py
+│   │   ├── urls.py
+│   │   ├── views.py
+│   │   └── __init__.py
+│   ├── suppliers
+│   │   ├── migrations
+│   │   │   ├── 0001_initial.py
+│   │   │   └── __init__.py
+│   │   ├── apps.py
+│   │   ├── models.py
+│   │   ├── urls.py
+│   │   ├── views.py
+│   │   └── __init__.py
+│   ├── system
+│   │   ├── management
+│   │   │   ├── commands
+│   │   │   │   ├── setup_aquaflow.py
+│   │   │   │   └── __init__.py
+│   │   │   └── __init__.py
+│   │   ├── migrations
+│   │   │   ├── 0001_initial.py
+│   │   │   ├── 0002_alter_auditlog_action_alter_auditlog_module_and_more.py
+│   │   │   └── __init__.py
+│   │   ├── templatetags
+│   │   │   ├── aquaflow_tags.py
+│   │   │   └── __init__.py
+│   │   ├── urls
+│   │   │   ├── api.py
+│   │   │   ├── dashboard.py
+│   │   │   ├── system.py
+│   │   │   └── __init__.py
+│   │   ├── apps.py
+│   │   ├── context_processors.py
+│   │   ├── db_service.py
+│   │   ├── db_views.py
+│   │   ├── features.py
+│   │   ├── features_views.py
+│   │   ├── health_views.py
+│   │   ├── models.py
+│   │   ├── qa_service.py
+│   │   ├── qa_views.py
+│   │   └── __init__.py
+│   ├── trash
+│   │   ├── migrations
+│   │   │   └── __init__.py
+│   │   ├── apps.py
+│   │   ├── models.py
+│   │   ├── urls.py
+│   │   ├── views.py
+│   │   └── __init__.py
+│   ├── vehicles
+│   │   ├── management
+│   │   │   ├── commands
+│   │   │   │   ├── uppercase_master.py
+│   │   │   │   └── __init__.py
+│   │   │   └── __init__.py
+│   │   ├── migrations
+│   │   │   ├── 0001_initial.py
+│   │   │   ├── 0002_alter_brand_options_alter_vehiclemodel_options_and_more.py
+│   │   │   └── __init__.py
+│   │   ├── apps.py
+│   │   ├── forms.py
+│   │   ├── models.py
+│   │   ├── urls.py
+│   │   ├── views.py
+│   │   └── __init__.py
+│   ├── wash
+│   │   ├── migrations
+│   │   │   ├── 0001_initial.py
+│   │   │   ├── 0002_washjob.py
+│   │   │   ├── 0003_washjobitem.py
+│   │   │   ├── 0004_washjob_checklist_dashboard_and_more.py
+│   │   │   └── __init__.py
+│   │   ├── apps.py
+│   │   ├── models.py
+│   │   ├── urls.py
+│   │   ├── views.py
+│   │   └── __init__.py
+│   └── __init__.py
+├── backups
+├── config
+│   ├── settings
+│   │   ├── base.py
+│   │   ├── development.py
+│   │   ├── production.py
+│   │   └── __init__.py
+│   ├── asgi.py
+│   ├── urls.py
+│   ├── wsgi.py
+│   └── __init__.py
+├── docs
+│   ├── AquaFlow_Developer_Guide.html
+│   ├── AquaFlow_User_Manual.html
+│   ├── generate_docs.py
+│   ├── next
+│   └── windows-deployment.md
+├── frontend
+│   └── react
+├── logs
+│   ├── aquaflow.log
+│   ├── backup.log
+│   └── error.log
+├── media
+│   ├── logos
+│   └── receipts
+├── requirements
+│   ├── base.txt
+│   ├── development.txt
+│   ├── production.txt
+│   └── usercreate.txt
+├── scripts
+├── static
+│   ├── css
+│   │   ├── aquaflow-smart-input.css
+│   │   └── aquaflow.css
+│   ├── dist
+│   ├── img
+│   └── js
+│       ├── aquaflow-smart-input.js
+│       └── aquaflow-theme.js
+├── staticfiles
+│   ├── admin
+│   │   ├── css
+│   │   │   ├── vendor
+│   │   │   │   └── select2
+│   │   │   │       ├── LICENSE-SELECT2.md
+│   │   │   │       ├── select2.css
+│   │   │   │       └── select2.min.css
+│   │   │   ├── autocomplete.css
+│   │   │   ├── base.css
+│   │   │   ├── changelists.css
+│   │   │   ├── dark_mode.css
+│   │   │   ├── dashboard.css
+│   │   │   ├── forms.css
+│   │   │   ├── login.css
+│   │   │   ├── nav_sidebar.css
+│   │   │   ├── responsive.css
+│   │   │   ├── responsive_rtl.css
+│   │   │   ├── rtl.css
+│   │   │   ├── unusable_password_field.css
+│   │   │   └── widgets.css
+│   │   ├── img
+│   │   │   ├── gis
+│   │   │   │   ├── move_vertex_off.svg
+│   │   │   │   └── move_vertex_on.svg
+│   │   │   ├── calendar-icons.svg
+│   │   │   ├── icon-addlink.svg
+│   │   │   ├── icon-alert.svg
+│   │   │   ├── icon-calendar.svg
+│   │   │   ├── icon-changelink.svg
+│   │   │   ├── icon-clock.svg
+│   │   │   ├── icon-deletelink.svg
+│   │   │   ├── icon-hidelink.svg
+│   │   │   ├── icon-no.svg
+│   │   │   ├── icon-unknown-alt.svg
+│   │   │   ├── icon-unknown.svg
+│   │   │   ├── icon-viewlink.svg
+│   │   │   ├── icon-yes.svg
+│   │   │   ├── inline-delete.svg
+│   │   │   ├── LICENSE
+│   │   │   ├── README.txt
+│   │   │   ├── search.svg
+│   │   │   ├── selector-icons.svg
+│   │   │   ├── sorting-icons.svg
+│   │   │   ├── tooltag-add.svg
+│   │   │   └── tooltag-arrowright.svg
+│   │   └── js
+│   │       ├── admin
+│   │       │   ├── DateTimeShortcuts.js
+│   │       │   └── RelatedObjectLookups.js
+│   │       ├── vendor
+│   │       │   ├── jquery
+│   │       │   │   ├── jquery.js
+│   │       │   │   ├── jquery.min.js
+│   │       │   │   └── LICENSE.txt
+│   │       │   ├── select2
+│   │       │   │   ├── i18n
+│   │       │   │   │   ├── af.js
+│   │       │   │   │   ├── ar.js
+│   │       │   │   │   ├── az.js
+│   │       │   │   │   ├── bg.js
+│   │       │   │   │   ├── bn.js
+│   │       │   │   │   ├── bs.js
+│   │       │   │   │   ├── ca.js
+│   │       │   │   │   ├── cs.js
+│   │       │   │   │   ├── da.js
+│   │       │   │   │   ├── de.js
+│   │       │   │   │   ├── dsb.js
+│   │       │   │   │   ├── el.js
+│   │       │   │   │   ├── en.js
+│   │       │   │   │   ├── es.js
+│   │       │   │   │   ├── et.js
+│   │       │   │   │   ├── eu.js
+│   │       │   │   │   ├── fa.js
+│   │       │   │   │   ├── fi.js
+│   │       │   │   │   ├── fr.js
+│   │       │   │   │   ├── gl.js
+│   │       │   │   │   ├── he.js
+│   │       │   │   │   ├── hi.js
+│   │       │   │   │   ├── hr.js
+│   │       │   │   │   ├── hsb.js
+│   │       │   │   │   ├── hu.js
+│   │       │   │   │   ├── hy.js
+│   │       │   │   │   ├── id.js
+│   │       │   │   │   ├── is.js
+│   │       │   │   │   ├── it.js
+│   │       │   │   │   ├── ja.js
+│   │       │   │   │   ├── ka.js
+│   │       │   │   │   ├── km.js
+│   │       │   │   │   ├── ko.js
+│   │       │   │   │   ├── lt.js
+│   │       │   │   │   ├── lv.js
+│   │       │   │   │   ├── mk.js
+│   │       │   │   │   ├── ms.js
+│   │       │   │   │   ├── nb.js
+│   │       │   │   │   ├── ne.js
+│   │       │   │   │   ├── nl.js
+│   │       │   │   │   ├── pl.js
+│   │       │   │   │   ├── ps.js
+│   │       │   │   │   ├── pt-BR.js
+│   │       │   │   │   ├── pt.js
+│   │       │   │   │   ├── ro.js
+│   │       │   │   │   ├── ru.js
+│   │       │   │   │   ├── sk.js
+│   │       │   │   │   ├── sl.js
+│   │       │   │   │   ├── sq.js
+│   │       │   │   │   ├── sr-Cyrl.js
+│   │       │   │   │   ├── sr.js
+│   │       │   │   │   ├── sv.js
+│   │       │   │   │   ├── th.js
+│   │       │   │   │   ├── tk.js
+│   │       │   │   │   ├── tr.js
+│   │       │   │   │   ├── uk.js
+│   │       │   │   │   ├── vi.js
+│   │       │   │   │   ├── zh-CN.js
+│   │       │   │   │   └── zh-TW.js
+│   │       │   │   ├── LICENSE.md
+│   │       │   │   ├── select2.full.js
+│   │       │   │   └── select2.full.min.js
+│   │       │   └── xregexp
+│   │       │       ├── LICENSE.txt
+│   │       │       ├── xregexp.js
+│   │       │       └── xregexp.min.js
+│   │       ├── actions.js
+│   │       ├── autocomplete.js
+│   │       ├── calendar.js
+│   │       ├── cancel.js
+│   │       ├── change_form.js
+│   │       ├── core.js
+│   │       ├── filters.js
+│   │       ├── inlines.js
+│   │       ├── jquery.init.js
+│   │       ├── nav_sidebar.js
+│   │       ├── popup_response.js
+│   │       ├── prepopulate.js
+│   │       ├── prepopulate_init.js
+│   │       ├── SelectBox.js
+│   │       ├── SelectFilter2.js
+│   │       ├── theme.js
+│   │       ├── unusable_password_field.js
+│   │       └── urlify.js
+│   ├── css
+│   │   ├── aquaflow-smart-input.css
+│   │   └── aquaflow.css
+│   ├── debug_toolbar
+│   │   ├── css
+│   │   │   ├── print.css
+│   │   │   └── toolbar.css
+│   │   ├── fonts
+│   │   │   ├── Alef-Bold.ttf
+│   │   │   ├── Alef-Bold.woff2
+│   │   │   ├── Geist.woff2
+│   │   │   ├── OFL-Alef.txt
+│   │   │   └── OFL-Geist.txt
+│   │   ├── img
+│   │   │   ├── alerts.svg
+│   │   │   ├── cache.svg
+│   │   │   ├── Coloured-Dark.svg
+│   │   │   ├── Coloured-Light.svg
+│   │   │   ├── community.svg
+│   │   │   ├── Green.svg
+│   │   │   ├── headers.svg
+│   │   │   ├── history.svg
+│   │   │   ├── profiling.svg
+│   │   │   ├── redirects.svg
+│   │   │   ├── request.svg
+│   │   │   ├── settings.svg
+│   │   │   ├── signals.svg
+│   │   │   ├── sql.svg
+│   │   │   ├── staticfiles.svg
+│   │   │   ├── tasks.svg
+│   │   │   ├── templates.svg
+│   │   │   ├── timer.svg
+│   │   │   └── versions.svg
+│   │   └── js
+│   │       ├── history.js
+│   │       ├── redirect.js
+│   │       ├── timer.js
+│   │       ├── toolbar.js
+│   │       └── utils.js
+│   ├── js
+│   │   ├── aquaflow-smart-input.js
+│   │   └── aquaflow-theme.js
+│   └── rest_framework
+│       ├── css
+│       │   ├── bootstrap-theme.min.css
+│       │   ├── bootstrap-theme.min.css.map
+│       │   ├── bootstrap-tweaks.css
+│       │   ├── bootstrap.min.css
+│       │   ├── bootstrap.min.css.map
+│       │   ├── default.css
+│       │   ├── font-awesome-4.0.3.css
+│       │   └── prettify.css
+│       ├── fonts
+│       │   ├── fontawesome-webfont.eot
+│       │   ├── fontawesome-webfont.svg
+│       │   ├── fontawesome-webfont.ttf
+│       │   ├── fontawesome-webfont.woff
+│       │   ├── glyphicons-halflings-regular.eot
+│       │   ├── glyphicons-halflings-regular.svg
+│       │   ├── glyphicons-halflings-regular.ttf
+│       │   ├── glyphicons-halflings-regular.woff
+│       │   └── glyphicons-halflings-regular.woff2
+│       ├── img
+│       │   ├── glyphicons-halflings-white.png
+│       │   ├── glyphicons-halflings.png
+│       │   └── grid.png
+│       └── js
+│           ├── ajax-form.js
+│           ├── bootstrap.min.js
+│           ├── csrf.js
+│           ├── default.js
+│           ├── jquery-3.7.1.min.js
+│           ├── load-ajax-form.js
+│           └── prettify-min.js
+├── templates
+│   ├── accounts
+│   │   ├── change_password.html
+│   │   ├── login.html
+│   │   ├── role_edit.html
+│   │   ├── role_list.html
+│   │   ├── security_dashboard.html
+│   │   └── user_list.html
+│   ├── audit
+│   │   ├── audit_dashboard.html
+│   │   ├── audit_detail.html
+│   │   └── audit_list.html
+│   ├── backups
+│   │   ├── backup_list.html
+│   │   ├── dashboard.html
+│   │   └── schedule.html
+│   ├── base
+│   │   └── base.html
+│   ├── bookings
+│   │   ├── booking_detail.html
+│   │   ├── booking_form.html
+│   │   └── booking_list.html
+│   ├── businesses
+│   │   └── settings.html
+│   ├── customers
+│   │   ├── partials
+│   │   │   └── customer_form_modal.html
+│   │   ├── customer_detail.html
+│   │   ├── customer_form.html
+│   │   └── customer_list.html
+│   ├── dashboard
+│   │   └── dashboard.html
+│   ├── employees
+│   │   ├── employee_detail.html
+│   │   └── employee_list.html
+│   ├── finance
+│   │   └── expense_list.html
+│   ├── inventory
+│   │   ├── product_detail.html
+│   │   ├── product_list.html
+│   │   └── stock_movements.html
+│   ├── invoices
+│   │   ├── invoice_detail.html
+│   │   └── invoice_list.html
+│   ├── loyalty
+│   │   ├── customer_history.html
+│   │   └── dashboard.html
+│   ├── memberships
+│   │   ├── membership_detail.html
+│   │   ├── membership_list.html
+│   │   └── plan_list.html
+│   ├── orders
+│   │   ├── order_detail.html
+│   │   └── order_list.html
+│   ├── payments
+│   │   ├── payment_list.html
+│   │   └── sales_summary.html
+│   ├── pos
+│   │   ├── pos.html
+│   │   ├── receipt_a4.html
+│   │   ├── receipt_dotmatrix.html
+│   │   ├── receipt_half_a4.html
+│   │   └── receipt_thermal.html
+│   ├── reports
+│   │   ├── cashiers.html
+│   │   ├── customers.html
+│   │   ├── home.html
+│   │   ├── inventory.html
+│   │   ├── payments.html
+│   │   ├── profit_loss.html
+│   │   ├── sales.html
+│   │   ├── services.html
+│   │   └── vehicles.html
+│   ├── services
+│   │   ├── category_list.html
+│   │   ├── service_detail.html
+│   │   ├── service_form.html
+│   │   └── service_list.html
+│   ├── suppliers
+│   │   └── supplier_list.html
+│   ├── system
+│   │   ├── db_config.html
+│   │   ├── features.html
+│   │   ├── health.html
+│   │   └── system.html
+│   ├── trash
+│   │   └── trash_list.html
+│   ├── vehicles
+│   │   ├── partials
+│   │   ├── brand_list.html
+│   │   ├── vehicle_detail.html
+│   │   ├── vehicle_form.html
+│   │   └── vehicle_list.html
+│   └── wash
+│       ├── job_note_half_a4.html
+│       ├── job_note_thermal.html
+│       ├── wash_board.html
+│       ├── wash_job_detail.html
+│       ├── wash_job_form.html
+│       └── wash_job_list.html
+├── .env
+├── .env.example
+├── .gitignore
+├── manage.py
+└── project_structure.txt
