@@ -194,17 +194,77 @@ def trash_list(request):
     paginator = Paginator(all_items, 30)
     page_obj = paginator.get_page(request.GET.get('page', 1))
 
+    # Convert the current page into JSON-safe data for React.
+    react_items = []
+
+    for item in page_obj.object_list:
+        deleted_at = item.get('deleted_at')
+        deleted_at_display = ''
+
+        if deleted_at:
+            try:
+                deleted_at = timezone.localtime(deleted_at)
+            except (ValueError, TypeError):
+                pass
+
+            deleted_at_display = deleted_at.strftime('%d %b %Y %H:%M')
+
+        deleted_by = item.get('deleted_by')
+
+        react_items.append({
+            'id': item['id'],
+            'type': item['type'],
+            'typeLabel': item['type_label'],
+            'icon': item['icon'],
+            'color': item['color'],
+            'name': item['name'],
+            'meta': item['meta'],
+            'deletedAt': deleted_at_display,
+            'deletedBy': deleted_by.username if deleted_by else None,
+            'restoreUrl': item['restore_url'],
+            'purgeUrl': item['delete_url'],
+        })
+
+    trash_data = {
+        'items': react_items,
+        'itemType': item_type,
+        'search': search,
+        'counts': counts,
+        'total': paginator.count,
+        'pagination': {
+            'number': page_obj.number,
+            'hasPrevious': page_obj.has_previous(),
+            'previousPage': (
+                page_obj.previous_page_number()
+                if page_obj.has_previous()
+                else None
+            ),
+            'hasNext': page_obj.has_next(),
+            'nextPage': (
+                page_obj.next_page_number()
+                if page_obj.has_next()
+                else None
+            ),
+            'hasOtherPages': page_obj.has_other_pages(),
+        },
+    }
+
     context = {
         'page_title': 'Trash',
-        'items':      page_obj,
-        'page_obj':   page_obj,
-        'item_type':  item_type,
-        'search':     search,
-        'counts':     counts,
-        'total':      paginator.count,
-    }
-    return render(request, 'trash/trash_list.html', context)
 
+        # Keeping these temporarily does not hurt.
+        'items': page_obj,
+        'page_obj': page_obj,
+        'item_type': item_type,
+        'search': search,
+        'counts': counts,
+        'total': paginator.count,
+
+        # Data consumed by React.
+        'trash_data': trash_data,
+    }
+
+    return render(request, 'trash/trash_list.html', context)
 
 # ─── RESTORE ─────────────────────────────────────────────────
 

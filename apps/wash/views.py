@@ -532,18 +532,26 @@ def assign_bay(request, pk):
 
 # ─── GENERATE JOB NOTE ───────────────────────────────────────
 
+# ─── GENERATE JOB NOTE ───────────────────────────────────────
+
 @login_required
 def generate_job_note(request, pk):
+    """
+    Renders the job note using the business default format.
+    Format dropdown removed — business.job_note_format is the single
+    source of truth (configured in Business Settings).
+    """
     if not check_permission(request, PermissionCode.WASH_MANAGE):
         messages.error(request, 'Permission denied.')
         return redirect('wash_board')
 
     job = get_object_or_404(
-        WashJob.objects.select_related('customer', 'vehicle', 'vehicle__brand', 'vehicle__model'),
+        WashJob.objects.select_related(
+            'customer', 'vehicle', 'vehicle__brand', 'vehicle__model'
+        ),
         pk=pk
     )
 
-    # Create or get existing note
     try:
         note = job.job_note
     except JobNote.DoesNotExist:
@@ -555,7 +563,8 @@ def generate_job_note(request, pk):
     from apps.businesses.models import Business
     business = Business.objects.get(pk=1)
 
-    fmt = request.GET.get('format', getattr(business, 'job_note_format', 'thermal_80mm'))
+    # Always use the business's configured default job note format
+    fmt = getattr(business, 'job_note_format', 'thermal_80mm')
 
     template_map = {
         'thermal_80mm': 'wash/job_note_thermal.html',
@@ -569,14 +578,9 @@ def generate_job_note(request, pk):
         'job':      job,
         'items':    job.items.all(),
         'business': business,
-        'formats': [
-            ('thermal_80mm', 'Thermal (80mm)'),
-            ('half_a4_bw',   'Half A4 (B&W)'),
-        ],
-        'current_format': fmt,
     }
-    return render(request, template, context)
 
+    return render(request, template, context)
 
 # ─── WASH JOB LIST ────────────────────────────────────────────
 

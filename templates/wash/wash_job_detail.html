@@ -135,21 +135,25 @@
 
                 <!-- INVOICE BUTTON (available at any status except completed with invoice) -->
                 {% if not job.invoice %}
-                <a href="/pos/?wash_job={{ job.pk }}" class="btn btn-success btn-lg">
-                    <i class="fas fa-cash-register me-1"></i>Invoice This Job
-                </a>
-                {% else %}
-                <a href="/pos/receipt/{{ job.invoice.pk }}/" target="_blank" class="btn btn-primary">
-                    <i class="fas fa-print me-1"></i>Reprint Invoice
-                </a>
-                {% endif %}
+<a href="/pos/?wash_job={{ job.pk }}" class="btn btn-success btn-lg">
+    <i class="fas fa-cash-register me-1"></i>Invoice This Job
+</a>
+{% else %}
+<button type="button"
+        class="btn btn-primary"
+        onclick="openPrintModal('/pos/receipt/{{ job.invoice.pk }}/', 'Invoice — {{ job.invoice.invoice_number }}')">
+    <i class="fas fa-print me-1"></i>Reprint Invoice
+</button>
+{% endif %}
 
-                <!-- Job Note -->
-                {% if can_manage %}
-                <a href="{% url 'wash_job_note' job.pk %}" target="_blank" class="btn btn-outline-info">
-                    <i class="fas fa-sticky-note me-1"></i>Print Job Note
-                </a>
-                {% endif %}
+<!-- Job Note -->
+{% if can_manage %}
+<button type="button"
+        class="btn btn-outline-info"
+        onclick="openPrintModal('{% url 'wash_job_note' job.pk %}', 'Job Note — {{ job.job_number }}')">
+    <i class="fas fa-sticky-note me-1"></i>Print Job Note
+</button>
+{% endif %}
 
                 <hr class="my-2">
 

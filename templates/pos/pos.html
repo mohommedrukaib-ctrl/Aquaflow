@@ -99,8 +99,13 @@
 }
 
 .pos-sticky { position: sticky; top: calc(var(--aq-navbar-h) + 10px); }
+
+/* NEW: locked smart input (readonly, still looks normal, not greyed out) */
+.aq-locked { pointer-events: none; }
+.aq-locked input { opacity: 1 !important; cursor: default; }
 </style>
 {% endblock %}
+
 {% block content %}
 
 {% if prefill %}
@@ -133,6 +138,8 @@
                          data-search-url="/customers/search/" data-create-url="/vehicles/customers/quick-create/"
                          data-results-key="customers" data-label="Customer"
                          data-placeholder="Search or type to add…" data-required="true"></div>
+                    <!-- NEW: phone line -->
+                    <small class="text-muted d-block" style="font-size:10px;" id="customerInfoLine"></small>
                 </div>
                 <div class="col-md-6">
                     <label class="form-label">Vehicle</label>
@@ -510,11 +517,11 @@ const FEATURE_PRODUCTS  = {{ features.products|yesno:"true,false" }};
 const FEATURE_TAX       = {{ features.tax|yesno:"true,false" }};
 const FEATURE_REPAIRS   = {{ features.repairs|yesno:"true,false" }};
 const FEATURE_JOB_NOTES = {{ features.job_notes|yesno:"true,false" }};
-const CSRF_TOKEN = '{{ csrf_token }}';
-const BRANCH_ID = {{ branch.pk }};
-const IDEMPOTENCY_KEY = '{{ idempotency_key }}';
-const TAX_PCT = {{ tax_percentage }};
-const PREFILL_DATA = {{ prefill_json|safe }};
+const CSRF_TOKEN        = '{{ csrf_token }}';
+const BRANCH_ID         = {{ branch.pk }};
+const IDEMPOTENCY_KEY   = '{{ idempotency_key }}';
+const TAX_PCT           = {{ tax_percentage }};
+const PREFILL_DATA      = {{ prefill_json|safe }};
 
 let cart = [];
 let payments = [];
@@ -525,12 +532,34 @@ let currentBookingId = null;
 function fmtCurrency(v) { return 'Rs. ' + Number(v).toLocaleString('en-LK', {minimumFractionDigits:2, maximumFractionDigits:2}); }
 function escapeHtml(s) { return String(s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
 
-const customerInput = document.getElementById('customerInput');
-const vehicleInput = document.getElementById('vehicleInput');
-const serviceInput = document.getElementById('serviceInput');
-const productInput = document.getElementById('productInput');
-const washJobInput = document.getElementById('washJobInput');
-const vehicleInfoLine = document.getElementById('vehicleInfoLine');
+const customerInput    = document.getElementById('customerInput');
+const vehicleInput     = document.getElementById('vehicleInput');
+const serviceInput     = document.getElementById('serviceInput');
+const productInput     = document.getElementById('productInput');
+const washJobInput     = document.getElementById('washJobInput');
+const vehicleInfoLine  = document.getElementById('vehicleInfoLine');
+const customerInfoLine = document.getElementById('customerInfoLine');   // NEW
+
+// ─── NEW: LOCK / UNLOCK HELPERS ─────────────────────────────
+function lockSmartInput(el) {
+    const si = el?._smartInput; if (!si) return;
+    si.input.readOnly = true;            // readOnly (NOT disabled) so it looks normal
+    si.input.tabIndex = -1;
+    si.clearBtn.style.display = 'none';  // hide the X button
+    el.classList.add('aq-locked');
+}
+function unlockSmartInput(el) {
+    const si = el?._smartInput; if (!si) return;
+    si.input.readOnly = false;
+    si.input.tabIndex = 0;
+    el.classList.remove('aq-locked');
+    if (si.hiddenInput.value) si.clearBtn.style.display = '';
+}
+function setCustomerInfo(phone) {
+    customerInfoLine.innerHTML = phone
+        ? `<i class="fas fa-phone me-1"></i>${escapeHtml(phone)}`
+        : '';
+}
 
 // ─── WASH JOB: Selected → Load ─────────────────────────────
 washJobInput?.addEventListener('aq:selected', (e) => {
@@ -540,7 +569,11 @@ washJobInput?.addEventListener('aq:selected', (e) => {
         if (!data.success) return;
         const wj = data.wash_job;
         currentBookingId = wj.booking_id;
+
         customerInput._smartInput.setSelected({id:wj.customer_id, label:wj.customer_name, name:wj.customer_name});
+        lockSmartInput(customerInput);            // NEW: lock customer
+        setCustomerInfo(wj.customer_phone);       // NEW: show phone
+
         setTimeout(() => {
             vehicleInput._smartInput.setSelected({id:wj.vehicle_id, label:wj.vehicle_reg, registration_number:wj.vehicle_reg});
             setTimeout(() => {
@@ -615,7 +648,11 @@ document.getElementById('saveWashBtn')?.addEventListener('click', function () {
 customerInput?.addEventListener('aq:selected', (e) => {
     const vs=vehicleInput._smartInput; vs.input.value=''; vs.hiddenInput.value=''; vs.enable(); vs.extraParams=`customer_id=${e.detail.id}`; vs.placeholder='Search vehicles...'; vs.input.placeholder=vs.placeholder; vehicleInfoLine.textContent='';
 });
-customerInput?.addEventListener('aq:cleared', () => { vehicleInput._smartInput.disable(); vehicleInfoLine.textContent=''; });
+customerInput?.addEventListener('aq:cleared', () => {
+    vehicleInput._smartInput.disable();
+    vehicleInfoLine.textContent='';
+    setCustomerInfo('');                       // NEW
+});
 vehicleInput?.addEventListener('aq:selected', (e) => {
     fetch(`/bookings/vehicle-details/${e.detail.id}/`).then(r=>r.json()).then(data => {
         if (!data.success) return;
@@ -636,7 +673,7 @@ serviceInput?.addEventListener('aq:selected', (e) => {
     });
 });
 
-// Service NOT found → auto-create and add
+// Service NOT found → popup
 serviceInput?.addEventListener('aq:pending', (e) => {
     const name = e.detail.value.trim();
     if (!name) return;
@@ -671,7 +708,7 @@ document.getElementById('saveNewSvcBtn')?.addEventListener('click', function () 
 
     const finishAdd = (serviceId) => {
         this.disabled = false;
-        this.innerHTML = '<i class="fas fa-plus me-1"></i>Add to Cart';
+        this.innerHTML = '<i class="fas fa-plus me-1"></i>Add';
         if (serviceId && price > 0) {
             const pfd = new FormData(); pfd.append('price', price);
             fetch(`/services/${serviceId}/quick-price/`, { method: 'POST', headers: { 'X-CSRFToken': CSRF_TOKEN }, body: pfd }).catch(() => {});
@@ -684,10 +721,11 @@ document.getElementById('saveNewSvcBtn')?.addEventListener('click', function () 
     if (saveToDb) {
         const fd = new FormData(); fd.append('name', name);
         fetch('/bookings/services/create/', { method: 'POST', headers: { 'X-CSRFToken': CSRF_TOKEN }, body: fd })
-        .then(r => r.json()).then(data => { finishAdd(data.success ? (data.item?.id || null) : null); })
-        .catch(() => { finishAdd(null); });
+            .then(r => r.json()).then(data => { finishAdd(data.success ? (data.item?.id || null) : null); })
+            .catch(() => { finishAdd(null); });
     } else { finishAdd(null); }
 });
+
 // ─── Add Product (selected) ─────────────────────────────────
 productInput?.addEventListener('aq:selected', (e) => {
     const p=e.detail;
@@ -795,7 +833,19 @@ function updateTotals() {
 }
 document.getElementById('vatToggle').addEventListener('change', updateTotals);
 document.getElementById('orderDiscountInput').addEventListener('input', updateTotals);
-document.getElementById('clearCartBtn').addEventListener('click', () => { if(confirm('Clear all?')){cart=[];renderCart();} });
+
+// NEW: clear cart also unlocks customer if it was locked by a wash job
+document.getElementById('clearCartBtn').addEventListener('click', () => {
+    if (confirm('Clear all?')) {
+        cart = []; renderCart();
+        if (currentWashJobId) {
+            currentWashJobId = null;
+            currentBookingId = null;
+            unlockSmartInput(customerInput);
+            setCustomerInfo('');
+        }
+    }
+});
 
 // ─── Payment ────────────────────────────────────────────────
 document.querySelectorAll('.pay-btn').forEach(btn => {
@@ -859,7 +909,11 @@ document.getElementById('completeSaleBtn').addEventListener('click', function ()
             notes:'',
         }),
     }).then(r=>r.json()).then(data => {
-        if(data.success){showToast(`Sale complete! ${data.invoice_number}`,'success');window.open(data.receipt_url,'_blank');setTimeout(()=>location.reload(),1500);}
+        if(data.success){
+            showToast(`Sale complete! ${data.invoice_number}`,'success');
+            openPrintModal(data.receipt_url, `Receipt — ${data.invoice_number}`);
+            setTimeout(()=>location.reload(), 3000);
+        }
         else{this.disabled=false;this.innerHTML='<i class="fas fa-check-circle me-1"></i>Complete Sale';showToast(data.error||'Failed.','error');}
     }).catch(()=>{this.disabled=false;this.innerHTML='<i class="fas fa-check-circle me-1"></i>Complete Sale';showToast('Network error.','error');});
 });
@@ -883,7 +937,6 @@ document.addEventListener('aq:pending', (e) => {
         return;
     }
 });
-
 
 // ─── Wash Popup: Customer/Vehicle create handlers ───────────
 document.addEventListener('aq:pending', (e) => {
@@ -975,7 +1028,6 @@ function openVehicleModalForWash(reg, custSmart) {
 
     new bootstrap.Modal(document.getElementById('vehicleModal')).show();
 }
-
 
 // Customer phone lookup + save
 document.getElementById('quickCustPhone')?.addEventListener('input', function(){
@@ -1093,13 +1145,20 @@ document.getElementById('saveVehicleBtn')?.addEventListener('click', function ()
     });
 });
 
-
 // ─── PREFILL ────────────────────────────────────────────────
 if(PREFILL_DATA){
     window.addEventListener('load',()=>{
         setTimeout(()=>{
             currentWashJobId=PREFILL_DATA.wash_job_id;currentBookingId=PREFILL_DATA.booking_id;
+
             customerInput._smartInput.setSelected({id:PREFILL_DATA.customer_id,label:PREFILL_DATA.customer_name,name:PREFILL_DATA.customer_name});
+
+            // NEW: lock customer + show phone when loaded from a wash job
+            if (PREFILL_DATA.wash_job_id) {
+                lockSmartInput(customerInput);
+                setCustomerInfo(PREFILL_DATA.customer_phone);
+            }
+
             setTimeout(()=>{
                 vehicleInput._smartInput.setSelected({id:PREFILL_DATA.vehicle_id,label:PREFILL_DATA.vehicle_reg,registration_number:PREFILL_DATA.vehicle_reg});
                 setTimeout(()=>{

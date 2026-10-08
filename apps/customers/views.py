@@ -1,4 +1,4 @@
-"""
+"""(
 AquaFlow — Customer Views
 Powered by Quantum Axis
 
@@ -8,6 +8,8 @@ Never trust frontend.
 
 import json
 import logging
+from django.urls import reverse
+from django.utils.text import Truncator
 from django.shortcuts import render, get_object_or_404, redirect
 from django.contrib.auth.decorators import login_required
 from django.contrib import messages
@@ -85,19 +87,91 @@ def customer_list(request):
     page      = request.GET.get('page', 1)
     page_obj  = paginator.get_page(page)
 
+    customer_rows = []
+
+    for c in page_obj.object_list:
+        created_at = c.created_at
+
+        if created_at and timezone.is_aware(created_at):
+            created_at = timezone.localtime(created_at)
+
+        status_key = str(c.status or '').lower()
+        status_classes = {
+            'active': 'badge bg-success',
+            'inactive': 'badge bg-secondary',
+        }
+
+        customer_rows.append({
+            'id': c.pk,
+            'customerCode': c.customer_code,
+            'name': c.name,
+            'phone': c.phone or '',
+            'email': c.email or '',
+            'emailDisplay': Truncator(c.email or '—').chars(24),
+            'vehicleCount': getattr(c, 'vehicle_count', ''),
+            'loyaltyPoints': getattr(c, 'loyalty_points', ''),
+            'statusDisplay': c.get_status_display(),
+            'statusClass': status_classes.get(
+                status_key,
+                'badge bg-light text-dark',
+            ),
+            'createdAt': (
+                created_at.strftime('%d %b %Y')
+                if created_at else ''
+            ),
+            'detailUrl': reverse('customer_detail', kwargs={'pk': c.pk}),
+            'editUrl': reverse('customer_edit', kwargs={'pk': c.pk}),
+            'deleteUrl': reverse('customer_delete', kwargs={'pk': c.pk}),
+        })
+
+    can_create = check_permission(
+        request, PermissionCode.CUSTOMERS_CREATE
+    )
+    can_edit = check_permission(
+        request, PermissionCode.CUSTOMERS_EDIT
+    )
+    can_delete = check_permission(
+        request, PermissionCode.CUSTOMERS_DELETE
+    )
+
+    customer_page_data = {
+        'customers': customer_rows,
+        'search': search,
+        'status': status,
+        'totalCount': paginator.count,
+        'listUrl': reverse('customer_list'),
+        'createUrl': reverse('customer_create'),
+        'canCreate': can_create,
+        'canEdit': can_edit,
+        'canDelete': can_delete,
+        'pagination': {
+            'number': page_obj.number,
+            'numPages': paginator.num_pages,
+            'hasOtherPages': page_obj.has_other_pages(),
+            'hasPrevious': page_obj.has_previous(),
+            'previousPage': (
+                page_obj.previous_page_number()
+                if page_obj.has_previous() else None
+            ),
+            'hasNext': page_obj.has_next(),
+            'nextPage': (
+                page_obj.next_page_number()
+                if page_obj.has_next() else None
+            ),
+        },
+    }
+
     context = {
-        'page_title':  'Customers',
-        'page_obj':    page_obj,
-        'customers':   page_obj,
-        'search':      search,
-        'status':      status,
+        'page_title': 'Customers',
+        'page_obj': page_obj,
+        'customers': page_obj,
+        'search': search,
+        'status': status,
         'total_count': paginator.count,
-        'can_create':  check_permission(request, PermissionCode.CUSTOMERS_CREATE),
-        'can_edit':    check_permission(request, PermissionCode.CUSTOMERS_EDIT),
-        'can_delete':  check_permission(request, PermissionCode.CUSTOMERS_DELETE),
-        'breadcrumbs': [
-            {'label': 'Customers', 'url': None}
-        ],
+        'can_create': can_create,
+        'can_edit': can_edit,
+        'can_delete': can_delete,
+        'customer_page_data': customer_page_data,
     }
     return render(request, 'customers/customer_list.html', context)
 
@@ -226,7 +300,10 @@ def customer_create(request):
             if is_ajax:
                 return JsonResponse({
                     'success': False,
-                    'errors':  form.errors,
+                    'errors': {
+                        field: [error['message'] for error in errors]
+                        for field, errors in form.errors.get_json_data().items()
+                    },
                 }, status=400)
     else:
         form = CustomerForm()

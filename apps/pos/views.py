@@ -1232,8 +1232,15 @@ def complete_sale(request):
 
 # ─── RECEIPT VIEW ───────────────────────────────────────────
 
+# ─── RECEIPT VIEW ───────────────────────────────────────────
+
 @login_required
 def receipt_view(request, invoice_id):
+    """
+    Renders the receipt using the business default print format.
+    Format dropdown is removed — business.print_format is the single
+    source of truth (configured in Business Settings).
+    """
     from apps.invoices.models import Invoice
     from apps.businesses.models import Business
 
@@ -1249,33 +1256,27 @@ def receipt_view(request, invoice_id):
 
     business = Business.objects.get(pk=1)
 
-    fmt = request.GET.get(
-        'format',
-        business.print_format or 'thermal_80mm',
-    )
+    # Always use the business's configured default format
+    fmt = business.print_format or 'thermal_80mm'
 
     template_map = {
         'thermal_80mm': 'pos/receipt_thermal.html',
-        'dot_matrix': 'pos/receipt_dotmatrix.html',
-        'half_a4': 'pos/receipt_half_a4.html',
-        'a4': 'pos/receipt_a4.html',
+        'dot_matrix':   'pos/receipt_dotmatrix.html',
+        'half_a4':      'pos/receipt_half_a4.html',
+        'a4':           'pos/receipt_a4.html',
     }
 
     template = template_map.get(fmt, 'pos/receipt_thermal.html')
 
     context = {
-        'invoice': invoice,
-        'order': invoice.order,
+        'invoice':  invoice,
+        'order':    invoice.order,
         'business': business,
-        'items': invoice.items.all(),
+        'items':    invoice.items.all(),
         'payments': invoice.payments.all(),
-        'current_format': fmt,
-        'formats': [
-            ('thermal_80mm', 'Thermal (80mm)'),
-            ('dot_matrix', 'Dot Matrix'),
-            ('half_a4', 'Half A4'),
-            ('a4', 'Full A4'),
-        ],
     }
 
     return render(request, template, context)
+
+
+    
